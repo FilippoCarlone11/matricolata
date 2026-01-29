@@ -64,7 +64,7 @@ export default function EditProfile({ user, onClose, onUpdate }) {
               <input 
                 type="text" value={teamName} onChange={(e) => setTeamName(e.target.value)}
                 className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-500 outline-none font-bold text-purple-700"
-                placeholder="Es: Real Madrink..."
+                placeholder="Es: SSC Napoli..."
               />
               <p className="text-[10px] text-gray-400 mt-1">Questo nome apparirà nelle classifiche.</p>
             </div>
