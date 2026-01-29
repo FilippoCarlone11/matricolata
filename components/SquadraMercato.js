@@ -29,7 +29,7 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
 
   // Funzione helper per gestire il blocco
   const checkMarket = () => {
-    if (!marketOpen) { alert("Il mercato è CHIUSO! Non puoi fare modifiche."); return false; }
+    if (!marketOpen && !isAdmin) { alert("Il mercato è CHIUSO! Non puoi fare modifiche."); return false; }
     return true;
   };
 
@@ -43,9 +43,10 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
     if (!confirm(`Svincolare ${name}?`)) return;
     try { 
       await releaseMatricola(currentUser.id, mid); 
+      // Aggiornamento locale rapido
       setMySquadDetails(prev => prev.filter(p => p.id !== mid));
       onUpdate(); 
-      loadAllData(); // Ricarica matricole
+      loadAllData(); // Ricarica matricole per farla riapparire sotto
     } catch (e) { alert(e); }
   };
 
@@ -55,6 +56,7 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
     if (!confirm(`Ingaggiare ${m.displayName}?`)) return;
     try {
       await recruitMatricola(currentUser.id, m.id);
+      // Rimuoviamo visivamente dalla lista sotto e aggiungiamo sopra
       setMatricole(prev => prev.filter(x => x.id !== m.id));
       setMySquadDetails(prev => [...prev, m]);
       onUpdate();
@@ -68,7 +70,14 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
     }
   };
 
-  const filtered = matricole.filter(m => m.displayName.toLowerCase().includes(searchTerm.toLowerCase()));
+  // --- FILTRO AVANZATO ---
+  // 1. Cerca per nome
+  // 2. NASCONDI quelli che ho già in squadra (currentUser.mySquad contiene gli ID)
+  const filtered = matricole.filter(m => {
+    const matchesName = m.displayName.toLowerCase().includes(searchTerm.toLowerCase());
+    const alreadyOwn = currentUser.mySquad && currentUser.mySquad.includes(m.id);
+    return matchesName && !alreadyOwn;
+  });
 
   if (loading) return <div className="text-center py-12">Caricamento...</div>;
 
@@ -78,7 +87,7 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
       {/* HEADER ROSA */}
       <div className="bg-white rounded-2xl shadow border border-gray-200 p-5">
         <div className="flex justify-between items-center mb-4 border-b pb-2">
-            <h2 className="text-xl font-bold flex items-center gap-2"><Users className="text-blue-600"/> La Tua Rosa ({currentSquadSize}/3)</h2>
+            <h2 className="text-xl font-bold flex items-center gap-2"><Users className="text-blue-600"/> La tua squadra ({currentSquadSize}/3)</h2>
             {isAdmin ? (
                 <button onClick={toggleStatus} className={`flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full ${marketOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                     {marketOpen ? <Unlock size={12}/> : <Lock size={12}/>} {marketOpen ? 'APERTO' : 'CHIUSO'}
@@ -97,16 +106,26 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
                 <div key={player.id} className={`flex items-center justify-between p-3 rounded-xl border ${isCaptain ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100'}`}>
                     <div className="flex items-center gap-3">
                         <img src={player.photoURL || '/default-avatar.png'} className="w-10 h-10 rounded-full" />
-                        <div><p className="font-bold text-sm">{player.displayName}</p><p className="text-xs text-gray-500">Pt: {player.punti || 0}</p></div>
+                        <div>
+                            <p className="font-bold text-sm">{player.displayName}</p>
+                            <p className="text-xs text-gray-500 flex items-center gap-1">
+                                Punti: {player.punti || 0}
+                                {isCaptain && (
+                                    <span className="text-[10px] bg-yellow-100 text-yellow-700 border border-yellow-300 px-1 rounded font-bold">
+                                    x2 = {(player.punti || 0) * 2}
+                                    </span>
+                                )}
+                            </p>
+                        </div>
                     </div>
-                    {/* BOTTONI CONDIZIONALI (Disabilitati se marketOpen è false) */}
+                    {/* BOTTONI CONDIZIONALI */}
                     <div className="flex gap-2">
                         {!isCaptain && (
-                            <button onClick={() => handleSetCaptain(player.id)} disabled={!marketOpen} className={`p-1.5 rounded-lg border ${!marketOpen ? 'bg-gray-100 text-gray-300' : 'bg-white text-gray-400 hover:text-yellow-500'}`}>
+                            <button onClick={() => handleSetCaptain(player.id)} disabled={!marketOpen && !isAdmin} className={`p-1.5 rounded-lg border ${(!marketOpen && !isAdmin) ? 'bg-gray-100 text-gray-300' : 'bg-white text-gray-400 hover:text-yellow-500'}`}>
                                 <Crown size={16} />
                             </button>
                         )}
-                        <button onClick={() => handleRelease(player.id, player.displayName)} disabled={!marketOpen} className={`p-1.5 rounded-lg border ${!marketOpen ? 'bg-gray-100 text-gray-300' : 'bg-white text-gray-400 hover:text-red-500'}`}>
+                        <button onClick={() => handleRelease(player.id, player.displayName)} disabled={!marketOpen && !isAdmin} className={`p-1.5 rounded-lg border ${(!marketOpen && !isAdmin) ? 'bg-gray-100 text-gray-300' : 'bg-white text-gray-400 hover:text-red-500'}`}>
                             <Trash2 size={16} />
                         </button>
                     </div>
@@ -119,7 +138,7 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
 
       {/* LISTA SVINCOLATI */}
       <div>
-        <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><UserPlus className="text-green-600"/> Svincolati</h3>
+        <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><UserPlus className="text-green-600"/> Lista Matricole</h3>
         <input type="text" placeholder="Cerca..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="w-full mb-4 p-2 border rounded-xl text-sm" />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -131,13 +150,14 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
                 </div>
                 <button 
                     onClick={() => handleRecruit(m)} 
-                    disabled={isSquadFull || !marketOpen}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 ${isSquadFull || !marketOpen ? 'bg-gray-100 text-gray-400' : 'bg-green-600 text-white'}`}
+                    disabled={isSquadFull || (!marketOpen && !isAdmin)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 ${isSquadFull || (!marketOpen && !isAdmin) ? 'bg-gray-100 text-gray-400' : 'bg-green-600 text-white'}`}
                 >
                     <UserPlus size={14} /> Prendi
                 </button>
             </div>
             ))}
+            {filtered.length === 0 && <p className="col-span-full text-center text-gray-400 text-sm py-4">Nessuna matricola trovata (o le hai già tutte in squadra!).</p>}
         </div>
       </div>
     </div>

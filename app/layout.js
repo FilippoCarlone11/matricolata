@@ -1,7 +1,7 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'Fanta-Collegio',
+  title: 'Matricolata',
   description: 'Competi, guadagna punti, costruisci la tua squadra',
 }
 
