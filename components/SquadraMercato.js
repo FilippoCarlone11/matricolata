@@ -27,16 +27,24 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
     setLoading(false);
   };
 
-  // Funzione helper per gestire il blocco
+// Funzione helper per gestire il blocco
   const checkMarket = () => {
-    if (!marketOpen && !isAdmin) { alert("Il mercato è CHIUSO! Non puoi fare modifiche."); return false; }
+    // Se il mercato è chiuso E NON SONO ADMIN, blocco tutto.
+    if (!marketOpen && !isAdmin) { 
+        alert("Il mercato è CHIUSO! Non puoi fare modifiche alla formazione."); 
+        return false; 
+    }
     return true;
   };
 
   const handleSetCaptain = async (mid) => {
+    // CONTROLLO BLOCCO MERCATO QUI
     if (!checkMarket()) return;
+    
     try { await setSquadCaptain(currentUser.id, mid); onUpdate(); } catch (e) { alert(e); }
   };
+
+
 
   const handleRelease = async (mid, name) => {
     if (!checkMarket()) return;

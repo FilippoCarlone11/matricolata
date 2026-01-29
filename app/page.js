@@ -9,19 +9,19 @@ import StoricoPunti from '@/components/StoricoPunti';
 import AdminUserList from '@/components/AdminUserList';
 import AdminRequests from '@/components/AdminRequests';
 import AdminChallenges from '@/components/AdminChallenges';
+import AdminMatricolaHistory from '@/components/AdminMatricolaHistory';
+import EditProfile from '@/components/EditProfile'; 
 import Navigation from '@/components/Navigation';
 import SquadraMercato from '@/components/SquadraMercato';
 import Classifiche from '@/components/Classifiche';
-import AdminMatricolaHistory from '@/components/AdminMatricolaHistory';
-import { Trophy, LogOut } from 'lucide-react';
+import { Trophy, LogOut, Target, Users, Edit2 } from 'lucide-react';
 
 export default function Home() {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  // activeTab gestisce tutto ora (home, squadra, classifiche, admin-sfide, admin-utenti)
-  const [activeTab, setActiveTab] = useState('home'); 
+  const [activeTab, setActiveTab] = useState('home');
+  const [showProfile, setShowProfile] = useState(false); 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -29,7 +29,6 @@ export default function Home() {
         setUser(firebaseUser);
         const data = await getUserData(firebaseUser.uid);
         setUserData(data);
-        // Redirect iniziale intelligente
         if (data.role === 'matricola') setActiveTab('home');
         else setActiveTab('squadra');
       } else {
@@ -59,13 +58,27 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
       <div className="max-w-lg mx-auto p-4 pb-28">
         
-        {/* HEADER */}
+        {/* HEADER CLICCABILE */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <img src={user.photoURL} className="w-10 h-10 rounded-full border border-gray-300" />
+          <div 
+            className="flex items-center gap-3 cursor-pointer group p-2 -ml-2 rounded-xl hover:bg-white hover:shadow-sm transition-all select-none"
+            onClick={() => setShowProfile(true)}
+            title="Modifica Profilo"
+          >
+            <div className="relative">
+                <img src={userData.photoURL || '/default-avatar.png'} className="w-12 h-12 rounded-full border border-gray-300 object-cover" />
+                <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow border border-gray-200 text-gray-500">
+                    <Edit2 size={10} />
+                </div>
+            </div>
             <div>
-              <h1 className="font-bold text-lg leading-tight">{user.displayName}</h1>
-              <span className="text-xs text-gray-500 uppercase font-bold tracking-wider">{userData.role}</span>
+              <h1 className="font-bold text-lg leading-tight flex items-center gap-2">
+                 {userData.displayName}
+              </h1>
+              {userData.role !== 'matricola' && userData.teamName && (
+                  <span className="text-xs font-bold text-purple-600 block">{userData.teamName}</span>
+              )}
+              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block mt-0.5">{userData.role}</span>
             </div>
           </div>
           <button onClick={handleLogout} className="p-2 bg-white rounded-xl shadow-sm border border-gray-200 text-gray-500 hover:text-red-600 transition-colors"><LogOut size={18} /></button>
@@ -96,16 +109,10 @@ export default function Home() {
         {/* --- VISTA ADMIN / UTENTE --- */}
         {userData.role !== 'matricola' && (
           <>
-            {/* Tab 1: SQUADRA & MERCATO */}
-            {activeTab === 'squadra' && (
-              <SquadraMercato currentUser={userData} onUpdate={refreshUserData} />
-            )}
-            
-            {/* Tab 2: CLASSIFICHE */}
+            {activeTab === 'squadra' && <SquadraMercato currentUser={userData} onUpdate={refreshUserData} />}
             {activeTab === 'classifiche' && <Classifiche />}
             
-            {/* Tab 3: ADMIN SFIDE (Solo se Admin) */}
-           {activeTab === 'admin-sfide' && userData.role === 'admin' && (
+            {activeTab === 'admin-sfide' && userData.role === 'admin' && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <AdminRequests />
                 <div className="border-t border-gray-200"></div>
@@ -113,24 +120,14 @@ export default function Home() {
               </div>
             )}
 
-            {/* NUOVO TAB 4: STORICO MATRICOLE */}
             {activeTab === 'admin-matricole' && userData.role === 'admin' && (
                <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                   <AdminMatricolaHistory />
                </div>
             )}
 
-            {/* Tab 5: ADMIN UTENTI */}
             {activeTab === 'admin-utenti' && userData.role === 'admin' && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <AdminUserList />
-              </div>
-            )}
-
-            {/* Tab 4: ADMIN UTENTI (Solo se Admin) */}
-            {activeTab === 'admin-utenti' && userData.role === 'admin' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                {/* Qui gestisci ruoli e punti manuali */}
                 <AdminUserList />
               </div>
             )}
@@ -138,6 +135,15 @@ export default function Home() {
         )}
 
       </div>
+
+      {/* MODALE EDIT PROFILE */}
+      {showProfile && user && (
+          <EditProfile 
+              user={userData} 
+              onClose={() => setShowProfile(false)} 
+              onUpdate={refreshUserData} 
+          />
+      )}
       
       {/* NAVIGATION BAR */}
       {userData.role === 'matricola' ? (
