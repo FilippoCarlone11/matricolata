@@ -137,7 +137,7 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
         ) : <div className="text-center py-6 text-gray-400 text-sm">Squadra vuota.</div>}
       </div>
 
-      {/* LISTA SVINCOLATI */}
+{/* LISTA SVINCOLATI */}
       <div>
         <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><UserPlus className="text-green-600"/> Lista Matricole</h3>
         <input type="text" placeholder="Cerca..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="w-full mb-4 p-2 border rounded-xl text-sm" />
@@ -147,6 +147,11 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
             <div key={m.id} className="bg-white border rounded-xl p-3 flex justify-between items-center shadow-sm">
                 <div className="flex items-center gap-3">
                     <img src={m.photoURL || '/default-avatar.png'} className="w-10 h-10 rounded-full" />
+                    {/* --- HO RIMESSO NOME E PUNTI QUI SOTTO --- */}
+                    <div>
+                        <p className="font-bold text-sm">{m.displayName}</p>
+                       
+                    </div>
                 </div>
                 <button 
                     onClick={() => handleRecruit(m)} 
