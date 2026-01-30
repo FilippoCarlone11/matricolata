@@ -9,14 +9,29 @@ export default function BonusMalusList({ currentUser }) {
   const [view, setView] = useState('bonus'); // 'bonus' | 'malus' | 'hidden'
   const [loading, setLoading] = useState(true);
 
-  // Verifica permessi: Se currentUser esiste e NON è matricola, può vedere i segreti
-  const canSeeHidden = currentUser && currentUser.role !== 'matricola';
+  // DEBUG: Verifica se currentUser arriva correttamente
+  useEffect(() => {
+    console.log("BonusMalusList - CurrentUser:", currentUser);
+    console.log("BonusMalusList - Role:", currentUser?.role);
+  }, [currentUser]);
+
+  // Se currentUser non è ancora caricato, mostriamo un caricamento per evitare crash
+  if (!currentUser) return <div className="p-4 text-center">Caricamento utente...</div>;
+
+  // Verifica permessi
+  const canSeeHidden = currentUser.role !== 'matricola';
 
   useEffect(() => {
     const load = async () => {
-      const data = await getChallenges();
-      setChallenges(data);
-      setLoading(false);
+      try {
+        const data = await getChallenges();
+        console.log("Sfide caricate dal DB:", data.length); // DEBUG
+        setChallenges(data);
+      } catch (error) {
+        console.error("Errore caricamento sfide:", error);
+      } finally {
+        setLoading(false);
+      }
     };
     load();
   }, []);
@@ -25,29 +40,28 @@ export default function BonusMalusList({ currentUser }) {
   const filteredList = challenges.filter(c => {
     // 1. GESTIONE TAB "SEGRETI"
     if (view === 'hidden') {
-        // Se siamo nel tab segreti, mostriamo SOLO i nascosti (sia bonus che malus)
+        // Mostra SOLO i nascosti
         return c.hidden === true;
     }
 
     // 2. GESTIONE TAB NORMALI (Bonus/Malus)
-    // Prima regola: Se è nascosto, NON mostrarlo qui (va nel tab segreti)
-    if (c.hidden) return false;
+    // Se è nascosto, NON mostrarlo qui
+    if (c.hidden === true) return false;
 
-    // Seconda regola: Filtra per tipo
+    // Filtra per tipo
     if (view === 'bonus') return c.punti > 0;
     if (view === 'malus') return c.punti < 0;
 
     return false;
   });
 
-  // RAGGRUPPAMENTO VISIVO (One Shot vs Daily) all'interno del tab corrente
+  // RAGGRUPPAMENTO VISIVO
   const oneShotItems = filteredList.filter(c => c.type !== 'daily');
   const dailyItems = filteredList.filter(c => c.type === 'daily');
 
-  // Funzione per renderizzare la singola card
+  // Funzione Rendering Card
   const renderCard = (c) => {
     const isBonus = c.punti > 0;
-    // Colori dinamici: Verde se bonus, Rosso se malus (anche dentro i segreti)
     const borderColor = isBonus ? 'border-green-100' : 'border-red-100';
     const textColor = isBonus ? 'text-green-900' : 'text-red-900';
     const badgeBg = isBonus ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
@@ -55,10 +69,14 @@ export default function BonusMalusList({ currentUser }) {
     return (
       <div key={c.id} className={`p-4 rounded-xl border flex items-center justify-between bg-white shadow-sm mb-2 ${borderColor}`}>
         <div className="flex items-center gap-3">
-            <span className="text-2xl filter drop-shadow-sm">{c.icon}</span>
+            <span className="text-2xl filter drop-shadow-sm">{c.icon || '❓'}</span>
             <div>
                 <h3 className={`font-bold leading-tight ${textColor}`}>{c.titolo}</h3>
-                {c.hidden && <span className="text-[9px] bg-gray-800 text-white px-1.5 py-0.5 rounded mt-1 inline-block flex w-fit items-center gap-1"><EyeOff size={8}/> NASCOSTO</span>}
+                {c.hidden && (
+                    <span className="text-[9px] bg-gray-800 text-white px-1.5 py-0.5 rounded mt-1 inline-flex items-center gap-1">
+                        <EyeOff size={8}/> NASCOSTO
+                    </span>
+                )}
             </div>
         </div>
         <div className={`px-3 py-1.5 rounded-lg font-black text-sm ${badgeBg}`}>
@@ -76,7 +94,7 @@ export default function BonusMalusList({ currentUser }) {
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Lista Ufficiale</h2>
         <p className="text-gray-500 text-sm">
-            {view === 'hidden' ? 'Bonus e Malus Segreti' : 'Regolamento Bonus & Malus'}
+            {view === 'hidden' ? 'Archivio Segreto' : 'Regolamento Bonus & Malus'}
         </p>
       </div>
 
@@ -111,7 +129,7 @@ export default function BonusMalusList({ currentUser }) {
         
         {filteredList.length === 0 && (
             <div className="text-center py-12 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">
-                Nessun elemento presente in questa sezione.
+                Nessun elemento trovato in "{view}".
             </div>
         )}
 
