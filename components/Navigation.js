@@ -17,7 +17,7 @@ export default function Navigation({ activeTab, setActiveTab, role }) {
 
   // 2. TAB AMMINISTRATIVI
   if (role === 'admin' || role === 'super-admin') {
-    tabs.push({ id: 'admin-sfide', label: 'Gest. Sfide', icon: Target });
+    tabs.push({ id: 'admin-sfide', label: 'Bonus/Malus', icon: Target });
     tabs.push({ id: 'admin-matricole', label: 'Matricole', icon: BookOpen });
   }
 

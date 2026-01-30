@@ -7,9 +7,8 @@ import Login from '@/components/Login';
 import ChallengeList from '@/components/ChallengeList';
 import StoricoPunti from '@/components/StoricoPunti';
 import AdminUserList from '@/components/AdminUserList';
-import AdminRequests from '@/components/AdminRequests';
-import AdminChallenges from '@/components/AdminChallenges';
 import AdminMatricolaHistory from '@/components/AdminMatricolaHistory';
+import AdminSfideManager from '@/components/AdminSfideManager'; // <--- NUOVO IMPORT
 import EditProfile from '@/components/EditProfile'; 
 import Navigation from '@/components/Navigation';
 import SquadraMercato from '@/components/SquadraMercato';
@@ -90,7 +89,6 @@ export default function Home() {
         {/* --- VISTA MATRICOLA --- */}
         {userData.role === 'matricola' && (
           <>
-            {/* 1. HOME: Punteggio + Ricerca + Pending */}
             {activeTab === 'home' && (
               <>
                 <div className="bg-gradient-to-br from-red-600 to-orange-500 rounded-3xl p-6 text-white mb-6 shadow-xl relative overflow-hidden">
@@ -105,11 +103,7 @@ export default function Home() {
                 <ChallengeList currentUser={userData} />
               </>
             )}
-
-            {/* 2. LISTA: Elenco completo Bonus/Malus */}
             {activeTab === 'lista' && <BonusMalusList />} 
-
-            {/* 3. PERCORSO: Storico Punti (SPOSTATO QUI) */}
             {activeTab === 'percorso' && <StoricoPunti currentUser={userData} />}
           </>
         )}
@@ -120,11 +114,10 @@ export default function Home() {
             {activeTab === 'squadra' && <SquadraMercato currentUser={userData} onUpdate={refreshUserData} />}
             {activeTab === 'classifiche' && <Classifiche />}
             
+            {/* GESTIONE SFIDE (ORA CON IL MANAGER) */}
             {activeTab === 'admin-sfide' && isAdminOrSuper && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <AdminRequests />
-                <div className="border-t border-gray-200"></div>
-                <AdminChallenges />
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <AdminSfideManager />
               </div>
             )}
 
