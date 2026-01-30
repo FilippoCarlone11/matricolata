@@ -43,7 +43,7 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
 
   const handleRelease = async (mid, name) => {
     if (!checkMarket()) return;
-    if (!confirm(`Svincolare ${name}?`)) return;
+    //if (!confirm(`Svincolare ${name}?`)) return;
     try { 
       await releaseMatricola(currentUser.id, mid); 
       setMySquadDetails(prev => prev.filter(p => p.id !== mid));
@@ -55,7 +55,7 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
   const handleRecruit = async (m) => {
     if (!checkMarket()) return;
     if (isSquadFull) { alert("Rosa piena (max 3)."); return; }
-    if (!confirm(`Ingaggiare ${m.displayName}?`)) return;
+    //if (!confirm(`Ingaggiare ${m.displayName}?`)) return;
     try {
       await recruitMatricola(currentUser.id, m.id);
       setMatricole(prev => prev.filter(x => x.id !== m.id));

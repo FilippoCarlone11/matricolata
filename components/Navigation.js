@@ -4,24 +4,27 @@ import { Users, Trophy, Target, Shield, BookOpen, List, Flag } from 'lucide-reac
 export default function Navigation({ activeTab, setActiveTab, role }) {
   const tabs = [];
 
-  // 1. TAB BASE (Matricola)
+  // TAB COMUNI (Tutti vedono la lista bonus/malus ora)
+  // Però l'ordine e il contesto cambiano leggermente.
+  
   if (role === 'matricola') {
     tabs.push({ id: 'home', label: 'Home', icon: Target });
-    tabs.push({ id: 'lista', label: 'Bonus/Malus', icon: List });
-    tabs.push({ id: 'percorso', label: 'Percorso', icon: Flag }); // NUOVO TAB
+    tabs.push({ id: 'lista', label: 'Listone', icon: List });
+    tabs.push({ id: 'percorso', label: 'Percorso', icon: Flag });
   } else {
     // Utente, Admin, Super Admin
     tabs.push({ id: 'squadra', label: 'Squadra', icon: Users });
     tabs.push({ id: 'classifiche', label: 'Classifiche', icon: Trophy });
+    tabs.push({ id: 'lista', label: 'Bonus', icon: List }); // <--- AGGIUNTO QUI
   }
 
-  // 2. TAB AMMINISTRATIVI
+  // TAB AMMINISTRATIVI
   if (role === 'admin' || role === 'super-admin') {
-    tabs.push({ id: 'admin-sfide', label: 'Bonus/Malus', icon: Target });
+    tabs.push({ id: 'admin-sfide', label: 'Gest. Sfide', icon: Target });
     tabs.push({ id: 'admin-matricole', label: 'Matricole', icon: BookOpen });
   }
 
-  // 3. TAB SUPER ESCLUSIVI
+  // TAB SUPER ESCLUSIVI
   if (role === 'super-admin') {
     tabs.push({ id: 'admin-utenti', label: 'Gest. Utenti', icon: Shield });
   }

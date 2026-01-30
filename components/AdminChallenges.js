@@ -6,12 +6,14 @@ import { Trash2, Plus, Zap, Eye, EyeOff, Smile } from 'lucide-react';
 
 export default function AdminChallenges() {
   const [challenges, setChallenges] = useState([]);
-  // Default icon: Coppa
   const [form, setForm] = useState({ titolo: '', punti: '', icon: '🏆', type: 'oneshot', hidden: false });
+  
+  // NUOVO STATO PER GLI ERRORI
+  const [errors, setErrors] = useState({ titolo: false, punti: false });
+  
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('bonus_visible'); 
 
-  // EMOJI PREDEFINITE PER VELOCIZZARE
   const PRESET_EMOJIS = [
     '🏆', '⚽', '🍺', '🍹', '🍕', '🧹', '💀', '💩', 
     '🤡', '🤮', '💋', '💊', '🧠', '👀', '💃', '🍆',
@@ -28,7 +30,21 @@ export default function AdminChallenges() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!form.titolo || !form.punti) return;
+    
+    // 1. VALIDAZIONE
+    const newErrors = {
+        titolo: !form.titolo, // Vero se vuoto
+        punti: !form.punti      // Vero se vuoto
+    };
+
+    // Se c'è almeno un errore...
+    if (newErrors.titolo || newErrors.punti) {
+        setErrors(newErrors); // Mostra il rosso
+        return; // Ferma tutto
+    }
+
+    // Se arrivo qui, resetto gli errori
+    setErrors({ titolo: false, punti: false });
     
     let isHidden = form.hidden;
     if (activeFilter.includes('hidden')) isHidden = true;
@@ -37,10 +53,10 @@ export default function AdminChallenges() {
       ...form, 
       punti: parseInt(form.punti), 
       hidden: isHidden,
-      // La categoria la togliamo o la lasciamo vuota/generica se serve al DB, 
-      // ma l'utente ora sceglie l'icona
       category: 'Custom' 
     });
+    
+    // Reset del form
     setForm({ titolo: '', punti: '', icon: '🏆', type: 'oneshot', hidden: false });
     loadChallenges();
   };
@@ -94,14 +110,32 @@ export default function AdminChallenges() {
         {/* RIGA 1: Titolo e Punti */}
         <div className="flex gap-2">
            <input 
-             type="text" placeholder="Titolo (es: Limone duro)" 
-             value={form.titolo} onChange={e => setForm({...form, titolo: e.target.value})}
-             className="flex-1 p-2 rounded-lg border text-sm focus:ring-2 focus:ring-blue-400 outline-none"
+             type="text" 
+             placeholder={errors.titolo ? "Titolo obbligatorio!" : "Titolo (es: Limone duro)"}
+             value={form.titolo} 
+             onChange={e => {
+                 setForm({...form, titolo: e.target.value});
+                 if(errors.titolo) setErrors({...errors, titolo: false}); // Rimuovi rosso mentre scrive
+             }}
+             className={`flex-1 p-2 rounded-lg border text-sm outline-none transition-all ${
+                 errors.titolo 
+                 ? 'border-red-500 ring-2 ring-red-200 bg-red-50 placeholder-red-400' 
+                 : 'border-gray-300 focus:ring-2 focus:ring-blue-400'
+             }`}
            />
            <input 
-             type="number" placeholder="Pt" 
-             value={form.punti} onChange={e => setForm({...form, punti: e.target.value})}
-             className="w-20 p-2 rounded-lg border text-sm font-bold text-center focus:ring-2 focus:ring-blue-400 outline-none"
+             type="number" 
+             placeholder="Pt" 
+             value={form.punti} 
+             onChange={e => {
+                 setForm({...form, punti: e.target.value});
+                 if(errors.punti) setErrors({...errors, punti: false}); // Rimuovi rosso mentre scrive
+             }}
+             className={`w-20 p-2 rounded-lg border text-sm font-bold text-center outline-none transition-all ${
+                 errors.punti 
+                 ? 'border-red-500 ring-2 ring-red-200 bg-red-50 placeholder-red-400' 
+                 : 'border-gray-300 focus:ring-2 focus:ring-blue-400'
+             }`}
            />
         </div>
 
@@ -109,7 +143,6 @@ export default function AdminChallenges() {
         <div>
             <label className="text-xs font-bold text-gray-500 mb-1 flex items-center gap-1"><Smile size={12}/> Scegli Icona</label>
             <div className="flex gap-2 items-center">
-                {/* Input Manuale Emoji */}
                 <input 
                     type="text" 
                     maxLength={2}
@@ -118,7 +151,6 @@ export default function AdminChallenges() {
                     className="w-12 h-12 text-2xl text-center border-2 border-blue-200 rounded-xl focus:border-blue-500 outline-none bg-white"
                 />
                 
-                {/* Lista Preset Scrollabile */}
                 <div className="flex-1 flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
                     {PRESET_EMOJIS.map(emoji => (
                         <button
@@ -155,7 +187,7 @@ export default function AdminChallenges() {
         </div>
       </form>
 
-      {/* FILTRI CATEGORIE (VISUALIZZAZIONE) */}
+      {/* FILTRI CATEGORIE */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
         <FilterButton id="bonus_visible" label="Bonus" icon={Plus} colorClass="bg-green-50 border-green-500 text-green-700" />
         <FilterButton id="malus_visible" label="Malus" icon={Trash2} colorClass="bg-red-50 border-red-500 text-red-700" />
