@@ -103,7 +103,7 @@ export default function Home() {
                 <ChallengeList currentUser={userData} />
               </>
             )}
-            {activeTab === 'lista' && <BonusMalusList />} 
+            {activeTab === 'lista' && <BonusMalusList currentUser={userData} />}
             {activeTab === 'percorso' && <StoricoPunti currentUser={userData} />}
           </>
         )}
