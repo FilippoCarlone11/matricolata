@@ -90,6 +90,7 @@ export default function Home() {
         {/* --- VISTA MATRICOLA --- */}
         {userData.role === 'matricola' && (
           <>
+            {/* 1. HOME: Punteggio + Ricerca + Pending */}
             {activeTab === 'home' && (
               <>
                 <div className="bg-gradient-to-br from-red-600 to-orange-500 rounded-3xl p-6 text-white mb-6 shadow-xl relative overflow-hidden">
@@ -102,10 +103,14 @@ export default function Home() {
                   </div>
                 </div>
                 <ChallengeList currentUser={userData} />
-                <StoricoPunti currentUser={userData} />
               </>
             )}
+
+            {/* 2. LISTA: Elenco completo Bonus/Malus */}
             {activeTab === 'lista' && <BonusMalusList />} 
+
+            {/* 3. PERCORSO: Storico Punti (SPOSTATO QUI) */}
+            {activeTab === 'percorso' && <StoricoPunti currentUser={userData} />}
           </>
         )}
 
@@ -115,7 +120,6 @@ export default function Home() {
             {activeTab === 'squadra' && <SquadraMercato currentUser={userData} onUpdate={refreshUserData} />}
             {activeTab === 'classifiche' && <Classifiche />}
             
-            {/* TAB AMMINISTRATIVI (Admin & Super Admin) */}
             {activeTab === 'admin-sfide' && isAdminOrSuper && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <AdminRequests />
@@ -130,7 +134,6 @@ export default function Home() {
                </div>
             )}
 
-            {/* TAB ESCLUSIVO SUPER ADMIN */}
             {activeTab === 'admin-utenti' && isSuperAdmin && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <AdminUserList currentUser={userData} />

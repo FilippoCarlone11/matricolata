@@ -1,26 +1,27 @@
 'use client';
-import { Users, Trophy, Target, Shield, BookOpen, List } from 'lucide-react';
+import { Users, Trophy, Target, Shield, BookOpen, List, Flag } from 'lucide-react';
 
 export default function Navigation({ activeTab, setActiveTab, role }) {
   const tabs = [];
 
-  // 1. TAB BASE (Matricola vs Altri)
+  // 1. TAB BASE (Matricola)
   if (role === 'matricola') {
     tabs.push({ id: 'home', label: 'Home', icon: Target });
-    tabs.push({ id: 'lista', label: 'Bonus/Malus', icon: List });
+    tabs.push({ id: 'lista', label: 'Listone', icon: List });
+    tabs.push({ id: 'percorso', label: 'Percorso', icon: Flag }); // NUOVO TAB
   } else {
     // Utente, Admin, Super Admin
     tabs.push({ id: 'squadra', label: 'Squadra', icon: Users });
     tabs.push({ id: 'classifiche', label: 'Classifiche', icon: Trophy });
   }
 
-  // 2. TAB AMMINISTRATIVI (Admin & Super Admin)
+  // 2. TAB AMMINISTRATIVI
   if (role === 'admin' || role === 'super-admin') {
     tabs.push({ id: 'admin-sfide', label: 'Gest. Sfide', icon: Target });
     tabs.push({ id: 'admin-matricole', label: 'Matricole', icon: BookOpen });
   }
 
-  // 3. TAB SUPER ESCLUSIVI (Solo Super Admin)
+  // 3. TAB SUPER ESCLUSIVI
   if (role === 'super-admin') {
     tabs.push({ id: 'admin-utenti', label: 'Gest. Utenti', icon: Shield });
   }
@@ -32,7 +33,6 @@ export default function Navigation({ activeTab, setActiveTab, role }) {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           
-          // Colore diverso per Admin tabs
           const isAdminTab = tab.id.startsWith('admin');
           const activeColor = isAdminTab ? 'text-blue-600' : 'text-red-600';
 
