@@ -170,7 +170,7 @@ export default function AdminMatricolaHistory() {
           <h2 className="font-bold text-xl text-purple-900 leading-tight">{selectedUser.displayName}</h2>
           <div className="flex gap-2 mt-1">
              <span className="text-[10px] font-bold bg-white text-gray-600 px-2 py-0.5 rounded border border-purple-100">
-                In {squadCounts[selectedUser.id] || 0} rose
+                In {squadCounts[selectedUser.id] || 0} squadre
              </span>
           </div>
         </div>

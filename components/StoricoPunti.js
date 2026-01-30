@@ -62,7 +62,7 @@ export default function StoricoPunti({ currentUser }) {
                             {isMalus && <span className="text-[10px] bg-red-600 text-white px-1.5 rounded uppercase">Malus</span>}
                         </h3>
                         <p className="text-xs text-gray-500 mt-0.5">
-                          {item.manual ? (isMalus ? 'Penalità Admin' : 'Bonus Admin') : 'Completato'}
+                          {item.manual ? (isMalus ? 'Malus dagli admin' : 'Bonus dagli admin') : 'Completato'}
                         </p>
                       </div>
                       <div className={`px-3 py-1.5 rounded-xl font-black text-sm border ${pointColor}`}>

@@ -60,7 +60,7 @@ export default function Classifiche() {
               <h3 className="font-bold text-gray-900 truncate text-lg leading-tight">{title}</h3>
               <p className="text-xs text-gray-500 truncate flex items-center gap-1">
                 {isFanta && item.teamName && <User size={10} />} {subTitle}
-                {isClickable && <span className="text-[9px] bg-blue-100 text-blue-600 px-1.5 rounded ml-2">Vedi Rosa</span>}
+                {isClickable && <span className="text-[9px] bg-blue-100 text-blue-600 px-1.5 rounded ml-2">Vedi Squadra</span>}
               </p>
             </div>
             <div className="text-right pl-2">

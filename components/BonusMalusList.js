@@ -71,8 +71,8 @@ export default function BonusMalusList({ currentUser }) {
     <div>
       {/* Intestazione */}
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Lista Ufficiale</h2>
-        <p className="text-gray-500 text-sm">Regolamento Bonus & Malus</p>
+        <h2 className="text-2xl font-bold text-gray-900">Regolamento Bonus & Malus</h2>
+        <p className="text-gray-500 text-sm"></p>
       </div>
 
       {/* Switcher Tab (SOLO 2 ORA) */}
@@ -106,7 +106,7 @@ export default function BonusMalusList({ currentUser }) {
         {visibleOneShot.length > 0 && (
             <div className="mb-4">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2 px-1">
-                    <Zap size={14} /> Una Tantum
+                    <Zap size={14} /> Bonus Speciali
                 </h3>
                 {visibleOneShot.map(c => renderCard(c, false))}
             </div>
@@ -124,7 +124,7 @@ export default function BonusMalusList({ currentUser }) {
         {visibleDaily.length > 0 && (
             <div className="mb-6">
                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2 px-1">
-                    <Repeat size={14} /> Giornalieri
+                    <Repeat size={14} /> Bonus Giornalieri
                  </h3>
                 {visibleDaily.map(c => renderCard(c, false))}
             </div>
@@ -140,7 +140,7 @@ export default function BonusMalusList({ currentUser }) {
                 <div className="flex items-center gap-3 mb-4">
                     <div className="h-0.5 bg-gray-800 flex-1 rounded-full"></div>
                     <span className="text-[10px] font-black text-gray-800 uppercase bg-gray-200 px-3 py-1 rounded-full flex items-center gap-1">
-                        <Lock size={10} /> Area Segreta
+                        <Lock size={10} /> Nascosti
                     </span>
                     <div className="h-0.5 bg-gray-800 flex-1 rounded-full"></div>
                 </div>

@@ -54,7 +54,7 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
 
   const handleRecruit = async (m) => {
     if (!checkMarket()) return;
-    if (isSquadFull) { alert("Rosa piena (max 3)."); return; }
+    if (isSquadFull) { alert("Squadra piena (max 3)."); return; }
     //if (!confirm(`Ingaggiare ${m.displayName}?`)) return;
     try {
       await recruitMatricola(currentUser.id, m.id);
@@ -86,7 +86,7 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
       {/* HEADER ROSA */}
       <div className="bg-white rounded-2xl shadow border border-gray-200 p-5">
         <div className="flex justify-between items-center mb-4 border-b pb-2">
-            <h2 className="text-xl font-bold flex items-center gap-2"><Users className="text-blue-600"/> La Tua Rosa ({currentSquadSize}/3)</h2>
+            <h2 className="text-xl font-bold flex items-center gap-2"><Users className="text-blue-600"/> La Tua Squadra ({currentSquadSize}/3)</h2>
             
             {/* SOLO SUPER ADMIN APRE/CHIUDE */}
             {isSuperAdmin ? (
@@ -134,7 +134,7 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
                 );
             })}
             </div>
-        ) : <div className="text-center py-6 text-gray-400 text-sm">Rosa vuota.</div>}
+        ) : <div className="text-center py-6 text-gray-400 text-sm">Squadra vuota.</div>}
       </div>
 
       {/* LISTA SVINCOLATI */}
@@ -147,7 +147,6 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
             <div key={m.id} className="bg-white border rounded-xl p-3 flex justify-between items-center shadow-sm">
                 <div className="flex items-center gap-3">
                     <img src={m.photoURL || '/default-avatar.png'} className="w-10 h-10 rounded-full" />
-                    <div><p className="font-bold text-sm">{m.displayName}</p><span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded">Pt: {m.punti||0}</span></div>
                 </div>
                 <button 
                     onClick={() => handleRecruit(m)} 
