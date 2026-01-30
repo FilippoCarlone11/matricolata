@@ -31,11 +31,9 @@ export default function Login() {
             <Trophy size={40} className="text-white" />
           </div>
           <h1 className="text-5xl font-black mb-3 bg-gradient-to-r from-red-600 to-orange-500 bg-clip-text text-transparent">
-            Fanta-Collegio
+            Matricolata.it
           </h1>
-          <p className="text-gray-600 text-lg">
-            Competi, guadagna punti, costruisci la tua squadra vincente
-          </p>
+
         </div>
 
         {/* Login Card */}
@@ -87,21 +85,6 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Features */}
-        <div className="mt-8 grid grid-cols-3 gap-4 text-center">
-          <div>
-            <div className="text-3xl mb-2">🎯</div>
-            <div className="text-sm text-gray-600 font-medium">Sfide</div>
-          </div>
-          <div>
-            <div className="text-3xl mb-2">👥</div>
-            <div className="text-sm text-gray-600 font-medium">Squadre</div>
-          </div>
-          <div>
-            <div className="text-3xl mb-2">🏆</div>
-            <div className="text-sm text-gray-600 font-medium">Classifiche</div>
-          </div>
-        </div>
       </div>
     </div>
   );
