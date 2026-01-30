@@ -123,7 +123,7 @@ export default function ChallengeList({ currentUser }) {
                         <span className="text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1 bg-green-100 text-green-700">
                             <Plus size={10}/> {c.punti} pt
                         </span>
-                        {c.type === 'daily' && <span className="text-[10px] text-purple-600 bg-purple-50 px-1 rounded font-bold border border-purple-100">DAILY</span>}
+                        {c.type === 'daily' && <span className="text-[10px] text-purple-600 bg-purple-50 px-1 rounded font-bold border border-purple-100">GIORNALIERO</span>}
                     </div>
                     </div>
                 </div>

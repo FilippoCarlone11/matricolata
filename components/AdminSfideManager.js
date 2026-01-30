@@ -13,7 +13,6 @@ export default function AdminSfideManager() {
       
       {/* HEADER + SWITCHER */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-4 px-2">Gestione Area Sfide</h1>
         
         {/* SLIDER / SWITCHER */}
         <div className="bg-gray-200 p-1.5 rounded-xl flex relative">

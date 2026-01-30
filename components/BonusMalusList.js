@@ -65,7 +65,7 @@ export default function BonusMalusList() {
                         <div>
                             <h3 className={`font-bold leading-tight ${view === 'bonus' ? 'text-green-900' : 'text-red-900'}`}>{c.titolo}</h3>
                             <div className="flex gap-2 mt-1">
-                                {c.type === 'daily' && <span className="text-[10px] uppercase font-bold text-purple-500 border border-purple-200 px-1 rounded bg-white">Daily</span>}
+                                {c.type === 'daily' && <span className="text-[10px] uppercase font-bold text-purple-500 border border-purple-200 px-1 rounded bg-white">Giornaliero</span>}
                             </div>
                         </div>
                     </div>
