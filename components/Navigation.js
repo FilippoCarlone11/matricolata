@@ -4,27 +4,32 @@ import { Users, Trophy, Target, Shield, BookOpen, List, Flag } from 'lucide-reac
 export default function Navigation({ activeTab, setActiveTab, role }) {
   const tabs = [];
 
-  // TAB COMUNI (Tutti vedono la lista bonus/malus ora)
-  // Però l'ordine e il contesto cambiano leggermente.
-  
+  // CASO 1: MATRICOLA
   if (role === 'matricola') {
     tabs.push({ id: 'home', label: 'Home', icon: Target });
     tabs.push({ id: 'lista', label: 'Listone', icon: List });
     tabs.push({ id: 'percorso', label: 'Percorso', icon: Flag });
-  } else {
-    // Utente, Admin, Super Admin
+  } 
+  
+  // CASO 2: ALTRI (Utente, Admin, Super Admin)
+  else {
     tabs.push({ id: 'squadra', label: 'Squadra', icon: Users });
     tabs.push({ id: 'classifiche', label: 'Classifiche', icon: Trophy });
-    tabs.push({ id: 'lista', label: 'Bonus', icon: List }); // <--- AGGIUNTO QUI
+
+    // CASO 2b: SOLO UTENTE SEMPLICE (Non Admin) vede la lista consultativa
+    // Gli admin hanno la gestione interna, inutile duplicare
+    if (role === 'utente') {
+        tabs.push({ id: 'lista', label: 'Bonus', icon: List });
+    }
   }
 
-  // TAB AMMINISTRATIVI
+  // CASO 3: TAB AMMINISTRATIVI (Solo Admin/SuperAdmin)
   if (role === 'admin' || role === 'super-admin') {
     tabs.push({ id: 'admin-sfide', label: 'Gest. Sfide', icon: Target });
     tabs.push({ id: 'admin-matricole', label: 'Matricole', icon: BookOpen });
   }
 
-  // TAB SUPER ESCLUSIVI
+  // CASO 4: TAB SUPER ADMIN
   if (role === 'super-admin') {
     tabs.push({ id: 'admin-utenti', label: 'Gest. Utenti', icon: Shield });
   }
