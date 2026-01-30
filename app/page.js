@@ -14,7 +14,7 @@ import EditProfile from '@/components/EditProfile';
 import Navigation from '@/components/Navigation';
 import SquadraMercato from '@/components/SquadraMercato';
 import Classifiche from '@/components/Classifiche';
-import BonusMalusList from '@/components/BonusMalusList'; // <--- IMPORTA QUESTO
+import BonusMalusList from '@/components/BonusMalusList'; 
 import { Trophy, LogOut, Edit2 } from 'lucide-react';
 
 export default function Home() {
@@ -54,6 +54,9 @@ export default function Home() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
   if (!user || !userData) return <Login />;
+
+  const isSuperAdmin = userData.role === 'super-admin';
+  const isAdminOrSuper = userData.role === 'admin' || isSuperAdmin;
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
@@ -102,7 +105,6 @@ export default function Home() {
                 <StoricoPunti currentUser={userData} />
               </>
             )}
-            {/* NUOVO TAB: LISTA BONUS/MALUS AL POSTO DI CLASSIFICHE */}
             {activeTab === 'lista' && <BonusMalusList />} 
           </>
         )}
@@ -113,7 +115,8 @@ export default function Home() {
             {activeTab === 'squadra' && <SquadraMercato currentUser={userData} onUpdate={refreshUserData} />}
             {activeTab === 'classifiche' && <Classifiche />}
             
-            {activeTab === 'admin-sfide' && userData.role === 'admin' && (
+            {/* TAB AMMINISTRATIVI (Admin & Super Admin) */}
+            {activeTab === 'admin-sfide' && isAdminOrSuper && (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <AdminRequests />
                 <div className="border-t border-gray-200"></div>
@@ -121,16 +124,17 @@ export default function Home() {
               </div>
             )}
 
-            {activeTab === 'admin-matricole' && userData.role === 'admin' && (
+            {activeTab === 'admin-matricole' && isAdminOrSuper && (
                <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                   <AdminMatricolaHistory />
                </div>
             )}
 
-            {activeTab === 'admin-utenti' && (userData.role === 'admin' || userData.role === 'super-admin') && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <AdminUserList currentUser={userData} />
-            </div>
+            {/* TAB ESCLUSIVO SUPER ADMIN */}
+            {activeTab === 'admin-utenti' && isSuperAdmin && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <AdminUserList currentUser={userData} />
+              </div>
             )}
           </>
         )}

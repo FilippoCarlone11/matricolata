@@ -1,15 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { onUsersChange, updateUserRole, manualAddPoints, deleteUserDocument } from '@/lib/firebase'; 
-import { Users, Shield, UserCheck, Crown, PlusCircle, Trash2, Key } from 'lucide-react'; 
+import { onUsersChange, updateUserRole, deleteUserDocument } from '@/lib/firebase'; 
+import { Users, UserCheck, Crown, Trash2, Key } from 'lucide-react'; 
 
-export default function AdminUserList({ currentUser }) { // <--- RICEVE currentUser
+export default function AdminUserList({ currentUser }) { 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingUser, setUpdatingUser] = useState(null);
 
-  // Determina se chi sta guardando è un Super Admin
   const isSuperAdmin = currentUser?.role === 'super-admin';
 
   useEffect(() => {
@@ -26,13 +25,6 @@ export default function AdminUserList({ currentUser }) { // <--- RICEVE currentU
     try { await updateUserRole(userId, newRole); } 
     catch (error) { alert('Errore aggiornamento ruolo'); } 
     finally { setUpdatingUser(null); }
-  };
-
-  const handleManualPoints = async (user) => {
-    const pointsStr = prompt(`Punti per ${user.displayName}?`, "10");
-    if (!pointsStr) return;
-    const reason = prompt("Motivo?", "Manuale");
-    try { await manualAddPoints(user.id, parseInt(pointsStr), reason); } catch (e) { alert(e); }
   };
 
   const handleDeleteUser = async (user) => {
@@ -54,10 +46,9 @@ export default function AdminUserList({ currentUser }) { // <--- RICEVE currentU
 
   return (
     <div className="space-y-3">
-      {/* Disclaimer per Admin normali */}
       {!isSuperAdmin && (
-          <div className="bg-yellow-50 text-yellow-800 p-3 rounded-xl text-xs mb-4 border border-yellow-200">
-              Sei un Admin. Puoi gestire i punti ma non puoi modificare i ruoli o eliminare utenti (richiede Super Admin).
+          <div className="bg-red-50 text-red-800 p-3 rounded-xl text-xs mb-4 border border-red-200 font-bold text-center">
+              Accesso Negato. Solo i Super Admin possono vedere questa pagina.
           </div>
       )}
 
@@ -71,25 +62,24 @@ export default function AdminUserList({ currentUser }) { // <--- RICEVE currentU
                       <h3 className="font-bold text-lg text-gray-900 truncate">{user.displayName}</h3>
                       {getRoleIcon(user.role)}
                   </div>
-                  <div className="flex gap-2">
-                      <button onClick={() => handleManualPoints(user)} className="p-2 bg-green-50 text-green-600 rounded-full hover:bg-green-100 border border-green-200"><PlusCircle size={20} /></button>
-                      
-                      {/* SOLO SUPER ADMIN PUO' ELIMINARE */}
-                      {isSuperAdmin && user.role !== 'super-admin' && (
-                          <button onClick={() => handleDeleteUser(user)} className="p-2 bg-red-50 text-red-600 rounded-full hover:bg-red-100 border border-red-200"><Trash2 size={20} /></button>
-                      )}
-                  </div>
+                  
+                  {/* SOLO TASTO ELIMINA (SOLO SUPER ADMIN) */}
+                  {isSuperAdmin && user.role !== 'super-admin' && (
+                      <button onClick={() => handleDeleteUser(user)} className="p-2 bg-red-50 text-red-600 rounded-full hover:bg-red-100 border border-red-200 transition-colors" title="Elimina Utente">
+                        <Trash2 size={20} />
+                      </button>
+                  )}
               </div>
               <p className="text-xs text-gray-500 truncate">{user.email}</p>
               {user.teamName && <p className="text-xs font-bold text-purple-600 mt-1">Team: {user.teamName}</p>}
-              <div className="flex items-center gap-2 mt-2">
+              
+              <div className="mt-2">
                 <span className={`px-3 py-1 rounded-full text-[10px] font-bold border uppercase bg-gray-100`}>{user.role}</span>
-                <span className="text-sm text-gray-500 font-medium">• {user.punti || 0} punti</span>
               </div>
             </div>
           </div>
           
-          {/* SOLO SUPER ADMIN PUO' CAMBIARE RUOLI */}
+          {/* CONTROLLI RUOLO (SOLO SUPER ADMIN) */}
           {isSuperAdmin && (
             <div className="flex gap-2 pt-2 border-t border-gray-100">
                 {['matricola', 'utente', 'admin', 'super-admin'].map(role => (

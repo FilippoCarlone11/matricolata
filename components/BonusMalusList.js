@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getChallenges } from '@/lib/firebase';
-import { ThumbsUp, ThumbsDown, Plus, Minus, Search } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, EyeOff } from 'lucide-react';
 
 export default function BonusMalusList() {
   const [challenges, setChallenges] = useState([]);
@@ -18,8 +18,14 @@ export default function BonusMalusList() {
     load();
   }, []);
 
-  // Filtriamo in base al Tab
-  const list = challenges.filter(c => view === 'bonus' ? c.punti > 0 : c.punti < 0);
+  // FILTRO: 
+  // 1. Tipo (Bonus > 0 / Malus < 0)
+  // 2. Visibilità (!hidden) -> LE MATRICOLE NON VEDONO QUELLI NASCOSTI
+  const list = challenges.filter(c => {
+    const isCorrectType = view === 'bonus' ? c.punti > 0 : c.punti < 0;
+    const isVisible = !c.hidden; 
+    return isCorrectType && isVisible;
+  });
 
   if (loading) return <div className="text-center py-12">Caricamento lista...</div>;
 
@@ -28,7 +34,7 @@ export default function BonusMalusList() {
       {/* Intestazione */}
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Lista Ufficiale</h2>
-        <p className="text-gray-500 text-sm">Consulta tutti i bonus e malus previsti</p>
+        <p className="text-gray-500 text-sm">Consulta tutti i bonus e malus pubblici</p>
       </div>
 
       {/* Switcher Tab */}
@@ -50,7 +56,7 @@ export default function BonusMalusList() {
       {/* Lista */}
       <div className="space-y-3">
         {list.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">Nessun {view} presente.</div>
+            <div className="text-center py-12 text-gray-400">Nessun {view} pubblico presente.</div>
         ) : (
             list.map(c => (
                 <div key={c.id} className={`p-4 rounded-xl border flex items-center justify-between ${view === 'bonus' ? 'bg-green-50/50 border-green-100' : 'bg-red-50/50 border-red-100'}`}>
