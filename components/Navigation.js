@@ -7,7 +7,7 @@ export default function Navigation({ activeTab, setActiveTab, role }) {
   // 1. TAB BASE (Matricola)
   if (role === 'matricola') {
     tabs.push({ id: 'home', label: 'Home', icon: Target });
-    tabs.push({ id: 'lista', label: 'Listone', icon: List });
+    tabs.push({ id: 'lista', label: 'Bonus/Malus', icon: List });
     tabs.push({ id: 'percorso', label: 'Percorso', icon: Flag }); // NUOVO TAB
   } else {
     // Utente, Admin, Super Admin
