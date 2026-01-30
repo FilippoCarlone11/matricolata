@@ -1,18 +1,26 @@
 'use client';
-import { Users, Trophy, Target, Shield, BookOpen } from 'lucide-react';
+import { Users, Trophy, Target, Shield, BookOpen, List } from 'lucide-react'; // Aggiunto List
 
 export default function Navigation({ activeTab, setActiveTab, role }) {
-  // Tab base per tutti (Utenti e Admin)
-  const tabs = [
-    { id: 'squadra', label: 'Squadra', icon: Users },
-    { id: 'classifiche', label: 'Classifiche', icon: Trophy },
-  ];
+  const tabs = [];
 
-  // Se è ADMIN, aggiungiamo DUE tab separati
+  // SE MATRICOLA: Home (Sfide) + Lista (Bonus/Malus)
+  if (role === 'matricola') {
+    tabs.push({ id: 'home', label: 'Home', icon: Target });
+    tabs.push({ id: 'lista', label: 'Bonus/Malus', icon: List }); // NUOVO TAB
+  } 
+  // SE ALTRI (Admin/Utente): Squadra + Classifiche
+  else {
+    tabs.push({ id: 'squadra', label: 'Squadra', icon: Users });
+    tabs.push({ id: 'classifiche', label: 'Classifiche', icon: Trophy });
+  }
+
+  // SE ADMIN: Aggiungi i tab extra
   if (role === 'admin') {
-    tabs.push({ id: 'admin-sfide', label: 'Sfide', icon: Target });
-    tabs.push({ id: 'admin-matricole', label: 'Matricole', icon: BookOpen }); // NUOVO TAB
-    tabs.push({ id: 'admin-utenti', label: 'Utenti', icon: Shield });}
+    tabs.push({ id: 'admin-sfide', label: 'Gest. Sfide', icon: Target });
+    tabs.push({ id: 'admin-matricole', label: 'Matricole', icon: BookOpen });
+    tabs.push({ id: 'admin-utenti', label: 'Gest. Utenti', icon: Shield });
+  }
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-50 pb-safe">
@@ -20,8 +28,7 @@ export default function Navigation({ activeTab, setActiveTab, role }) {
         {tabs.map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
-          
-          // Calcolo colore: Rosso per i tab normali, Blu/Viola per quelli Admin per distinguerli
+          // Colore diverso per Admin tabs
           const activeColor = tab.id.startsWith('admin') ? 'text-blue-600' : 'text-red-600';
 
           return (

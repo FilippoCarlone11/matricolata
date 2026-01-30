@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getAllUsers, getApprovedRequestsByUser, revokeApprovedRequest, manualAddPoints, getChallenges, assignExistingChallenge } from '@/lib/firebase';
-import { Search, Calendar, Trash2, PlusCircle, ArrowLeft, Frown, Zap } from 'lucide-react';
+import { Search, Calendar, Trash2, PlusCircle, ArrowLeft, Frown, Zap, EyeOff } from 'lucide-react';
 
 export default function AdminMatricolaHistory() {
   const [users, setUsers] = useState([]);
@@ -11,7 +11,6 @@ export default function AdminMatricolaHistory() {
   const [groupedHistory, setGroupedHistory] = useState({});
   const [loading, setLoading] = useState(true);
   
-  // Stati per assegnazione bonus esistente
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [availableChallenges, setAvailableChallenges] = useState([]);
 
@@ -51,7 +50,6 @@ export default function AdminMatricolaHistory() {
     } catch (e) { alert("Errore: " + e); }
   };
 
-  // ASSEGNAZIONE MANUALE (Punti liberi)
   const handleAddManual = async () => {
     const pointsStr = prompt("Punti (+ o -):", "10");
     if (!pointsStr) return;
@@ -62,7 +60,6 @@ export default function AdminMatricolaHistory() {
     } catch (e) { alert(e); }
   };
 
-  // ASSEGNAZIONE DA LISTA
   const openAssignModal = async () => {
     const challs = await getChallenges();
     setAvailableChallenges(challs);
@@ -72,6 +69,7 @@ export default function AdminMatricolaHistory() {
   const handleAssignExisting = async (challenge) => {
     if(!confirm(`Assegnare "${challenge.titolo}" (${challenge.punti} pt) a ${selectedUser.displayName}?`)) return;
     try {
+        // Passiamo anche il TITOLO per risolvere il problema del "nome strano"
         await assignExistingChallenge(selectedUser.id, challenge.id, challenge.punti, challenge.titolo);
         setShowAssignModal(false);
         loadUserHistory(selectedUser.id);
@@ -80,7 +78,6 @@ export default function AdminMatricolaHistory() {
 
   const filteredUsers = users.filter(u => u.displayName.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  // --- VISTA 1: RICERCA ---
   if (!selectedUser) {
     return (
       <div className="space-y-4">
@@ -107,7 +104,6 @@ export default function AdminMatricolaHistory() {
     );
   }
 
-  // --- VISTA 2: DETTAGLIO ---
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4 bg-purple-50 p-4 rounded-2xl border border-purple-100">
@@ -119,10 +115,9 @@ export default function AdminMatricolaHistory() {
         </div>
       </div>
       
-      {/* TOOLBAR AZIONI */}
       <div className="flex gap-2">
           <button onClick={openAssignModal} className="flex-1 bg-blue-600 text-white p-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow hover:bg-blue-700">
-            <Zap size={16}/> Assegna Bonus/Malus
+            <Zap size={16}/> Assegna Bonus
           </button>
           <button onClick={handleAddManual} className="flex-1 bg-gray-800 text-white p-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow hover:bg-gray-900">
             <PlusCircle size={16}/> Manuale
@@ -138,6 +133,7 @@ export default function AdminMatricolaHistory() {
               <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2"><Calendar size={14}/> {date}</h3>
               <div className="space-y-2">
                 {groupedHistory[date].map(item => {
+                   // Malus Logic: se punti negativi, TUTTO ROSSO
                    const isMalus = item.puntiRichiesti < 0;
                    return (
                     <div key={item.id} className={`bg-white p-3 rounded-xl border flex justify-between items-center shadow-sm ${isMalus ? 'border-red-100 bg-red-50/30' : 'border-gray-200'}`}>
@@ -158,18 +154,25 @@ export default function AdminMatricolaHistory() {
         )}
       </div>
 
-      {/* MODALE LISTA BONUS/MALUS */}
       {showAssignModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowAssignModal(false)}>
             <div className="bg-white w-full max-w-sm max-h-[80vh] rounded-2xl p-4 overflow-y-auto" onClick={e => e.stopPropagation()}>
-                <h3 className="font-bold text-lg mb-4">Scegli cosa assegnare</h3>
+                <h3 className="font-bold text-lg mb-4">Scegli Bonus/Malus</h3>
                 <div className="space-y-2">
-                    {availableChallenges.map(c => (
+                    {availableChallenges.map(c => {
+                        const isMalus = c.punti < 0;
+                        return (
                         <button key={c.id} onClick={() => handleAssignExisting(c)} className="w-full flex items-center justify-between p-3 border rounded-xl hover:bg-gray-50 text-left">
-                            <span className="font-medium text-sm">{c.titolo}</span>
-                            <span className={`font-bold text-xs ${c.punti < 0 ? 'text-red-600' : 'text-green-600'}`}>{c.punti > 0 ? '+' : ''}{c.punti}</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-lg">{c.icon}</span>
+                                <div>
+                                    <span className="font-medium text-sm block">{c.titolo}</span>
+                                    {c.hidden && <span className="text-[10px] bg-gray-200 text-gray-600 px-1 rounded flex items-center gap-1 w-fit"><EyeOff size={8}/> Nascosto</span>}
+                                </div>
+                            </div>
+                            <span className={`font-bold text-xs ${isMalus ? 'text-red-600' : 'text-green-600'}`}>{c.punti > 0 ? '+' : ''}{c.punti}</span>
                         </button>
-                    ))}
+                    )})}
                 </div>
                 <button onClick={() => setShowAssignModal(false)} className="w-full mt-4 p-3 bg-gray-100 rounded-xl font-bold text-sm">Annulla</button>
             </div>

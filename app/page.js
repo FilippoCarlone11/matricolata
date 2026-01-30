@@ -14,7 +14,8 @@ import EditProfile from '@/components/EditProfile';
 import Navigation from '@/components/Navigation';
 import SquadraMercato from '@/components/SquadraMercato';
 import Classifiche from '@/components/Classifiche';
-import { Trophy, LogOut, Target, Users, Edit2 } from 'lucide-react';
+import BonusMalusList from '@/components/BonusMalusList'; // <--- IMPORTA QUESTO
+import { Trophy, LogOut, Edit2 } from 'lucide-react';
 
 export default function Home() {
   const [user, setUser] = useState(null);
@@ -58,12 +59,11 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
       <div className="max-w-lg mx-auto p-4 pb-28">
         
-        {/* HEADER CLICCABILE */}
+        {/* HEADER */}
         <div className="flex items-center justify-between mb-6">
           <div 
             className="flex items-center gap-3 cursor-pointer group p-2 -ml-2 rounded-xl hover:bg-white hover:shadow-sm transition-all select-none"
             onClick={() => setShowProfile(true)}
-            title="Modifica Profilo"
           >
             <div className="relative">
                 <img src={userData.photoURL || '/default-avatar.png'} className="w-12 h-12 rounded-full border border-gray-300 object-cover" />
@@ -102,7 +102,8 @@ export default function Home() {
                 <StoricoPunti currentUser={userData} />
               </>
             )}
-            {activeTab === 'classifiche' && <Classifiche />}
+            {/* NUOVO TAB: LISTA BONUS/MALUS AL POSTO DI CLASSIFICHE */}
+            {activeTab === 'lista' && <BonusMalusList />} 
           </>
         )}
 
@@ -126,10 +127,10 @@ export default function Home() {
                </div>
             )}
 
-            {activeTab === 'admin-utenti' && userData.role === 'admin' && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <AdminUserList />
-              </div>
+            {activeTab === 'admin-utenti' && (userData.role === 'admin' || userData.role === 'super-admin') && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <AdminUserList currentUser={userData} />
+            </div>
             )}
           </>
         )}
@@ -138,28 +139,11 @@ export default function Home() {
 
       {/* MODALE EDIT PROFILE */}
       {showProfile && user && (
-          <EditProfile 
-              user={userData} 
-              onClose={() => setShowProfile(false)} 
-              onUpdate={refreshUserData} 
-          />
+          <EditProfile user={userData} onClose={() => setShowProfile(false)} onUpdate={refreshUserData} />
       )}
       
       {/* NAVIGATION BAR */}
-      {userData.role === 'matricola' ? (
-         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-50 pb-safe">
-            <div className="max-w-lg mx-auto flex">
-              <button onClick={() => setActiveTab('home')} className={`flex-1 py-3 flex flex-col items-center gap-1 ${activeTab === 'home' ? 'text-red-600' : 'text-gray-400'}`}>
-                <Trophy size={24} /><span className="text-[10px] font-bold">Sfide</span>
-              </button>
-              <button onClick={() => setActiveTab('classifiche')} className={`flex-1 py-3 flex flex-col items-center gap-1 ${activeTab === 'classifiche' ? 'text-red-600' : 'text-gray-400'}`}>
-                <Trophy size={24} /><span className="text-[10px] font-bold">Classifiche</span>
-              </button>
-            </div>
-         </div>
-      ) : (
-        <Navigation activeTab={activeTab} setActiveTab={setActiveTab} role={userData.role} />
-      )}
+      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} role={userData.role} />
     </div>
   );
 }

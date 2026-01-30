@@ -2,12 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { onUsersChange, updateUserRole, manualAddPoints, deleteUserDocument } from '@/lib/firebase'; 
-import { Users, Shield, UserCheck, Crown, PlusCircle, Trash2 } from 'lucide-react'; 
+import { Users, Shield, UserCheck, Crown, PlusCircle, Trash2, Key } from 'lucide-react'; 
 
-export default function AdminUserList() {
+export default function AdminUserList({ currentUser }) { // <--- RICEVE currentUser
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingUser, setUpdatingUser] = useState(null);
+
+  // Determina se chi sta guardando è un Super Admin
+  const isSuperAdmin = currentUser?.role === 'super-admin';
 
   useEffect(() => {
     const unsubscribe = onUsersChange((updatedUsers) => {
@@ -18,6 +21,7 @@ export default function AdminUserList() {
   }, []);
 
   const handleRoleChange = async (userId, newRole) => {
+    if (!isSuperAdmin) return;
     setUpdatingUser(userId);
     try { await updateUserRole(userId, newRole); } 
     catch (error) { alert('Errore aggiornamento ruolo'); } 
@@ -32,12 +36,14 @@ export default function AdminUserList() {
   };
 
   const handleDeleteUser = async (user) => {
+    if (!isSuperAdmin) return;
     if (prompt(`Per eliminare ${user.displayName} scrivi ELIMINA:`) !== "ELIMINA") return;
     try { await deleteUserDocument(user.id); alert("Utente eliminato."); } catch (e) { alert(e); }
   };
 
   const getRoleIcon = (role) => {
     switch (role) {
+      case 'super-admin': return <Key size={20} className="text-yellow-600" />;
       case 'admin': return <Crown size={20} className="text-purple-600" />;
       case 'utente': return <UserCheck size={20} className="text-blue-600" />;
       default: return <Users size={20} className="text-gray-600" />;
@@ -48,6 +54,13 @@ export default function AdminUserList() {
 
   return (
     <div className="space-y-3">
+      {/* Disclaimer per Admin normali */}
+      {!isSuperAdmin && (
+          <div className="bg-yellow-50 text-yellow-800 p-3 rounded-xl text-xs mb-4 border border-yellow-200">
+              Sei un Admin. Puoi gestire i punti ma non puoi modificare i ruoli o eliminare utenti (richiede Super Admin).
+          </div>
+      )}
+
       {users.map(user => (
         <div key={user.id} className="bg-white rounded-2xl p-5 shadow-md border border-gray-200">
           <div className="flex items-start gap-4 mb-4">
@@ -60,7 +73,9 @@ export default function AdminUserList() {
                   </div>
                   <div className="flex gap-2">
                       <button onClick={() => handleManualPoints(user)} className="p-2 bg-green-50 text-green-600 rounded-full hover:bg-green-100 border border-green-200"><PlusCircle size={20} /></button>
-                      {user.role !== 'admin' && (
+                      
+                      {/* SOLO SUPER ADMIN PUO' ELIMINARE */}
+                      {isSuperAdmin && user.role !== 'super-admin' && (
                           <button onClick={() => handleDeleteUser(user)} className="p-2 bg-red-50 text-red-600 rounded-full hover:bg-red-100 border border-red-200"><Trash2 size={20} /></button>
                       )}
                   </div>
@@ -73,11 +88,15 @@ export default function AdminUserList() {
               </div>
             </div>
           </div>
-          <div className="flex gap-2 pt-2 border-t border-gray-100">
-            {['matricola', 'utente', 'admin'].map(role => (
-              <button key={role} onClick={() => handleRoleChange(user.id, role)} disabled={user.role === role || updatingUser === user.id} className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-[10px] uppercase transition-all ${user.role === role ? 'bg-gray-800 text-white' : 'bg-gray-50 text-gray-400 hover:bg-gray-200'} disabled:opacity-50`}>{role}</button>
-            ))}
-          </div>
+          
+          {/* SOLO SUPER ADMIN PUO' CAMBIARE RUOLI */}
+          {isSuperAdmin && (
+            <div className="flex gap-2 pt-2 border-t border-gray-100">
+                {['matricola', 'utente', 'admin', 'super-admin'].map(role => (
+                <button key={role} onClick={() => handleRoleChange(user.id, role)} disabled={user.role === role || updatingUser === user.id} className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-[10px] uppercase transition-all ${user.role === role ? 'bg-gray-800 text-white' : 'bg-gray-50 text-gray-400 hover:bg-gray-200'} disabled:opacity-50`}>{role === 'super-admin' ? 'S-ADM' : role}</button>
+                ))}
+            </div>
+          )}
         </div>
       ))}
     </div>

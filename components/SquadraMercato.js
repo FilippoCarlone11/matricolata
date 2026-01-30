@@ -11,7 +11,10 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const isAdmin = currentUser.role === 'admin';
+  // DEFINIZIONE RUOLI
+  const isSuperAdmin = currentUser.role === 'super-admin';
+  const isAdmin = currentUser.role === 'admin' || isSuperAdmin; // Admin include Super Admin per poteri minori
+  
   const currentSquadSize = currentUser.mySquad ? currentUser.mySquad.length : 0;
   const isSquadFull = currentSquadSize >= 3;
 
@@ -27,34 +30,25 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
     setLoading(false);
   };
 
-// Funzione helper per gestire il blocco
   const checkMarket = () => {
-    // Se il mercato è chiuso E NON SONO ADMIN, blocco tutto.
-    if (!marketOpen && !isAdmin) { 
-        alert("Il mercato è CHIUSO! Non puoi fare modifiche alla formazione."); 
-        return false; 
-    }
+    // Se mercato chiuso e NON sono Super Admin (nemmeno Admin semplice può forzare mercato per sé stesso se chiuso)
+    if (!marketOpen && !isSuperAdmin) { alert("Il mercato è CHIUSO!"); return false; }
     return true;
   };
 
   const handleSetCaptain = async (mid) => {
-    // CONTROLLO BLOCCO MERCATO QUI
     if (!checkMarket()) return;
-    
     try { await setSquadCaptain(currentUser.id, mid); onUpdate(); } catch (e) { alert(e); }
   };
-
-
 
   const handleRelease = async (mid, name) => {
     if (!checkMarket()) return;
     if (!confirm(`Svincolare ${name}?`)) return;
     try { 
       await releaseMatricola(currentUser.id, mid); 
-      // Aggiornamento locale rapido
       setMySquadDetails(prev => prev.filter(p => p.id !== mid));
       onUpdate(); 
-      loadAllData(); // Ricarica matricole per farla riapparire sotto
+      loadAllData(); 
     } catch (e) { alert(e); }
   };
 
@@ -64,7 +58,6 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
     if (!confirm(`Ingaggiare ${m.displayName}?`)) return;
     try {
       await recruitMatricola(currentUser.id, m.id);
-      // Rimuoviamo visivamente dalla lista sotto e aggiungiamo sopra
       setMatricole(prev => prev.filter(x => x.id !== m.id));
       setMySquadDetails(prev => [...prev, m]);
       onUpdate();
@@ -72,15 +65,13 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
   };
 
   const toggleStatus = async () => {
+    if (!isSuperAdmin) return;
     if (confirm(`Vuoi ${marketOpen ? 'CHIUDERE' : 'APRIRE'} il mercato?`)) {
       await toggleMarketStatus(!marketOpen);
       setMarketOpen(!marketOpen);
     }
   };
 
-  // --- FILTRO AVANZATO ---
-  // 1. Cerca per nome
-  // 2. NASCONDI quelli che ho già in squadra (currentUser.mySquad contiene gli ID)
   const filtered = matricole.filter(m => {
     const matchesName = m.displayName.toLowerCase().includes(searchTerm.toLowerCase());
     const alreadyOwn = currentUser.mySquad && currentUser.mySquad.includes(m.id);
@@ -95,8 +86,10 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
       {/* HEADER ROSA */}
       <div className="bg-white rounded-2xl shadow border border-gray-200 p-5">
         <div className="flex justify-between items-center mb-4 border-b pb-2">
-            <h2 className="text-xl font-bold flex items-center gap-2"><Users className="text-blue-600"/> La tua squadra ({currentSquadSize}/3)</h2>
-            {isAdmin ? (
+            <h2 className="text-xl font-bold flex items-center gap-2"><Users className="text-blue-600"/> La Tua Rosa ({currentSquadSize}/3)</h2>
+            
+            {/* SOLO SUPER ADMIN APRE/CHIUDE */}
+            {isSuperAdmin ? (
                 <button onClick={toggleStatus} className={`flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full ${marketOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                     {marketOpen ? <Unlock size={12}/> : <Lock size={12}/>} {marketOpen ? 'APERTO' : 'CHIUSO'}
                 </button>
@@ -129,11 +122,11 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
                     {/* BOTTONI CONDIZIONALI */}
                     <div className="flex gap-2">
                         {!isCaptain && (
-                            <button onClick={() => handleSetCaptain(player.id)} disabled={!marketOpen && !isAdmin} className={`p-1.5 rounded-lg border ${(!marketOpen && !isAdmin) ? 'bg-gray-100 text-gray-300' : 'bg-white text-gray-400 hover:text-yellow-500'}`}>
+                            <button onClick={() => handleSetCaptain(player.id)} disabled={!marketOpen && !isSuperAdmin} className={`p-1.5 rounded-lg border ${(!marketOpen && !isSuperAdmin) ? 'bg-gray-100 text-gray-300' : 'bg-white text-gray-400 hover:text-yellow-500'}`}>
                                 <Crown size={16} />
                             </button>
                         )}
-                        <button onClick={() => handleRelease(player.id, player.displayName)} disabled={!marketOpen && !isAdmin} className={`p-1.5 rounded-lg border ${(!marketOpen && !isAdmin) ? 'bg-gray-100 text-gray-300' : 'bg-white text-gray-400 hover:text-red-500'}`}>
+                        <button onClick={() => handleRelease(player.id, player.displayName)} disabled={!marketOpen && !isSuperAdmin} className={`p-1.5 rounded-lg border ${(!marketOpen && !isSuperAdmin) ? 'bg-gray-100 text-gray-300' : 'bg-white text-gray-400 hover:text-red-500'}`}>
                             <Trash2 size={16} />
                         </button>
                     </div>
@@ -158,14 +151,14 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
                 </div>
                 <button 
                     onClick={() => handleRecruit(m)} 
-                    disabled={isSquadFull || (!marketOpen && !isAdmin)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 ${isSquadFull || (!marketOpen && !isAdmin) ? 'bg-gray-100 text-gray-400' : 'bg-green-600 text-white'}`}
+                    disabled={isSquadFull || (!marketOpen && !isSuperAdmin)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 ${isSquadFull || (!marketOpen && !isSuperAdmin) ? 'bg-gray-100 text-gray-400' : 'bg-green-600 text-white'}`}
                 >
                     <UserPlus size={14} /> Prendi
                 </button>
             </div>
             ))}
-            {filtered.length === 0 && <p className="col-span-full text-center text-gray-400 text-sm py-4">Nessuna matricola trovata (o le hai già tutte in squadra!).</p>}
+            {filtered.length === 0 && <p className="col-span-full text-center text-gray-400 text-sm py-4">Nessuna matricola trovata.</p>}
         </div>
       </div>
     </div>
