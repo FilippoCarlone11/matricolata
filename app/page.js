@@ -114,6 +114,9 @@ export default function Home() {
             {activeTab === 'squadra' && <SquadraMercato currentUser={userData} onUpdate={refreshUserData} />}
             {activeTab === 'classifiche' && <Classifiche />}
             
+            {/* --- ECCO LA RIGA CHE MANCAVA --- */}
+            {activeTab === 'lista' && <BonusMalusList currentUser={userData} />} 
+
             {/* GESTIONE SFIDE (ORA CON IL MANAGER) */}
             {activeTab === 'admin-sfide' && isAdminOrSuper && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">

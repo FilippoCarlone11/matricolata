@@ -7,8 +7,8 @@ export default function Navigation({ activeTab, setActiveTab, role }) {
   // CASO 1: MATRICOLA
   if (role === 'matricola') {
     tabs.push({ id: 'home', label: 'Home', icon: Target });
-    tabs.push({ id: 'lista', label: 'Listone', icon: List });
     tabs.push({ id: 'percorso', label: 'Percorso', icon: Flag });
+    tabs.push({ id: 'lista', label: 'Bonus/Malus', icon: List });
   } 
   
   // CASO 2: ALTRI (Utente, Admin, Super Admin)
@@ -19,19 +19,19 @@ export default function Navigation({ activeTab, setActiveTab, role }) {
     // CASO 2b: SOLO UTENTE SEMPLICE (Non Admin) vede la lista consultativa
     // Gli admin hanno la gestione interna, inutile duplicare
     if (role === 'utente') {
-        tabs.push({ id: 'lista', label: 'Bonus', icon: List });
+        tabs.push({ id: 'lista', label: 'Bonus/Malus', icon: List });
     }
   }
 
   // CASO 3: TAB AMMINISTRATIVI (Solo Admin/SuperAdmin)
   if (role === 'admin' || role === 'super-admin') {
-    tabs.push({ id: 'admin-sfide', label: 'Gest. Sfide', icon: Target });
+    tabs.push({ id: 'admin-sfide', label: 'Bonus/Malus', icon: Target });
     tabs.push({ id: 'admin-matricole', label: 'Matricole', icon: BookOpen });
   }
 
   // CASO 4: TAB SUPER ADMIN
   if (role === 'super-admin') {
-    tabs.push({ id: 'admin-utenti', label: 'Gest. Utenti', icon: Shield });
+    tabs.push({ id: 'admin-utenti', label: 'Utenti', icon: Shield });
   }
 
   return (
