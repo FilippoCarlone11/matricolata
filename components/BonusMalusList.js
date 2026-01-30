@@ -2,79 +2,58 @@
 
 import { useState, useEffect } from 'react';
 import { getChallenges } from '@/lib/firebase';
-import { ThumbsUp, ThumbsDown, EyeOff, Zap, Repeat } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, EyeOff, Zap, Repeat, Lock } from 'lucide-react';
 
 export default function BonusMalusList({ currentUser }) {
   const [challenges, setChallenges] = useState([]);
-  const [view, setView] = useState('bonus'); // 'bonus' | 'malus' | 'hidden'
+  const [view, setView] = useState('bonus'); // 'bonus' | 'malus'
   const [loading, setLoading] = useState(true);
 
-  // DEBUG: Verifica se currentUser arriva correttamente
-  useEffect(() => {
-    console.log("BonusMalusList - CurrentUser:", currentUser);
-    console.log("BonusMalusList - Role:", currentUser?.role);
-  }, [currentUser]);
-
-  // Se currentUser non è ancora caricato, mostriamo un caricamento per evitare crash
-  if (!currentUser) return <div className="p-4 text-center">Caricamento utente...</div>;
-
-  // Verifica permessi
-  const canSeeHidden = currentUser.role !== 'matricola';
+  // Verifica permessi: Se currentUser esiste e NON è matricola, può vedere i segreti
+  const canSeeHidden = currentUser && currentUser.role !== 'matricola';
 
   useEffect(() => {
     const load = async () => {
-      try {
-        const data = await getChallenges();
-        console.log("Sfide caricate dal DB:", data.length); // DEBUG
-        setChallenges(data);
-      } catch (error) {
-        console.error("Errore caricamento sfide:", error);
-      } finally {
-        setLoading(false);
-      }
+      const data = await getChallenges();
+      setChallenges(data);
+      setLoading(false);
     };
     load();
   }, []);
 
-  // FILTRO LOGICO
-  const filteredList = challenges.filter(c => {
-    // 1. GESTIONE TAB "SEGRETI"
-    if (view === 'hidden') {
-        // Mostra SOLO i nascosti
-        return c.hidden === true;
-    }
-
-    // 2. GESTIONE TAB NORMALI (Bonus/Malus)
-    // Se è nascosto, NON mostrarlo qui
-    if (c.hidden === true) return false;
-
-    // Filtra per tipo
+  // 1. FILTRO BASE (Bonus vs Malus)
+  const currentTabItems = challenges.filter(c => {
     if (view === 'bonus') return c.punti > 0;
     if (view === 'malus') return c.punti < 0;
-
     return false;
   });
 
-  // RAGGRUPPAMENTO VISIVO
-  const oneShotItems = filteredList.filter(c => c.type !== 'daily');
-  const dailyItems = filteredList.filter(c => c.type === 'daily');
+  // 2. SEPARAZIONE VISIBILI / NASCOSTI
+  const visibleItems = currentTabItems.filter(c => !c.hidden);
+  const hiddenItems = currentTabItems.filter(c => c.hidden);
+
+  // 3. RAGGRUPPAMENTO VISIBILI (One Shot vs Daily)
+  const visibleOneShot = visibleItems.filter(c => c.type !== 'daily');
+  const visibleDaily = visibleItems.filter(c => c.type === 'daily');
 
   // Funzione Rendering Card
-  const renderCard = (c) => {
+  const renderCard = (c, isHiddenSection = false) => {
     const isBonus = c.punti > 0;
+    // Se siamo nella sezione nascosta, usiamo colori più scuri/grigi per differenziare, oppure manteniamo i colori standard
+    // Qui mantengo i colori standard ma aggiungo il badge evidente
     const borderColor = isBonus ? 'border-green-100' : 'border-red-100';
     const textColor = isBonus ? 'text-green-900' : 'text-red-900';
     const badgeBg = isBonus ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
 
     return (
-      <div key={c.id} className={`p-4 rounded-xl border flex items-center justify-between bg-white shadow-sm mb-2 ${borderColor}`}>
+      <div key={c.id} className={`p-4 rounded-xl border flex items-center justify-between bg-white shadow-sm mb-2 ${borderColor} ${isHiddenSection ? 'bg-gray-50' : ''}`}>
         <div className="flex items-center gap-3">
-            <span className="text-2xl filter drop-shadow-sm">{c.icon || '❓'}</span>
+            <span className="text-2xl filter drop-shadow-sm">{c.icon}</span>
             <div>
                 <h3 className={`font-bold leading-tight ${textColor}`}>{c.titolo}</h3>
-                {c.hidden && (
+                {isHiddenSection && (
                     <span className="text-[9px] bg-gray-800 text-white px-1.5 py-0.5 rounded mt-1 inline-flex items-center gap-1">
-                        <EyeOff size={8}/> NASCOSTO
+                        <EyeOff size={8}/> SEGRETO
                     </span>
                 )}
             </div>
@@ -93,12 +72,10 @@ export default function BonusMalusList({ currentUser }) {
       {/* Intestazione */}
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900">Lista Ufficiale</h2>
-        <p className="text-gray-500 text-sm">
-            {view === 'hidden' ? 'Archivio Segreto' : 'Regolamento Bonus & Malus'}
-        </p>
+        <p className="text-gray-500 text-sm">Regolamento Bonus & Malus</p>
       </div>
 
-      {/* Switcher Tab */}
+      {/* Switcher Tab (SOLO 2 ORA) */}
       <div className="bg-gray-200 p-1 rounded-xl mb-6 flex">
         <button 
           onClick={() => setView('bonus')}
@@ -112,55 +89,71 @@ export default function BonusMalusList({ currentUser }) {
         >
           <ThumbsDown size={18} /> Malus
         </button>
-        
-        {/* Tab Segreti (Visibile solo se NON matricola) */}
-        {canSeeHidden && (
-            <button 
-            onClick={() => setView('hidden')}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-bold flex justify-center items-center gap-2 transition-all ${view === 'hidden' ? 'bg-white shadow text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}
-            >
-            <EyeOff size={18} /> Segreti
-            </button>
-        )}
       </div>
 
-      {/* CONTENUTO LISTA */}
+      {/* CONTENUTO */}
       <div className="pb-10">
         
-        {filteredList.length === 0 && (
-            <div className="text-center py-12 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">
-                Nessun elemento trovato in "{view}".
+        {/* === PARTE PUBBLICA (Visibile a tutti) === */}
+        
+        {visibleItems.length === 0 && (
+             <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl mb-4">
+                Nessun elemento pubblico qui.
             </div>
         )}
 
-        {/* 1. SEZIONE ONE SHOT */}
-        {oneShotItems.length > 0 && (
+        {/* 1. One Shot Pubblici */}
+        {visibleOneShot.length > 0 && (
             <div className="mb-4">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2 px-1">
-                    <Zap size={14} /> Una Tantum (One Shot)
+                    <Zap size={14} /> Una Tantum
                 </h3>
-                {oneShotItems.map(renderCard)}
+                {visibleOneShot.map(c => renderCard(c, false))}
             </div>
         )}
 
-        {/* 2. DIVISORE (Solo se ci sono entrambi) */}
-        {oneShotItems.length > 0 && dailyItems.length > 0 && (
-            <div className="flex items-center gap-2 my-6 opacity-50">
-                <div className="h-px bg-gray-300 flex-1"></div>
-                <span className="text-[10px] font-bold text-gray-400 uppercase">Oppure</span>
-                <div className="h-px bg-gray-300 flex-1"></div>
+        {/* Divisore interno OneShot/Daily */}
+        {visibleOneShot.length > 0 && visibleDaily.length > 0 && (
+            <div className="flex items-center gap-2 my-6 opacity-30">
+                <div className="h-px bg-gray-400 flex-1"></div>
+                <div className="h-px bg-gray-400 flex-1"></div>
             </div>
         )}
 
-        {/* 3. SEZIONE DAILY */}
-        {dailyItems.length > 0 && (
-            <div>
+        {/* 2. Daily Pubblici */}
+        {visibleDaily.length > 0 && (
+            <div className="mb-6">
                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2 px-1">
-                    <Repeat size={14} /> Ripetibili (Daily)
+                    <Repeat size={14} /> Giornalieri
                  </h3>
-                {dailyItems.map(renderCard)}
+                {visibleDaily.map(c => renderCard(c, false))}
             </div>
         )}
+
+
+        {/* === PARTE SEGRETA (Visibile solo a Non-Matricole) === */}
+        
+        {canSeeHidden && hiddenItems.length > 0 && (
+            <div className="mt-8 animate-in fade-in slide-in-from-bottom-4">
+                
+                {/* Divisore Speciale Segreti */}
+                <div className="flex items-center gap-3 mb-4">
+                    <div className="h-0.5 bg-gray-800 flex-1 rounded-full"></div>
+                    <span className="text-[10px] font-black text-gray-800 uppercase bg-gray-200 px-3 py-1 rounded-full flex items-center gap-1">
+                        <Lock size={10} /> Area Segreta
+                    </span>
+                    <div className="h-0.5 bg-gray-800 flex-1 rounded-full"></div>
+                </div>
+
+                <div className="bg-gray-100 p-3 rounded-2xl border border-gray-200">
+                    <p className="text-center text-[10px] text-gray-500 mb-3">
+                        Questi elementi sono nascosti alle matricole.
+                    </p>
+                    {hiddenItems.map(c => renderCard(c, true))}
+                </div>
+            </div>
+        )}
+
       </div>
     </div>
   );
