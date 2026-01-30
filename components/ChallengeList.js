@@ -1,175 +1,129 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getChallenges, getUserRequests, createRequest } from '@/lib/firebase';
-import { getAvailableChallenges, getStatusBadge } from '@/lib/utils';
-import { Target, Zap, Calendar, CheckCircle } from 'lucide-react';
+import { getChallenges, createRequest, getUserRequests } from '@/lib/firebase';
+import { CheckCircle, Clock, XCircle, Send, Plus, Minus } from 'lucide-react';
 
 export default function ChallengeList({ currentUser }) {
   const [challenges, setChallenges] = useState([]);
-  const [userRequests, setUserRequests] = useState([]);
+  const [myRequests, setMyRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [requesting, setRequesting] = useState(null);
+  const [sending, setSending] = useState(null);
 
-  useEffect(() => {
-    loadData();
-  }, [currentUser]);
+  useEffect(() => { loadData(); }, [currentUser]);
 
   const loadData = async () => {
-    try {
-      const [challengesData, requestsData] = await Promise.all([
-        getChallenges(),
-        getUserRequests(currentUser.id)
-      ]);
-      
-      setChallenges(challengesData);
-      setUserRequests(requestsData);
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
-    }
+    const [challs, reqs] = await Promise.all([ getChallenges(), getUserRequests(currentUser.id) ]);
+    setChallenges(challs);
+    setMyRequests(reqs);
+    setLoading(false);
   };
 
-  const handleRequest = async (challenge) => {
-    setRequesting(challenge.id);
-    
+  const handleSendRequest = async (challenge) => {
+    if (!confirm(`Richiedere approvazione per: "${challenge.titolo}"?`)) return;
+    setSending(challenge.id);
     try {
       await createRequest(currentUser.id, challenge.id, challenge.punti);
-      // Reload requests
-      const updatedRequests = await getUserRequests(currentUser.id);
-      setUserRequests(updatedRequests);
-    } catch (error) {
-      console.error('Error creating request:', error);
-      alert('Errore durante la richiesta');
-    } finally {
-      setRequesting(null);
-    }
+      const newReqs = await getUserRequests(currentUser.id);
+      setMyRequests(newReqs);
+    } catch (e) { alert("Errore: " + e); } 
+    finally { setSending(null); }
   };
 
-  // Filter challenges based on user requests
-  const availableChallenges = getAvailableChallenges(challenges, userRequests);
-  
-  // Get requests with status for display
-  const challengesWithStatus = challenges.map(challenge => {
-    const request = userRequests.find(req => req.challengeId === challenge.id);
-    return {
-      ...challenge,
-      userRequest: request,
-      canRequest: availableChallenges.some(c => c.id === challenge.id)
-    };
-  });
+  // Funzione per capire lo stato
+  const getStatus = (challengeId, challengeType) => {
+    const reqs = myRequests.filter(r => r.challengeId === challengeId);
+    
+    // 1. Approvata?
+    const approved = reqs.find(r => r.status === 'approved');
+    if (approved) {
+        if (challengeType === 'daily') {
+            // FIX: Se è daily, controllo se è stata fatta OGGI
+            const today = new Date().toDateString();
+            const reqDate = approved.approvedAt?.toDate().toDateString();
+            if (reqDate === today) return 'done_today';
+            // Se la data è vecchia, return 'new' (implicito, perché non matcha 'done_today')
+        } else {
+            return 'done'; // One-shot fatta per sempre
+        }
+    }
 
-  if (loading) {
-    return (
-      <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
-      </div>
-    );
-  }
+    // 2. In attesa?
+    const pending = reqs.find(r => r.status === 'pending');
+    if (pending) return 'pending';
+
+    // 3. Rifiutata? (Se l'ultima è rifiutata e non ce ne sono altre pending)
+    const rejected = reqs.find(r => r.status === 'rejected');
+    if (rejected) return 'rejected'; // FIX: Permette di riprovare
+
+    return 'new';
+  };
+
+  if (loading) return <div className="text-center py-8">Caricamento...</div>;
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <Target size={28} className="text-red-600" />
-          Sfide Disponibili
-        </h2>
-        <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-medium">
-          {availableChallenges.length} attive
-        </span>
-      </div>
-
+    <div className="mb-8">
+      <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+        🎯 Bonus & Malus Disponibili
+      </h2>
+      
       <div className="space-y-3">
-        {challengesWithStatus.map(challenge => {
-          const badge = challenge.userRequest ? getStatusBadge(challenge.userRequest.status) : null;
-          
+        {challenges.map(c => {
+          const status = getStatus(c.id, c.type);
+          const isMalus = c.punti < 0;
+
+          let btnContent, btnClass, isDisabled;
+          switch(status) {
+            case 'done':
+            case 'done_today':
+                btnContent = <><CheckCircle size={18}/> Fatto</>;
+                btnClass = "bg-green-100 text-green-700 border-green-200";
+                isDisabled = true;
+                break;
+            case 'pending':
+                btnContent = <><Clock size={18}/> In attesa</>;
+                btnClass = "bg-yellow-100 text-yellow-700 border-yellow-200";
+                isDisabled = true;
+                break;
+            case 'rejected':
+                btnContent = <><XCircle size={18}/> Riprova</>;
+                btnClass = "bg-red-100 text-red-700 border-red-200 hover:bg-red-200";
+                isDisabled = false; 
+                break;
+            default: 
+                btnContent = <><Send size={18}/> Richiedi</>;
+                btnClass = "bg-blue-600 text-white hover:bg-blue-700 shadow-md";
+                isDisabled = false;
+          }
+
           return (
-            <div
-              key={challenge.id}
-              className={`bg-white rounded-2xl p-5 shadow-md border transition-all ${
-                challenge.canRequest
-                  ? 'border-gray-200 hover:shadow-lg'
-                  : 'border-gray-300 opacity-60'
-              }`}
-            >
-              <div className="flex items-start gap-4 mb-4">
-                <span className="text-4xl">{challenge.icon || '🎯'}</span>
-                
-                <div className="flex-1">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div>
-                      <h3 className="font-bold text-lg text-gray-900 mb-1">
-                        {challenge.titolo}
-                      </h3>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full">
-                          {challenge.categoria}
-                        </span>
-                        
-                        {/* Type Badge */}
-                        {challenge.type === 'daily' ? (
-                          <span className="flex items-center gap-1 text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
-                            <Calendar size={12} />
-                            Giornaliera
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-xs font-semibold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-200">
-                            <CheckCircle size={12} />
-                            One-Shot
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="bg-gradient-to-br from-red-500 to-orange-500 text-white px-4 py-2 rounded-xl font-black text-lg shadow-lg">
-                      +{challenge.punti}
-                    </div>
+            <div key={c.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{c.icon}</span>
+                <div>
+                  <h3 className={`font-bold leading-tight ${isMalus ? 'text-red-900' : 'text-gray-900'}`}>
+                    {c.titolo}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1 ${isMalus ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                        {isMalus ? <Minus size={10}/> : <Plus size={10}/>} {Math.abs(c.punti)} pt
+                    </span>
+                    {c.type === 'daily' && <span className="text-[10px] text-purple-600 bg-purple-50 px-1 rounded font-bold border border-purple-100">DAILY</span>}
                   </div>
                 </div>
               </div>
 
-              {/* Action Button or Status */}
-              {badge ? (
-                <div className="mt-3">
-                  <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold border ${badge.color}`}>
-                    {badge.label}
-                  </span>
-                </div>
-              ) : challenge.canRequest ? (
-                <button
-                  onClick={() => handleRequest(challenge)}
-                  disabled={requesting === challenge.id}
-                  className="w-full bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white py-3.5 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {requesting === challenge.id ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Zap size={20} />
-                      Richiedi Punti
-                    </>
-                  )}
-                </button>
-              ) : (
-                <div className="text-center py-2 text-gray-500 text-sm font-medium">
-                  {challenge.type === 'oneshot' 
-                    ? 'Già richiesta' 
-                    : 'Disponibile domani'
-                  }
-                </div>
-              )}
+              <button
+                onClick={() => !isDisabled && handleSendRequest(c)}
+                disabled={isDisabled || sending === c.id}
+                className={`px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1 transition-all ${btnClass} ${isDisabled ? 'opacity-80 cursor-not-allowed' : ''}`}
+              >
+                {sending === c.id ? '...' : btnContent}
+              </button>
             </div>
           );
         })}
-
-        {availableChallenges.length === 0 && (
-          <div className="text-center py-12 bg-gray-50 rounded-2xl">
-            <Target size={48} className="mx-auto text-gray-300 mb-3" />
-            <p className="text-gray-600 font-medium">Nessuna sfida disponibile al momento</p>
-            <p className="text-gray-400 text-sm mt-1">Torna domani per nuove sfide giornaliere</p>
-          </div>
-        )}
+        {challenges.length === 0 && <p className="text-gray-400 text-center py-4">Nessun bonus/malus attivo.</p>}
       </div>
     </div>
   );

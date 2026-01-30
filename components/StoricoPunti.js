@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getApprovedRequestsByUser } from '@/lib/firebase';
-import { Award, Calendar } from 'lucide-react';
+import { Award } from 'lucide-react';
 
 export default function StoricoPunti({ currentUser }) {
   const [groupedHistory, setGroupedHistory] = useState({});
@@ -11,18 +11,13 @@ export default function StoricoPunti({ currentUser }) {
   useEffect(() => {
     const loadHistory = async () => {
       const data = await getApprovedRequestsByUser(currentUser.id);
-      
-      // Raggruppa per data
       const grouped = data.reduce((acc, item) => {
         const dateObj = item.approvedAt?.toDate ? item.approvedAt.toDate() : new Date();
-        // Formato: Lunedì 24 Ottobre
         const dateStr = dateObj.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
-        
         if (!acc[dateStr]) acc[dateStr] = [];
         acc[dateStr].push(item);
         return acc;
       }, {});
-
       setGroupedHistory(grouped);
       setLoading(false);
     };
@@ -34,18 +29,17 @@ export default function StoricoPunti({ currentUser }) {
   return (
     <div className="mt-8 pb-12">
       <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2 mb-6">
-        <Award size={28} className="text-red-600" /> Il Tuo Percorso
+        <Award size={28} className="text-red-600" /> Il Tuo Storico
       </h2>
 
       {Object.keys(groupedHistory).length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-          <p className="text-gray-500">Nessuna sfida completata... ancora!</p>
+          <p className="text-gray-500">Nessuna attività registrata.</p>
         </div>
       ) : (
         <div className="space-y-8">
           {Object.keys(groupedHistory).map(date => (
             <div key={date} className="relative">
-              {/* Linea temporale */}
               <div className="absolute left-2.5 top-8 bottom-0 w-0.5 bg-gray-200"></div>
               
               <div className="flex items-center gap-2 mb-3">
@@ -54,19 +48,29 @@ export default function StoricoPunti({ currentUser }) {
               </div>
 
               <div className="pl-8 space-y-3">
-                {groupedHistory[date].map((item) => (
-                  <div key={item.id} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex justify-between items-center">
-                    <div>
-                      <h3 className="font-bold text-gray-900">{item.challengeName}</h3>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {item.manual ? 'Bonus Admin' : 'Sfida Completata'}
-                      </p>
+                {groupedHistory[date].map((item) => {
+                  // VISUALIZZAZIONE MALUS ROSSO
+                  const isMalus = item.puntiRichiesti < 0;
+                  const pointColor = isMalus ? 'bg-red-100 text-red-700 border-red-200' : 'bg-green-100 text-green-700 border-green-200';
+                  const titleColor = isMalus ? 'text-red-900' : 'text-gray-900';
+
+                  return (
+                    <div key={item.id} className={`bg-white border rounded-2xl p-4 shadow-sm flex justify-between items-center ${isMalus ? 'border-red-100 bg-red-50/50' : 'border-gray-100'}`}>
+                      <div>
+                        <h3 className={`font-bold ${titleColor} flex items-center gap-2`}>
+                            {item.challengeName}
+                            {isMalus && <span className="text-[10px] bg-red-600 text-white px-1.5 rounded uppercase">Malus</span>}
+                        </h3>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {item.manual ? (isMalus ? 'Penalità Admin' : 'Bonus Admin') : 'Completato'}
+                        </p>
+                      </div>
+                      <div className={`px-3 py-1.5 rounded-xl font-black text-sm border ${pointColor}`}>
+                        {item.puntiRichiesti > 0 ? '+' : ''}{item.puntiRichiesti}
+                      </div>
                     </div>
-                    <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white px-3 py-1.5 rounded-xl font-bold text-sm shadow-md">
-                      +{item.puntiRichiesti}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
