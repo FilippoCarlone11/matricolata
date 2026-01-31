@@ -167,8 +167,7 @@ export default function Home() {
           <EditProfile user={userData} onClose={() => setShowProfile(false)} onUpdate={refreshUserData} />
       )}
       
-      {/* GENERATORE ACCOUNT PER TEST */}
-      <AccountGenerator />
+      
 
       {/* NAVIGATION BAR */}
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} role={userData.role} />
