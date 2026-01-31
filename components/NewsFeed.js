@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getGlobalFeed } from '@/lib/firebase';
-import { Clock, Trophy, Frown, X, Camera, User, Hourglass, CheckCircle, ShieldAlert } from 'lucide-react';
+import { Clock, Trophy, Frown, X, Camera, User, Hourglass, CheckCircle, ShieldAlert, EyeOff } from 'lucide-react';
 
 export default function NewsFeed() {
   const [feed, setFeed] = useState([]);
@@ -16,7 +16,6 @@ export default function NewsFeed() {
   const loadFeed = async () => {
     try {
       const data = await getGlobalFeed();
-      // Mostriamo: Pending, Approved (sia manuali che richieste). Nascondiamo Rejected.
       const visibleFeed = data.filter(item => item.status !== 'rejected');
       setFeed(visibleFeed);
     } catch (e) {
@@ -57,20 +56,18 @@ export default function NewsFeed() {
         feed.map((item, index) => {
           const isMalus = item.puntiRichiesti < 0;
           const isPending = item.status === 'pending';
-          const isManual = item.manual === true; // Se true, è stato dato dall'admin direttamente
+          const isManual = item.manual === true;
           const isPhoto = !!item.photoProof;
+          const isHidden = item.isHidden === true; // NUOVO FLAG
           
-          // Calcolo Date per divisore
           const dateRef = item.createdAt || item.timestamp;
           const currentDateLabel = getDateLabel(dateRef);
-          
           const prevItem = feed[index-1];
           const prevDateRef = prevItem ? (prevItem.createdAt || prevItem.timestamp) : null;
           const prevDateLabel = index > 0 ? getDateLabel(prevDateRef) : null;
-          
           const showDivider = currentDateLabel !== prevDateLabel;
 
-          // Testi e Icone Dinamici
+          // LOGICA TESTI
           let statusLabel = "";
           let statusColor = "";
           let actionText = "";
@@ -80,11 +77,18 @@ export default function NewsFeed() {
               statusColor = "bg-yellow-100 text-yellow-700 border-yellow-200";
               actionText = "Ha inviato una richiesta:";
           } else if (isManual) {
-              statusLabel = "Admin"; // Assegnato d'ufficio
+              statusLabel = "Admin";
               statusColor = "bg-purple-100 text-purple-700 border-purple-200";
-              actionText = isMalus ? "Malus assegnato d'ufficio:" : "Bonus assegnato d'ufficio:";
+              
+              // *** NUOVO: LOGICA PER NASCOSTI ***
+              if (isHidden) {
+                  actionText = isMalus ? "Ha preso un Malus Nascosto:" : "Ha preso un Bonus Nascosto:";
+              } else {
+                  actionText = isMalus ? "Ha preso un Malus:" : "Ha preso un Bonus:";
+              }
+
           } else {
-              statusLabel = "Approvato"; // Richiesta utente accettata
+              statusLabel = "Approvato";
               statusColor = "bg-green-100 text-green-700 border-green-200";
               actionText = "Richiesta approvata:";
           }
@@ -92,7 +96,6 @@ export default function NewsFeed() {
           return (
             <div key={item.id}>
               
-              {/* DIVISORE GIORNI */}
               {showDivider && (
                 <div className="flex items-center justify-center my-6">
                     <div className="h-px bg-gray-200 w-12"></div>
@@ -103,13 +106,10 @@ export default function NewsFeed() {
                 </div>
               )}
 
-              {/* CARD */}
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500">
                 
-                {/* HEADER: Chi e Quando */}
                 <div className="p-3 flex items-center justify-between border-b border-gray-50 bg-gray-50/50">
                   <div className="flex items-center gap-3">
-                     {/* Avatar */}
                      <div className={`w-9 h-9 rounded-full flex items-center justify-center border bg-white ${isMalus ? 'border-red-200' : 'border-blue-200'}`}>
                         {item.userPhoto ? (
                           <img src={item.userPhoto} className="w-full h-full rounded-full object-cover" />
@@ -125,7 +125,6 @@ export default function NewsFeed() {
                      </div>
                   </div>
 
-                  {/* BOLLINO STATO */}
                   <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border ${statusColor}`}>
                       {isPending && <Hourglass size={10} />}
                       {!isPending && isManual && <ShieldAlert size={10} />}
@@ -134,14 +133,11 @@ export default function NewsFeed() {
                   </span>
                 </div>
 
-                {/* CONTENUTO */}
                 <div className="p-4">
-                   {/* Descrizione Azione */}
-                   <p className="text-gray-500 text-xs mb-1.5 uppercase tracking-wide font-bold">
-                      {actionText}
+                   <p className="text-gray-500 text-xs mb-1.5 uppercase tracking-wide font-bold flex items-center gap-1">
+                      {isHidden && isManual && <EyeOff size={12}/>} {actionText}
                    </p>
                    
-                   {/* Titolo Sfida e Punti */}
                    <div className="flex items-center justify-between">
                        <span className={`font-bold text-base leading-tight ${isMalus ? 'text-red-700' : 'text-gray-900'}`}>
                            {item.challengeName}
@@ -152,15 +148,9 @@ export default function NewsFeed() {
                    </div>
                 </div>
 
-                {/* FOTO PROVA (ECCI LA FOTO!) */}
                 {isPhoto && (
                   <div className="w-full bg-gray-100 relative group cursor-pointer border-t border-gray-100" onClick={() => setSelectedImage(item.photoProof)}>
-                      <img 
-                          src={item.photoProof} 
-                          className="w-full h-auto object-cover max-h-[400px] min-h-[200px]" 
-                          alt="Prova"
-                      />
-                      {/* Overlay Zoom Hint */}
+                      <img src={item.photoProof} className="w-full h-auto object-cover max-h-[400px] min-h-[200px]" alt="Prova"/>
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                           <div className="bg-black/70 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-2">
                              <Camera size={14} /> Ingrandisci
@@ -175,7 +165,6 @@ export default function NewsFeed() {
         })
       )}
 
-      {/* MODALE ZOOM IMMAGINE (FULLSCREEN) */}
       {selectedImage && (
         <div 
             className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-2 backdrop-blur-sm animate-in fade-in duration-200"
@@ -184,11 +173,7 @@ export default function NewsFeed() {
             <button className="absolute top-6 right-6 text-white/80 hover:text-white bg-white/10 p-3 rounded-full z-50">
                 <X size={24} />
             </button>
-            <img 
-                src={selectedImage} 
-                className="max-w-full max-h-full rounded-lg shadow-2xl object-contain"
-                onClick={(e) => e.stopPropagation()} 
-            />
+            <img src={selectedImage} className="max-w-full max-h-full rounded-lg shadow-2xl object-contain" onClick={(e) => e.stopPropagation()} />
         </div>
       )}
 
