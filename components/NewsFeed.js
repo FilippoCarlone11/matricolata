@@ -82,9 +82,9 @@ export default function NewsFeed() {
               
               // *** NUOVO: LOGICA PER NASCOSTI ***
               if (isHidden) {
-                  actionText = isMalus ? "Ha preso un Malus Nascosto:" : "Ha preso un Bonus Nascosto:";
+                  actionText = isMalus ? "Ha ottenuto un Malus Nascosto:" : "Ha ottenuto un Bonus Nascosto:";
               } else {
-                  actionText = isMalus ? "Ha preso un Malus:" : "Ha preso un Bonus:";
+                  actionText = isMalus ? "Ha ottenuto un Malus:" : "Ha ottenuto un Bonus:";
               }
 
           } else {
