@@ -8,19 +8,24 @@ import ChallengeList from '@/components/ChallengeList';
 import StoricoPunti from '@/components/StoricoPunti';
 import AdminUserList from '@/components/AdminUserList';
 import AdminMatricolaHistory from '@/components/AdminMatricolaHistory';
-import AdminSfideManager from '@/components/AdminSfideManager'; // <--- NUOVO IMPORT
+import AdminSfideManager from '@/components/AdminSfideManager'; 
 import EditProfile from '@/components/EditProfile'; 
 import Navigation from '@/components/Navigation';
 import SquadraMercato from '@/components/SquadraMercato';
 import Classifiche from '@/components/Classifiche';
 import BonusMalusList from '@/components/BonusMalusList'; 
+import NewsFeed from '@/components/NewsFeed'; 
+import AccountGenerator from '@/components/AccountGenerator'; // <--- GENERATORE TEST
 import { Trophy, LogOut, Edit2 } from 'lucide-react';
 
 export default function Home() {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('home');
+  
+  // Default 'feed' (Bacheca) all'avvio
+  const [activeTab, setActiveTab] = useState('feed'); 
+  
   const [showProfile, setShowProfile] = useState(false); 
 
   useEffect(() => {
@@ -29,8 +34,7 @@ export default function Home() {
         setUser(firebaseUser);
         const data = await getUserData(firebaseUser.uid);
         setUserData(data);
-        if (data.role === 'matricola') setActiveTab('home');
-        else setActiveTab('squadra');
+        // Non forziamo il tab qui per lasciare libertà all'utente se ricarica
       } else {
         setUser(null);
         setUserData(null);
@@ -86,6 +90,9 @@ export default function Home() {
           <button onClick={handleLogout} className="p-2 bg-white rounded-xl shadow-sm border border-gray-200 text-gray-500 hover:text-red-600 transition-colors"><LogOut size={18} /></button>
         </div>
 
+        {/* --- FEED (VISIBILE A TUTTI) --- */}
+        {activeTab === 'feed' && <NewsFeed />}
+
         {/* --- VISTA MATRICOLA --- */}
         {userData.role === 'matricola' && (
           <>
@@ -113,11 +120,9 @@ export default function Home() {
           <>
             {activeTab === 'squadra' && <SquadraMercato currentUser={userData} onUpdate={refreshUserData} />}
             {activeTab === 'classifiche' && <Classifiche />}
-            
-            {/* --- ECCO LA RIGA CHE MANCAVA --- */}
             {activeTab === 'lista' && <BonusMalusList currentUser={userData} />} 
 
-            {/* GESTIONE SFIDE (ORA CON IL MANAGER) */}
+            {/* GESTIONE SFIDE */}
             {activeTab === 'admin-sfide' && isAdminOrSuper && (
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <AdminSfideManager />
@@ -145,6 +150,7 @@ export default function Home() {
           <EditProfile user={userData} onClose={() => setShowProfile(false)} onUpdate={refreshUserData} />
       )}
       
+
       {/* NAVIGATION BAR */}
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} role={userData.role} />
     </div>

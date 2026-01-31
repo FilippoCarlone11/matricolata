@@ -2,15 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { createChallenge, getChallenges, deleteChallenge } from '@/lib/firebase';
-import { Trash2, Plus, Zap, Eye, EyeOff, Smile } from 'lucide-react';
+import { Trash2, Plus, Zap, Eye, EyeOff, Smile, Repeat, Target, AlignLeft } from 'lucide-react';
 
 export default function AdminChallenges() {
   const [challenges, setChallenges] = useState([]);
-  const [form, setForm] = useState({ titolo: '', punti: '', icon: '🏆', type: 'oneshot', hidden: false });
+  const [form, setForm] = useState({ 
+    titolo: '', 
+    punti: '', 
+    icon: '🏆', 
+    type: 'oneshot', // Default: Una Tantum
+    description: '', // Nuova: Descrizione
+    hidden: false 
+  });
   
-  // NUOVO STATO PER GLI ERRORI
   const [errors, setErrors] = useState({ titolo: false, punti: false });
-  
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('bonus_visible'); 
 
@@ -31,19 +36,16 @@ export default function AdminChallenges() {
   const handleCreate = async (e) => {
     e.preventDefault();
     
-    // 1. VALIDAZIONE
     const newErrors = {
-        titolo: !form.titolo, // Vero se vuoto
-        punti: !form.punti      // Vero se vuoto
+        titolo: !form.titolo,
+        punti: !form.punti
     };
 
-    // Se c'è almeno un errore...
     if (newErrors.titolo || newErrors.punti) {
-        setErrors(newErrors); // Mostra il rosso
-        return; // Ferma tutto
+        setErrors(newErrors);
+        return;
     }
 
-    // Se arrivo qui, resetto gli errori
     setErrors({ titolo: false, punti: false });
     
     let isHidden = form.hidden;
@@ -57,7 +59,7 @@ export default function AdminChallenges() {
     });
     
     // Reset del form
-    setForm({ titolo: '', punti: '', icon: '🏆', type: 'oneshot', hidden: false });
+    setForm({ titolo: '', punti: '', icon: '🏆', type: 'oneshot', description: '', hidden: false });
     loadChallenges();
   };
 
@@ -107,20 +109,18 @@ export default function AdminChallenges() {
       {/* FORM CREAZIONE */}
       <form onSubmit={handleCreate} className="bg-gray-100 p-4 rounded-xl mb-6 space-y-3 border border-gray-200 shadow-inner">
         
-        {/* RIGA 1: Titolo e Punti */}
+        {/* RIGA 1: Titolo, Punti e TIPO */}
         <div className="flex gap-2">
            <input 
              type="text" 
-             placeholder={errors.titolo ? "Titolo obbligatorio!" : "Titolo (es: Limone duro)"}
+             placeholder={errors.titolo ? "Titolo obbligatorio!" : "Titolo..."}
              value={form.titolo} 
              onChange={e => {
                  setForm({...form, titolo: e.target.value});
-                 if(errors.titolo) setErrors({...errors, titolo: false}); // Rimuovi rosso mentre scrive
+                 if(errors.titolo) setErrors({...errors, titolo: false});
              }}
-             className={`flex-1 p-2 rounded-lg border text-sm outline-none transition-all ${
-                 errors.titolo 
-                 ? 'border-red-500 ring-2 ring-red-200 bg-red-50 placeholder-red-400' 
-                 : 'border-gray-300 focus:ring-2 focus:ring-blue-400'
+             className={`flex-[2] p-2 rounded-lg border text-sm outline-none transition-all ${
+                 errors.titolo ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:ring-2 focus:ring-blue-400'
              }`}
            />
            <input 
@@ -129,36 +129,46 @@ export default function AdminChallenges() {
              value={form.punti} 
              onChange={e => {
                  setForm({...form, punti: e.target.value});
-                 if(errors.punti) setErrors({...errors, punti: false}); // Rimuovi rosso mentre scrive
+                 if(errors.punti) setErrors({...errors, punti: false});
              }}
-             className={`w-20 p-2 rounded-lg border text-sm font-bold text-center outline-none transition-all ${
-                 errors.punti 
-                 ? 'border-red-500 ring-2 ring-red-200 bg-red-50 placeholder-red-400' 
-                 : 'border-gray-300 focus:ring-2 focus:ring-blue-400'
+             className={`w-16 p-2 rounded-lg border text-sm font-bold text-center outline-none ${
+                 errors.punti ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:ring-2 focus:ring-blue-400'
              }`}
            />
+           {/* SELECTOR TIPO */}
+           <select 
+             value={form.type}
+             onChange={e => setForm({...form, type: e.target.value})}
+             className="flex-1 p-2 rounded-lg border border-gray-300 text-sm outline-none bg-white focus:ring-2 focus:ring-blue-400"
+           >
+               <option value="oneshot">Speciale</option>
+               <option value="daily">Giornaliero</option>
+           </select>
         </div>
 
-        {/* RIGA 2: Selezione Emoji */}
+        {/* RIGA 2: DESCRIZIONE (Nuova) */}
+        <div className="relative">
+            <AlignLeft size={14} className="absolute top-2.5 left-2.5 text-gray-400" />
+            <textarea
+                placeholder="Descrizione (opzionale): Spiega come ottenere il bonus..."
+                value={form.description}
+                onChange={e => setForm({...form, description: e.target.value})}
+                className="w-full p-2 pl-8 rounded-lg border border-gray-300 text-sm outline-none focus:ring-2 focus:ring-blue-400 min-h-[60px]"
+            />
+        </div>
+
+        {/* RIGA 3: Icona ed Emoji */}
         <div>
             <label className="text-xs font-bold text-gray-500 mb-1 flex items-center gap-1"><Smile size={12}/> Scegli Icona</label>
             <div className="flex gap-2 items-center">
                 <input 
-                    type="text" 
-                    maxLength={2}
-                    value={form.icon}
+                    type="text" maxLength={2} value={form.icon}
                     onChange={(e) => setForm({...form, icon: e.target.value})}
-                    className="w-12 h-12 text-2xl text-center border-2 border-blue-200 rounded-xl focus:border-blue-500 outline-none bg-white"
+                    className="w-10 h-10 text-xl text-center border-2 border-blue-200 rounded-lg outline-none bg-white"
                 />
-                
                 <div className="flex-1 flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
                     {PRESET_EMOJIS.map(emoji => (
-                        <button
-                            key={emoji}
-                            type="button"
-                            onClick={() => setForm({...form, icon: emoji})}
-                            className={`min-w-[40px] h-10 rounded-lg text-lg flex items-center justify-center transition-all ${form.icon === emoji ? 'bg-blue-600 text-white scale-110 shadow-md' : 'bg-white border hover:bg-gray-50'}`}
-                        >
+                        <button key={emoji} type="button" onClick={() => setForm({...form, icon: emoji})} className={`min-w-[36px] h-9 rounded-lg text-lg flex items-center justify-center transition-all ${form.icon === emoji ? 'bg-blue-600 text-white scale-110' : 'bg-white border hover:bg-gray-50'}`}>
                             {emoji}
                         </button>
                     ))}
@@ -166,15 +176,10 @@ export default function AdminChallenges() {
             </div>
         </div>
 
-        {/* RIGA 3: Controlli Extra e Submit */}
+        {/* RIGA 4: Controlli Extra e Submit */}
         <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-2">
             <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border hover:bg-gray-50 transition-colors">
-                <input 
-                    type="checkbox" 
-                    checked={form.hidden} 
-                    onChange={e => setForm({...form, hidden: e.target.checked})} 
-                    className="accent-purple-600"
-                />
+                <input type="checkbox" checked={form.hidden} onChange={e => setForm({...form, hidden: e.target.checked})} className="accent-purple-600"/>
                 <span className="text-xs font-bold flex items-center gap-1 text-gray-700">
                     {form.hidden ? <EyeOff size={14} className="text-purple-600"/> : <Eye size={14} className="text-gray-400"/>} 
                     {form.hidden ? 'Nascosto' : 'Visibile'}
@@ -187,7 +192,7 @@ export default function AdminChallenges() {
         </div>
       </form>
 
-      {/* FILTRI CATEGORIE */}
+      {/* FILTRI */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
         <FilterButton id="bonus_visible" label="Bonus" icon={Plus} colorClass="bg-green-50 border-green-500 text-green-700" />
         <FilterButton id="malus_visible" label="Malus" icon={Trash2} colorClass="bg-red-50 border-red-500 text-red-700" />
@@ -198,7 +203,7 @@ export default function AdminChallenges() {
       {/* LISTA */}
       <div className="space-y-2">
         {filteredList.map(c => (
-          <div key={c.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm animate-in fade-in duration-300">
+          <div key={c.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
             <div className="flex items-center gap-3">
                <span className="text-2xl w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full">{c.icon}</span>
                <div>
@@ -207,16 +212,13 @@ export default function AdminChallenges() {
                       <span className={`text-[10px] font-bold px-1.5 rounded ${c.punti > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {c.punti > 0 ? '+' : ''}{c.punti} pt
                       </span>
-                      {c.hidden && <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded flex items-center gap-1"><EyeOff size={10}/> Nascosto</span>}
+                      {c.type === 'daily' && <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 rounded font-bold flex items-center gap-1"><Repeat size={8}/> Giornaliero</span>}
                   </div>
                </div>
             </div>
-            <button onClick={() => handleDelete(c.id)} className="text-gray-400 hover:text-red-500 p-2 transition-colors">
-              <Trash2 size={18} />
-            </button>
+            <button onClick={() => handleDelete(c.id)} className="text-gray-400 hover:text-red-500 p-2 transition-colors"><Trash2 size={18} /></button>
           </div>
         ))}
-        {filteredList.length === 0 && <p className="text-center text-gray-400 text-sm py-8 bg-white rounded-xl border border-dashed">Nessun elemento qui.</p>}
       </div>
     </div>
   );

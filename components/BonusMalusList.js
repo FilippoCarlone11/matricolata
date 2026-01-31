@@ -2,14 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { getChallenges } from '@/lib/firebase';
-import { ThumbsUp, ThumbsDown, EyeOff, Zap, Repeat, Lock } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, EyeOff, Zap, Repeat, Lock, RotateCcw } from 'lucide-react';
 
 export default function BonusMalusList({ currentUser }) {
   const [challenges, setChallenges] = useState([]);
-  const [view, setView] = useState('bonus'); // 'bonus' | 'malus'
+  const [view, setView] = useState('bonus'); 
   const [loading, setLoading] = useState(true);
+  
+  // Stato per tracciare quale card è girata (solo una alla volta o multiple)
+  const [flippedId, setFlippedId] = useState(null);
 
-  // Verifica permessi: Se currentUser esiste e NON è matricola, può vedere i segreti
   const canSeeHidden = currentUser && currentUser.role !== 'matricola';
 
   useEffect(() => {
@@ -21,45 +23,92 @@ export default function BonusMalusList({ currentUser }) {
     load();
   }, []);
 
-  // 1. FILTRO BASE (Bonus vs Malus)
+  const handleCardClick = (id) => {
+    // Se clicco sulla stessa, la chiudo (null), altrimenti apro quella nuova
+    setFlippedId(flippedId === id ? null : id);
+  };
+
   const currentTabItems = challenges.filter(c => {
     if (view === 'bonus') return c.punti > 0;
     if (view === 'malus') return c.punti < 0;
     return false;
   });
 
-  // 2. SEPARAZIONE VISIBILI / NASCOSTI
   const visibleItems = currentTabItems.filter(c => !c.hidden);
   const hiddenItems = currentTabItems.filter(c => c.hidden);
 
-  // 3. RAGGRUPPAMENTO VISIBILI (One Shot vs Daily)
   const visibleOneShot = visibleItems.filter(c => c.type !== 'daily');
   const visibleDaily = visibleItems.filter(c => c.type === 'daily');
 
-  // Funzione Rendering Card
+  // --- RENDERIZZA CARD (Con effetto Flip) ---
   const renderCard = (c, isHiddenSection = false) => {
     const isBonus = c.punti > 0;
-    // Se siamo nella sezione nascosta, usiamo colori più scuri/grigi per differenziare, oppure manteniamo i colori standard
-    // Qui mantengo i colori standard ma aggiungo il badge evidente
+    const isFlipped = flippedId === c.id;
+
+    // Colori Fronte
     const borderColor = isBonus ? 'border-green-100' : 'border-red-100';
     const textColor = isBonus ? 'text-green-900' : 'text-red-900';
     const badgeBg = isBonus ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+    
+    // Colori Retro (Descrizione)
+    const backBg = isBonus ? 'bg-green-50' : 'bg-red-50';
 
     return (
-      <div key={c.id} className={`p-4 rounded-xl border flex items-center justify-between bg-white shadow-sm mb-2 ${borderColor} ${isHiddenSection ? 'bg-gray-50' : ''}`}>
-        <div className="flex items-center gap-3">
-            <span className="text-2xl filter drop-shadow-sm">{c.icon}</span>
-            <div>
-                <h3 className={`font-bold leading-tight ${textColor}`}>{c.titolo}</h3>
-                {isHiddenSection && (
-                    <span className="text-[9px] bg-gray-800 text-white px-1.5 py-0.5 rounded mt-1 inline-flex items-center gap-1">
-                        <EyeOff size={8}/> SEGRETO
-                    </span>
-                )}
+      <div 
+        key={c.id} 
+        onClick={() => handleCardClick(c.id)}
+        className="relative w-full h-20 mb-3 cursor-pointer perspective-1000 group"
+        style={{ perspective: '1000px' }} // Fallback style
+      >
+        {/* INNER CONTAINER (Quello che ruota) */}
+        <div 
+            className={`relative w-full h-full duration-500 transition-all preserve-3d ${isFlipped ? '[transform:rotateY(180deg)]' : ''}`}
+            style={{ transformStyle: 'preserve-3d' }}
+        >
+            
+            {/* --- FRONTE DELLA CARD --- */}
+            <div 
+                className={`absolute inset-0 backface-hidden p-4 rounded-xl border flex items-center justify-between bg-white shadow-sm ${borderColor} ${isHiddenSection ? 'opacity-80' : ''}`}
+                style={{ backfaceVisibility: 'hidden' }}
+            >
+                <div className="flex items-center gap-3">
+                    <span className="text-3xl filter drop-shadow-sm">{c.icon}</span>
+                    <div>
+                        <h3 className={`font-bold leading-tight text-sm ${textColor}`}>{c.titolo}</h3>
+                        <div className="flex gap-2 mt-1">
+                            {isHiddenSection && (
+                                <span className="text-[9px] bg-gray-800 text-white px-1.5 rounded flex items-center gap-1">
+                                    <EyeOff size={8}/> Segreto
+                                </span>
+                            )}
+                            {/* Mostra "Tap per info" se c'è descrizione */}
+                            {c.description && (
+                                <span className="text-[9px] text-gray-400 flex items-center gap-1 animate-pulse">
+                                    <RotateCcw size={8}/> Info
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+                <div className={`px-3 py-1.5 rounded-lg font-black text-sm ${badgeBg}`}>
+                    {isBonus ? '+' : ''}{c.punti}
+                </div>
             </div>
-        </div>
-        <div className={`px-3 py-1.5 rounded-lg font-black text-sm ${badgeBg}`}>
-            {isBonus ? '+' : ''}{c.punti}
+
+            {/* --- RETRO DELLA CARD (Descrizione) --- */}
+            <div 
+                className={`absolute inset-0 backface-hidden p-4 rounded-xl border flex flex-col justify-center items-center text-center shadow-inner ${backBg} ${borderColor} [transform:rotateY(180deg)]`}
+                style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+            >
+                <p className="text-xs text-gray-600 font-medium leading-relaxed px-2">
+                    {c.description || "Nessuna descrizione disponibile."}
+                </p>
+                <span className="text-[9px] text-gray-400 mt-1 uppercase font-bold tracking-wider">
+                    {/* MODIFICA NOMI QUI */}
+                    {c.type === 'daily' ? 'GIORNALIERO' : 'BONUS SPECIALE'}
+                </span>
+            </div>
+
         </div>
       </div>
     );
@@ -69,13 +118,11 @@ export default function BonusMalusList({ currentUser }) {
 
   return (
     <div>
-      {/* Intestazione */}
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Regolamento Bonus & Malus</h2>
-        <p className="text-gray-500 text-sm"></p>
+        <h2 className="text-2xl font-bold text-gray-900">Regolamento</h2>
+        <p className="text-gray-400 text-xs mt-1">Tocca una card per leggere i dettagli</p>
       </div>
 
-      {/* Switcher Tab (SOLO 2 ORA) */}
       <div className="bg-gray-200 p-1 rounded-xl mb-6 flex">
         <button 
           onClick={() => setView('bonus')}
@@ -91,66 +138,43 @@ export default function BonusMalusList({ currentUser }) {
         </button>
       </div>
 
-      {/* CONTENUTO */}
-      <div className="pb-10">
-        
-        {/* === PARTE PUBBLICA (Visibile a tutti) === */}
+      <div className="pb-10 px-1">
         
         {visibleItems.length === 0 && (
              <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl mb-4">
-                Nessun elemento pubblico qui.
+                Nessun elemento pubblico.
             </div>
         )}
 
-        {/* 1. One Shot Pubblici */}
+        {/* 1. Bonus Speciali */}
         {visibleOneShot.length > 0 && (
-            <div className="mb-4">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2 px-1">
+            <div className="mb-6">
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2 px-1">
                     <Zap size={14} /> Bonus Speciali
                 </h3>
                 {visibleOneShot.map(c => renderCard(c, false))}
             </div>
         )}
 
-        {/* Divisore interno OneShot/Daily */}
-        {visibleOneShot.length > 0 && visibleDaily.length > 0 && (
-            <div className="flex items-center gap-2 my-6 opacity-30">
-                <div className="h-px bg-gray-400 flex-1"></div>
-                <div className="h-px bg-gray-400 flex-1"></div>
-            </div>
-        )}
-
-        {/* 2. Daily Pubblici */}
+        {/* 2. Giornalieri */}
         {visibleDaily.length > 0 && (
             <div className="mb-6">
-                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-2 px-1">
-                    <Repeat size={14} /> Bonus Giornalieri
+                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2 px-1">
+                    <Repeat size={14} /> Giornalieri
                  </h3>
                 {visibleDaily.map(c => renderCard(c, false))}
             </div>
         )}
 
-
-        {/* === PARTE SEGRETA (Visibile solo a Non-Matricole) === */}
-        
+        {/* Segreti */}
         {canSeeHidden && hiddenItems.length > 0 && (
-            <div className="mt-8 animate-in fade-in slide-in-from-bottom-4">
-                
-                {/* Divisore Speciale Segreti */}
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="h-0.5 bg-gray-800 flex-1 rounded-full"></div>
-                    <span className="text-[10px] font-black text-gray-800 uppercase bg-gray-200 px-3 py-1 rounded-full flex items-center gap-1">
-                        <Lock size={10} /> Nascosti
+            <div className="mt-8 pt-4 border-t border-dashed border-gray-300">
+                <div className="flex justify-center mb-4">
+                    <span className="text-[10px] font-black text-white uppercase bg-gray-800 px-3 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                        <Lock size={10} /> Area Segreta
                     </span>
-                    <div className="h-0.5 bg-gray-800 flex-1 rounded-full"></div>
                 </div>
-
-                <div className="bg-gray-100 p-3 rounded-2xl border border-gray-200">
-                    <p className="text-center text-[10px] text-gray-500 mb-3">
-                        Questi elementi sono nascosti alle matricole.
-                    </p>
-                    {hiddenItems.map(c => renderCard(c, true))}
-                </div>
+                {hiddenItems.map(c => renderCard(c, true))}
             </div>
         )}
 
