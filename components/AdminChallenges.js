@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createChallenge, getChallenges, deleteChallenge } from '@/lib/firebase';
-import { Trash2, Plus, Zap, Eye, EyeOff, Smile, Repeat, Target, AlignLeft } from 'lucide-react';
+import { Trash2, Plus, Zap, Eye, EyeOff, Smile, Repeat, AlignLeft } from 'lucide-react';
 
 export default function AdminChallenges() {
   const [challenges, setChallenges] = useState([]);
@@ -11,7 +11,7 @@ export default function AdminChallenges() {
     punti: '', 
     icon: '🏆', 
     type: 'oneshot', // Default: Una Tantum
-    description: '', // Nuova: Descrizione
+    description: '', 
     hidden: false 
   });
   
@@ -106,10 +106,10 @@ export default function AdminChallenges() {
         <Zap className="text-blue-600" /> Gestione Bonus & Malus
       </h2>
 
-      {/* FORM CREAZIONE */}
+      {/* FORM CREAZIONE (Ridisegnato per Mobile) */}
       <form onSubmit={handleCreate} className="bg-gray-100 p-4 rounded-xl mb-6 space-y-3 border border-gray-200 shadow-inner">
         
-        {/* RIGA 1: Titolo, Punti e TIPO */}
+        {/* RIGA 1: Titolo e Punti (Ora hanno tutto lo spazio) */}
         <div className="flex gap-2">
            <input 
              type="text" 
@@ -119,7 +119,7 @@ export default function AdminChallenges() {
                  setForm({...form, titolo: e.target.value});
                  if(errors.titolo) setErrors({...errors, titolo: false});
              }}
-             className={`flex-[2] p-2 rounded-lg border text-sm outline-none transition-all ${
+             className={`flex-1 p-3 rounded-xl border text-sm outline-none transition-all font-bold ${
                  errors.titolo ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:ring-2 focus:ring-blue-400'
              }`}
            />
@@ -131,65 +131,79 @@ export default function AdminChallenges() {
                  setForm({...form, punti: e.target.value});
                  if(errors.punti) setErrors({...errors, punti: false});
              }}
-             className={`w-16 p-2 rounded-lg border text-sm font-bold text-center outline-none ${
+             className={`w-20 p-3 rounded-xl border text-sm font-black text-center outline-none ${
                  errors.punti ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:ring-2 focus:ring-blue-400'
              }`}
            />
-           {/* SELECTOR TIPO */}
-           <select 
-             value={form.type}
-             onChange={e => setForm({...form, type: e.target.value})}
-             className="flex-1 p-2 rounded-lg border border-gray-300 text-sm outline-none bg-white focus:ring-2 focus:ring-blue-400"
-           >
-               <option value="oneshot">Speciale</option>
-               <option value="daily">Giornaliero</option>
-           </select>
         </div>
 
-        {/* RIGA 2: DESCRIZIONE (Nuova) */}
+        {/* RIGA 2: DESCRIZIONE */}
         <div className="relative">
-            <AlignLeft size={14} className="absolute top-2.5 left-2.5 text-gray-400" />
+            <AlignLeft size={16} className="absolute top-3 left-3 text-gray-400" />
             <textarea
-                placeholder="Descrizione (opzionale): Spiega come ottenere il bonus..."
+                placeholder="Descrizione (opzionale)..."
                 value={form.description}
                 onChange={e => setForm({...form, description: e.target.value})}
-                className="w-full p-2 pl-8 rounded-lg border border-gray-300 text-sm outline-none focus:ring-2 focus:ring-blue-400 min-h-[60px]"
+                className="w-full p-2 pl-9 rounded-xl border border-gray-300 text-sm outline-none focus:ring-2 focus:ring-blue-400 min-h-[50px] bg-white"
             />
         </div>
 
-        {/* RIGA 3: Icona ed Emoji */}
-        <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 flex items-center gap-1"><Smile size={12}/> Scegli Icona</label>
-            <div className="flex gap-2 items-center">
-                <input 
+        {/* RIGA 3: TIPO (SWITCH) + VISIBILITÀ + ICONA */}
+        <div className="flex flex-wrap gap-2 items-center">
+            
+            {/* 3a. SWITCH TIPO (Pillola) */}
+            <div className="flex bg-white rounded-xl border border-gray-300 p-1 flex-1 min-w-[160px]">
+                <button 
+                    type="button" 
+                    onClick={() => setForm({...form, type: 'oneshot'})}
+                    className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-lg flex items-center justify-center gap-1 transition-all ${
+                        form.type === 'oneshot' ? 'bg-orange-100 text-orange-700 shadow-sm' : 'text-gray-400 hover:bg-gray-50'
+                    }`}
+                >
+                    <Zap size={12}/> Speciale
+                </button>
+                <button 
+                    type="button" 
+                    onClick={() => setForm({...form, type: 'daily'})}
+                    className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-lg flex items-center justify-center gap-1 transition-all ${
+                        form.type === 'daily' ? 'bg-purple-100 text-purple-700 shadow-sm' : 'text-gray-400 hover:bg-gray-50'
+                    }`}
+                >
+                    <Repeat size={12}/> Giornaliero
+                </button>
+            </div>
+
+            {/* 3b. INPUT ICONA */}
+            <div className="relative w-12 h-[42px]">
+                 <input 
                     type="text" maxLength={2} value={form.icon}
                     onChange={(e) => setForm({...form, icon: e.target.value})}
-                    className="w-10 h-10 text-xl text-center border-2 border-blue-200 rounded-lg outline-none bg-white"
+                    className="w-full h-full text-xl text-center border border-gray-300 rounded-xl outline-none bg-white focus:ring-2 focus:ring-blue-400"
                 />
-                <div className="flex-1 flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
-                    {PRESET_EMOJIS.map(emoji => (
-                        <button key={emoji} type="button" onClick={() => setForm({...form, icon: emoji})} className={`min-w-[36px] h-9 rounded-lg text-lg flex items-center justify-center transition-all ${form.icon === emoji ? 'bg-blue-600 text-white scale-110' : 'bg-white border hover:bg-gray-50'}`}>
-                            {emoji}
-                        </button>
-                    ))}
-                </div>
             </div>
+
+            {/* 3c. VISIBILITÀ (Piccolo Check) */}
+            <label className={`cursor-pointer w-12 h-[42px] flex items-center justify-center rounded-xl border transition-all ${form.hidden ? 'bg-gray-800 border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-400'}`}>
+                <input type="checkbox" checked={form.hidden} onChange={e => setForm({...form, hidden: e.target.checked})} className="hidden"/>
+                {form.hidden ? <EyeOff size={20}/> : <Eye size={20}/>}
+            </label>
+
         </div>
 
-        {/* RIGA 4: Controlli Extra e Submit */}
-        <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-2">
-            <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-lg border hover:bg-gray-50 transition-colors">
-                <input type="checkbox" checked={form.hidden} onChange={e => setForm({...form, hidden: e.target.checked})} className="accent-purple-600"/>
-                <span className="text-xs font-bold flex items-center gap-1 text-gray-700">
-                    {form.hidden ? <EyeOff size={14} className="text-purple-600"/> : <Eye size={14} className="text-gray-400"/>} 
-                    {form.hidden ? 'Nascosto' : 'Visibile'}
-                </span>
-            </label>
-            
-            <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-blue-700 shadow-lg flex items-center gap-2">
-                <Plus size={16}/> Crea
-            </button>
+        {/* RIGA 4: EMOJI PICKER (Scorrevole) */}
+        <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide pt-1">
+            {PRESET_EMOJIS.map(emoji => (
+                <button key={emoji} type="button" onClick={() => setForm({...form, icon: emoji})} className={`min-w-[36px] h-9 rounded-lg text-lg flex items-center justify-center transition-all ${form.icon === emoji ? 'bg-blue-600 text-white scale-110 shadow-md' : 'bg-white border hover:bg-gray-50'}`}>
+                    {emoji}
+                </button>
+            ))}
         </div>
+
+        {/* RIGA 5: SUBMIT */}
+        <button type="submit" className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold text-sm hover:bg-black shadow-lg flex items-center justify-center gap-2 mt-2">
+            <Plus size={18}/> AGGIUNGI BONUS
+        </button>
+
       </form>
 
       {/* FILTRI */}
@@ -203,7 +217,7 @@ export default function AdminChallenges() {
       {/* LISTA */}
       <div className="space-y-2">
         {filteredList.map(c => (
-          <div key={c.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+          <div key={c.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm animate-in fade-in">
             <div className="flex items-center gap-3">
                <span className="text-2xl w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full">{c.icon}</span>
                <div>
@@ -213,10 +227,11 @@ export default function AdminChallenges() {
                           {c.punti > 0 ? '+' : ''}{c.punti} pt
                       </span>
                       {c.type === 'daily' && <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 rounded font-bold flex items-center gap-1"><Repeat size={8}/> Giornaliero</span>}
+                      {c.hidden && <span className="text-[10px] bg-gray-800 text-white px-1.5 rounded flex items-center gap-1"><EyeOff size={8}/> Nascosto</span>}
                   </div>
                </div>
             </div>
-            <button onClick={() => handleDelete(c.id)} className="text-gray-400 hover:text-red-500 p-2 transition-colors"><Trash2 size={18} /></button>
+            <button onClick={() => handleDelete(c.id)} className="text-gray-300 hover:text-red-500 p-2 transition-colors"><Trash2 size={18} /></button>
           </div>
         ))}
       </div>

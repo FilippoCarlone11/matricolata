@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { auth, getUserData, signOutUser } from '@/lib/firebase';
+import { auth, db, getUserData, signOutUser } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore'; 
+
 import Login from '@/components/Login';
 import ChallengeList from '@/components/ChallengeList';
 import StoricoPunti from '@/components/StoricoPunti';
@@ -15,7 +17,7 @@ import SquadraMercato from '@/components/SquadraMercato';
 import Classifiche from '@/components/Classifiche';
 import BonusMalusList from '@/components/BonusMalusList'; 
 import NewsFeed from '@/components/NewsFeed'; 
-import AccountGenerator from '@/components/AccountGenerator'; // <--- GENERATORE TEST
+import AccountGenerator from '@/components/AccountGenerator'; 
 import { Trophy, LogOut, Edit2 } from 'lucide-react';
 
 export default function Home() {
@@ -23,25 +25,40 @@ export default function Home() {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // Default 'feed' (Bacheca) all'avvio
   const [activeTab, setActiveTab] = useState('feed'); 
-  
   const [showProfile, setShowProfile] = useState(false); 
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+    let unsubscribeUser = () => {}; 
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
-        const data = await getUserData(firebaseUser.uid);
-        setUserData(data);
-        // Non forziamo il tab qui per lasciare libertà all'utente se ricarica
+        
+        // *** FIX: FORZIAMO LA BACHECA AD OGNI LOGIN/REFRESH ***
+        setActiveTab('feed'); 
+
+        // Listener in tempo reale sull'utente
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        unsubscribeUser = onSnapshot(userRef, (docSnap) => {
+          if (docSnap.exists()) {
+             setUserData({ id: docSnap.id, ...docSnap.data() });
+          }
+          setLoading(false);
+        });
+
       } else {
         setUser(null);
         setUserData(null);
+        unsubscribeUser(); 
+        setLoading(false);
       }
-      setLoading(false);
     });
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribeAuth();
+      unsubscribeUser();
+    };
   }, []);
 
   const refreshUserData = async () => {
@@ -150,6 +167,8 @@ export default function Home() {
           <EditProfile user={userData} onClose={() => setShowProfile(false)} onUpdate={refreshUserData} />
       )}
       
+      {/* GENERATORE ACCOUNT PER TEST */}
+      <AccountGenerator />
 
       {/* NAVIGATION BAR */}
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} role={userData.role} />
