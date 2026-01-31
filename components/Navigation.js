@@ -5,7 +5,7 @@ export default function Navigation({ activeTab, setActiveTab, role }) {
   const tabs = [];
 
   // --- TAB COMUNE A TUTTI (IL FEED) ---
-  tabs.push({ id: 'feed', label: 'Bacheca', icon: Newspaper });
+  tabs.push({ id: 'feed', label: 'Feed', icon: Newspaper });
 
   // CASO 1: MATRICOLA
   if (role === 'matricola') {
@@ -21,13 +21,13 @@ export default function Navigation({ activeTab, setActiveTab, role }) {
 
     // CASO 2b: SOLO UTENTE SEMPLICE (Non Admin) vede la lista consultativa
     if (role === 'utente') {
-        tabs.push({ id: 'lista', label: 'Regole', icon: List });
+        tabs.push({ id: 'lista', label: 'Bonus/Malus', icon: List });
     }
   }
 
   // CASO 3: TAB AMMINISTRATIVI (Solo Admin/SuperAdmin)
   if (role === 'admin' || role === 'super-admin') {
-    tabs.push({ id: 'admin-sfide', label: 'Gestione', icon: Target });
+    tabs.push({ id: 'admin-sfide', label: 'Bonus/Malus', icon: Target });
     tabs.push({ id: 'admin-matricole', label: 'Matricole', icon: BookOpen });
   }
 
