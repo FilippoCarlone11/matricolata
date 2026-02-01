@@ -105,7 +105,7 @@ export default function BonusMalusList({ currentUser }) {
                 </p>
                 <span className="text-[9px] text-gray-400 mt-1 uppercase font-bold tracking-wider">
                     {/* MODIFICA NOMI QUI */}
-                    {c.type === 'daily' ? 'GIORNALIERO' : 'BONUS SPECIALE'}
+                    {c.type === 'daily' ? 'GIORNALIERO' : 'SPECIALE'}
                 </span>
             </div>
 
