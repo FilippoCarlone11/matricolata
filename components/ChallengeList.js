@@ -166,7 +166,7 @@ export default function ChallengeList({ currentUser }) {
                                     </button>
                                 </div>
                                 <p className="text-sm text-gray-600 leading-relaxed">
-                                    {c.descrizione || "Nessuna descrizione dettagliata disponibile per questo bonus."}
+                                    {c.description || "Nessuna descrizione dettagliata disponibile per questo bonus."}
                                 </p>
                             </div>
                             <div className="text-xs text-gray-400 mt-2 pt-2 border-t border-gray-100 text-center uppercase tracking-wider font-semibold">

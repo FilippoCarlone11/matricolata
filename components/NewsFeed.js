@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getGlobalFeed } from '@/lib/firebase';
-import { Clock, Trophy, Frown, X, Camera, User, Hourglass, CheckCircle, ShieldAlert, EyeOff } from 'lucide-react';
+import { Clock, User, Hourglass, CheckCircle, ShieldAlert, EyeOff, XCircle, Camera, X } from 'lucide-react';
 
 export default function NewsFeed() {
   const [feed, setFeed] = useState([]);
@@ -16,8 +16,9 @@ export default function NewsFeed() {
   const loadFeed = async () => {
     try {
       const data = await getGlobalFeed();
-      const visibleFeed = data.filter(item => item.status !== 'rejected');
-      setFeed(visibleFeed);
+      // MODIFICA: Ora mostriamo TUTTO, anche i rejected
+      // const visibleFeed = data.filter(item => item.status !== 'rejected'); <--- RIMOSSO
+      setFeed(data);
     } catch (e) {
       console.error(e);
     } finally {
@@ -57,8 +58,9 @@ export default function NewsFeed() {
           const isMalus = item.puntiRichiesti < 0;
           const isPending = item.status === 'pending';
           const isManual = item.manual === true;
+          const isRejected = item.status === 'rejected'; // NUOVO STATO
           const isPhoto = !!item.photoProof;
-          const isHidden = item.isHidden === true; // NUOVO FLAG
+          const isHidden = item.isHidden === true; 
           
           const dateRef = item.createdAt || item.timestamp;
           const currentDateLabel = getDateLabel(dateRef);
@@ -67,26 +69,29 @@ export default function NewsFeed() {
           const prevDateLabel = index > 0 ? getDateLabel(prevDateRef) : null;
           const showDivider = currentDateLabel !== prevDateLabel;
 
-          // LOGICA TESTI
+          // LOGICA TESTI E COLORI
           let statusLabel = "";
           let statusColor = "";
           let actionText = "";
+          let cardOpacity = "opacity-100"; // Per i rifiutati usiamo un po' di trasparenza
 
-          if (isPending) {
+          if (isRejected) {
+              statusLabel = "Rifiutato";
+              statusColor = "bg-red-50 text-red-500 border-red-100";
+              actionText = "Richiesta Rifiutata:";
+              cardOpacity = "opacity-75 grayscale-[0.5]"; // Effetto visivo "spento"
+          } else if (isPending) {
               statusLabel = "In Attesa";
               statusColor = "bg-yellow-100 text-yellow-700 border-yellow-200";
               actionText = "Ha inviato una richiesta:";
           } else if (isManual) {
               statusLabel = "Admin";
               statusColor = "bg-purple-100 text-purple-700 border-purple-200";
-              
-              // *** NUOVO: LOGICA PER NASCOSTI ***
               if (isHidden) {
-                  actionText = isMalus ? "Ha ottenuto un Malus Nascosto:" : "Ha ottenuto un Bonus Nascosto:";
+                  actionText = isMalus ? "Ha preso un Malus Nascosto:" : "Ha preso un Bonus Nascosto:";
               } else {
-                  actionText = isMalus ? "Ha ottenuto un Malus:" : "Ha ottenuto un Bonus:";
+                  actionText = isMalus ? "Ha preso un Malus:" : "Ha preso un Bonus:";
               }
-
           } else {
               statusLabel = "Approvato";
               statusColor = "bg-green-100 text-green-700 border-green-200";
@@ -94,7 +99,7 @@ export default function NewsFeed() {
           }
 
           return (
-            <div key={item.id}>
+            <div key={item.id} className={cardOpacity}>
               
               {showDivider && (
                 <div className="flex items-center justify-center my-6">
@@ -118,7 +123,7 @@ export default function NewsFeed() {
                         )}
                      </div>
                      <div>
-                        <p className="font-bold text-gray-900 text-sm leading-tight">{item.userName}</p>
+                        <p className={`font-bold text-sm leading-tight ${isRejected ? 'line-through text-gray-500' : 'text-gray-900'}`}>{item.userName}</p>
                         <p className="text-[10px] text-gray-400 flex items-center gap-1">
                           <Clock size={10}/> {formatTime(dateRef)}
                         </p>
@@ -127,8 +132,9 @@ export default function NewsFeed() {
 
                   <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border ${statusColor}`}>
                       {isPending && <Hourglass size={10} />}
-                      {!isPending && isManual && <ShieldAlert size={10} />}
-                      {!isPending && !isManual && <CheckCircle size={10} />}
+                      {isRejected && <XCircle size={10} />}
+                      {!isPending && !isRejected && isManual && <ShieldAlert size={10} />}
+                      {!isPending && !isRejected && !isManual && <CheckCircle size={10} />}
                       {statusLabel}
                   </span>
                 </div>
@@ -139,18 +145,25 @@ export default function NewsFeed() {
                    </p>
                    
                    <div className="flex items-center justify-between">
-                       <span className={`font-bold text-base leading-tight ${isMalus ? 'text-red-700' : 'text-gray-900'}`}>
+                       <span className={`font-bold text-base leading-tight ${isRejected ? 'text-gray-400 line-through' : (isMalus ? 'text-red-700' : 'text-gray-900')}`}>
                            {item.challengeName}
                        </span>
-                       <span className={`text-sm font-black px-2 py-1 rounded-lg ${isMalus ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
-                           {item.puntiRichiesti > 0 ? '+' : ''}{item.puntiRichiesti}
-                       </span>
+                       {!isRejected && (
+                           <span className={`text-sm font-black px-2 py-1 rounded-lg ${isMalus ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                               {item.puntiRichiesti > 0 ? '+' : ''}{item.puntiRichiesti}
+                           </span>
+                       )}
+                       {isRejected && (
+                           <span className="text-sm font-black px-2 py-1 rounded-lg bg-gray-100 text-gray-400">
+                               0
+                           </span>
+                       )}
                    </div>
                 </div>
 
                 {isPhoto && (
                   <div className="w-full bg-gray-100 relative group cursor-pointer border-t border-gray-100" onClick={() => setSelectedImage(item.photoProof)}>
-                      <img src={item.photoProof} className="w-full h-auto object-cover max-h-[400px] min-h-[200px]" alt="Prova"/>
+                      <img src={item.photoProof} className={`w-full h-auto object-cover max-h-[400px] min-h-[200px] ${isRejected ? 'grayscale' : ''}`} alt="Prova"/>
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                           <div className="bg-black/70 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-2">
                              <Camera size={14} /> Ingrandisci
