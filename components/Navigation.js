@@ -9,9 +9,9 @@ export default function Navigation({ activeTab, setActiveTab, role }) {
 
   // CASO 1: MATRICOLA
   if (role === 'matricola') {
-    tabs.push({ id: 'home', label: 'Sfide', icon: Target }); // Ho rinominato 'Home' in 'Sfide' per chiarezza
-    tabs.push({ id: 'percorso', label: 'Storico', icon: Flag });
-    tabs.push({ id: 'lista', label: 'Regole', icon: List });
+    tabs.push({ id: 'home', label: 'Richieste', icon: Target }); // Ho rinominato 'Home' in 'Sfide' per chiarezza
+    tabs.push({ id: 'percorso', label: 'Archivio', icon: Flag });
+    tabs.push({ id: 'lista', label: 'Bonus/Malus', icon: List });
   } 
   
   // CASO 2: ALTRI (Utente, Admin, Super Admin)

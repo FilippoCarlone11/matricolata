@@ -150,7 +150,7 @@ export default function BonusMalusList({ currentUser }) {
         {visibleOneShot.length > 0 && (
             <div className="mb-6">
                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2 px-1">
-                    <Zap size={14} /> Bonus Speciali
+                    <Zap size={14} /> Speciali
                 </h3>
                 {visibleOneShot.map(c => renderCard(c, false))}
             </div>
