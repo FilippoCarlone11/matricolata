@@ -1,14 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { onUsersChange, updateUserRole, deleteUserDocument } from '@/lib/firebase';
-import { Users, UserCheck, Crown, Trash2, Key, Search } from 'lucide-react';
+// HO AGGIUNTO QUI: getSystemSettings, toggleRegistrations
+import { onUsersChange, updateUserRole, deleteUserDocument, getSystemSettings, toggleRegistrations } from '@/lib/firebase';
+// HO AGGIUNTO QUI: Lock, Unlock, ShieldAlert
+import { Users, UserCheck, Crown, Trash2, Key, Search, Lock, Unlock, ShieldAlert } from 'lucide-react';
 
 export default function AdminUserList({ currentUser }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingUser, setUpdatingUser] = useState(null);
-  const [searchTerm, setSearchTerm] = useState(''); // Per filtrare la lista
+  const [searchTerm, setSearchTerm] = useState(''); 
+
+  // --- NUOVI STATI PER IL BOTTONE REGISTRAZIONI ---
+  const [regOpen, setRegOpen] = useState(true);
+  const [settingsLoading, setSettingsLoading] = useState(true);
 
   const isSuperAdmin = currentUser?.role === 'super-admin';
 
@@ -19,6 +25,28 @@ export default function AdminUserList({ currentUser }) {
     });
     return () => unsubscribe();
   }, []);
+
+  // --- NUOVO EFFETTO: CARICA STATO REGISTRAZIONI ---
+  useEffect(() => {
+    if (isSuperAdmin) {
+        const loadSettings = async () => {
+            try {
+                const settings = await getSystemSettings();
+                // Se settings esiste usa quello, altrimenti true di default
+                setRegOpen(settings?.registrationsOpen ?? true);
+            } catch (e) { console.error(e); }
+            finally { setSettingsLoading(false); }
+        };
+        loadSettings();
+    }
+  }, [isSuperAdmin]);
+
+  // --- NUOVA FUNZIONE: CAMBIA STATO REGISTRAZIONI ---
+  const handleToggleReg = async () => {
+    const newState = !regOpen;
+    setRegOpen(newState); 
+    await toggleRegistrations(newState);
+  };
 
   const handleRoleChange = async (userId, newRole) => {
     if (!isSuperAdmin) return;
@@ -55,7 +83,41 @@ export default function AdminUserList({ currentUser }) {
         <Users className="text-blue-600" /> Gestione Utenti
       </h2>
 
-      {/* --- DASHBOARD CONTEGGI (NUOVO) --- */}
+      {/* ------------------------------------------------------- */}
+      {/* NUOVO BLOCCO: CONTROLLO REGISTRAZIONI (SOLO SUPER ADMIN) */}
+      {/* ------------------------------------------------------- */}
+      {isSuperAdmin && (
+        <div className="bg-white text-black p-4 rounded-xl shadow-lg border border-slate-700 mb-6">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <ShieldAlert className="text-red-400" size={24} />
+                    <div>
+                        <h3 className="font-bold text-lg leading-tight">Controllo Accessi</h3>
+                        <p className="text-slate-400 text-xs">Blocca o sblocca nuovi accessi</p>
+                    </div>
+                </div>
+
+                <button 
+                    onClick={handleToggleReg}
+                    disabled={settingsLoading}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-xs transition-all uppercase tracking-wider ${
+                        regOpen 
+                        ? 'bg-green-600 hover:bg-green-700 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]' 
+                        : 'bg-red-600 hover:bg-red-700 text-white shadow-[0_0_15px_rgba(220,38,38,0.4)]'
+                    }`}
+                >
+                    {settingsLoading ? '...' : (
+                        regOpen ? <><Unlock size={16}/> Iscrizioni Aperte</> : <><Lock size={16}/> Iscrizioni Chiuse</>
+                    )}
+                </button>
+            </div>
+            
+        </div>
+      )}
+      {/* ------------------------------------------------------- */}
+
+
+      {/* --- DASHBOARD CONTEGGI --- */}
       <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
               <div className="flex items-center gap-2">
