@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getAvailableMatricole, recruitMatricola, getFullSquadDetails, releaseMatricola, setSquadCaptain, getMarketStatus, toggleMarketStatus } from '@/lib/firebase';
+// RIMOSSO getAvailableMatricole e getFullSquadDetails
+import { recruitMatricola, releaseMatricola, setSquadCaptain, getMarketStatus, toggleMarketStatus } from '@/lib/firebase';
 import { UserPlus, Search, Users, Crown, Trash2, Lock, Unlock } from 'lucide-react';
 
-export default function SquadraMercato({ currentUser, onUpdate }) {
+// AGGIUNTO PROP: preloadedUsers
+export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers = [] }) {
   const [matricole, setMatricole] = useState([]);
   const [mySquadDetails, setMySquadDetails] = useState([]);
   const [marketOpen, setMarketOpen] = useState(true);
@@ -13,25 +15,42 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
 
   // DEFINIZIONE RUOLI
   const isSuperAdmin = currentUser.role === 'super-admin';
-  const isAdmin = currentUser.role === 'admin' || isSuperAdmin; // Admin include Super Admin per poteri minori
+  const isAdmin = currentUser.role === 'admin' || isSuperAdmin; 
   
   const currentSquadSize = currentUser.mySquad ? currentUser.mySquad.length : 0;
   const isSquadFull = currentSquadSize >= 3;
 
-  useEffect(() => { loadAllData(); }, [currentUser]);
+  useEffect(() => {
+     loadMarketData();
+  }, []);
 
-  const loadAllData = async () => {
+  // Questo effetto aggiorna le liste ISTANTANEAMENTE quando cambia currentUser o preloadedUsers
+  // Senza fare chiamate al database!
+  useEffect(() => {
+     if (preloadedUsers.length > 0) {
+        // 1. Calcola lista matricole disponibili (filtro locale)
+        const allMatricole = preloadedUsers.filter(u => u.role === 'matricola');
+        setMatricole(allMatricole);
+
+        // 2. Calcola dettagli della mia squadra (filtro locale)
+        if (currentUser.mySquad && currentUser.mySquad.length > 0) {
+            const squad = preloadedUsers.filter(u => currentUser.mySquad.includes(u.id));
+            setMySquadDetails(squad);
+        } else {
+            setMySquadDetails([]);
+        }
+     }
+  }, [currentUser, preloadedUsers]);
+
+  const loadMarketData = async () => {
     setLoading(true);
-    const [avail, status] = await Promise.all([ getAvailableMatricole(), getMarketStatus() ]);
-    setMatricole(avail);
+    // Unica chiamata DB rimasta: controlliamo se il mercato è aperto
+    const status = await getMarketStatus();
     setMarketOpen(status);
-    if (currentUser.mySquad?.length > 0) setMySquadDetails(await getFullSquadDetails(currentUser.mySquad));
-    else setMySquadDetails([]);
     setLoading(false);
   };
 
   const checkMarket = () => {
-    // Se mercato chiuso e NON sono Super Admin (nemmeno Admin semplice può forzare mercato per sé stesso se chiuso)
     if (!marketOpen && !isSuperAdmin) { alert("Il mercato è CHIUSO!"); return false; }
     return true;
   };
@@ -43,23 +62,19 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
 
   const handleRelease = async (mid, name) => {
     if (!checkMarket()) return;
-    //if (!confirm(`Svincolare ${name}?`)) return;
     try { 
       await releaseMatricola(currentUser.id, mid); 
-      setMySquadDetails(prev => prev.filter(p => p.id !== mid));
+      // L'aggiornamento visivo avverrà quando onUpdate ricaricherà currentUser
       onUpdate(); 
-      loadAllData(); 
     } catch (e) { alert(e); }
   };
 
   const handleRecruit = async (m) => {
     if (!checkMarket()) return;
     if (isSquadFull) { alert("Squadra piena (max 3)."); return; }
-    //if (!confirm(`Ingaggiare ${m.displayName}?`)) return;
     try {
       await recruitMatricola(currentUser.id, m.id);
-      setMatricole(prev => prev.filter(x => x.id !== m.id));
-      setMySquadDetails(prev => [...prev, m]);
+      // L'aggiornamento visivo avverrà quando onUpdate ricaricherà currentUser
       onUpdate();
     } catch (e) { alert(e); }
   };
@@ -78,7 +93,7 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
     return matchesName && !alreadyOwn;
   });
 
-  if (loading) return <div className="text-center py-12">Caricamento...</div>;
+  if (loading && matricole.length === 0) return <div className="text-center py-12">Caricamento mercato...</div>;
 
   return (
     <div className="space-y-8">
@@ -147,10 +162,8 @@ export default function SquadraMercato({ currentUser, onUpdate }) {
             <div key={m.id} className="bg-white border rounded-xl p-3 flex justify-between items-center shadow-sm">
                 <div className="flex items-center gap-3">
                     <img src={m.photoURL || '/default-avatar.png'} className="w-10 h-10 rounded-full" />
-                    {/* --- HO RIMESSO NOME E PUNTI QUI SOTTO --- */}
                     <div>
                         <p className="font-bold text-sm">{m.displayName}</p>
-                       
                     </div>
                 </div>
                 <button 

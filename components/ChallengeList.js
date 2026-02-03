@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createRequest, getUserRequests } from '@/lib/firebase'; // RIMOSSO getChallenges
+import { createRequest, getUserRequests } from '@/lib/firebase'; 
 import { Send, Plus, Zap, Search, Clock, Hourglass, Camera, Loader2, Info, X } from 'lucide-react';
 
-// AGGIUNTO PROP: preloadedChallenges
 export default function ChallengeList({ currentUser, preloadedChallenges = [] }) {
   const [challenges, setChallenges] = useState([]);
   const [myRequests, setMyRequests] = useState([]);
@@ -17,12 +16,9 @@ export default function ChallengeList({ currentUser, preloadedChallenges = [] })
   const [flippedId, setFlippedId] = useState(null);
 
   useEffect(() => {
-    // 1. Usiamo le sfide passate da page.js (Costo: 0 letture)
     if (preloadedChallenges.length > 0) {
         setChallenges(preloadedChallenges);
     }
-    
-    // 2. Scarichiamo solo lo stato delle MIE richieste (Costo basso: solo le mie)
     loadUserStatus();
   }, [currentUser, preloadedChallenges]);
 
@@ -64,18 +60,15 @@ export default function ChallengeList({ currentUser, preloadedChallenges = [] })
         photoString = await compressImage(selectedFile);
       }
 
-      // --- MODIFICA CHIAVE: Passiamo currentUser e challenge interi ---
-      // Questo evita che il backend debba leggerli di nuovo (Risparmio: 2 letture)
       await createRequest(
           currentUser.id, 
           challenge.id, 
           challenge.punti, 
           photoString,
-          currentUser, // Passiamo l'oggetto utente
-          challenge    // Passiamo l'oggetto sfida
+          currentUser, 
+          challenge    
       );
       
-      // Ricarichiamo solo le mie richieste per aggiornare lo stato UI
       const newReqs = await getUserRequests(currentUser.id);
       setMyRequests(newReqs);
       
@@ -87,35 +80,47 @@ export default function ChallengeList({ currentUser, preloadedChallenges = [] })
     finally { setSendingId(null); }
   };
 
+  // --- LOGICA CORRETTA ---
   const isRequestable = (challengeId, challengeType) => {
-    const reqs = myRequests.filter(r => r.challengeId === challengeId);
-    const approved = reqs.find(r => r.status === 'approved');
-    if (approved) {
+    // 1. PRIORITÀ ASSOLUTA: Se c'è una richiesta in attesa, NASCONDI SEMPRE
+    const pending = myRequests.find(r => r.challengeId === challengeId && r.status === 'pending');
+    if (pending) return false;
+
+    // 2. Se non è in attesa, controlliamo lo storico delle approvate
+    const approvedReqs = myRequests.filter(r => r.challengeId === challengeId && r.status === 'approved');
+
+    if (approvedReqs.length > 0) {
         if (challengeType === 'daily') {
             const today = new Date().toDateString();
-            // Gestione sicura della data (timestamp firestore vs date js)
-            let reqDate = null;
-            if (approved.approvedAt?.toDate) {
-                reqDate = approved.approvedAt.toDate().toDateString();
-            } else if (approved.createdAt?.toDate) {
-                reqDate = approved.createdAt.toDate().toDateString();
-            }
             
-            if (reqDate === today) return false; 
+            // Controlla se una QUALSIASI delle richieste approvate è stata fatta OGGI
+            const doneToday = approvedReqs.some(r => {
+                let reqDate = null;
+                const timestamp = r.approvedAt || r.createdAt;
+                
+                if (timestamp?.toDate) {
+                    reqDate = timestamp.toDate().toDateString();
+                } else if (timestamp) { // Fallback se fosse una data JS standard
+                    reqDate = new Date(timestamp).toDateString();
+                }
+                
+                return reqDate === today;
+            });
+
+            // Se l'ho fatta oggi -> False (Nascondi). Se l'ho fatta ieri -> True (Mostra)
+            return !doneToday; 
         } else {
-            return false; // Oneshot già fatta
+            // Oneshot: Se ce n'è anche solo una approvata, è andata per sempre
+            return false; 
         }
     }
-    const pending = reqs.find(r => r.status === 'pending');
-    if (pending) return false;
+    
     return true;
   };
 
-  // Filtriamo solo sfide attive, visibili e non ancora fatte
   const activeChallenges = challenges.filter(c => c.punti > 0 && !c.hidden && isRequestable(c.id, c.type));
   const filteredList = activeChallenges.filter(c => c.titolo.toLowerCase().includes(searchTerm.toLowerCase()));
   
-  // Mappiamo le richieste pendenti recuperando i titoli dalle sfide in memoria
   const pendingRequests = myRequests.filter(r => r.status === 'pending').map(req => {
         const originalChallenge = challenges.find(c => c.id === req.challengeId);
         return { 

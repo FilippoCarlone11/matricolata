@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// AGGIUNTO getChallenges e getAllUsers
-import { auth, db, getUserData, signOutUser, getChallenges, getAllUsers } from '@/lib/firebase';
+// IMPORTA getSystemSettings
+import { auth, db, getUserData, signOutUser, getChallenges, getAllUsers, getSystemSettings } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore'; 
 
@@ -21,17 +21,57 @@ import NewsFeed from '@/components/NewsFeed';
 import AccountGenerator from '@/components/AccountGenerator'; 
 import { Trophy, LogOut, Edit2 } from 'lucide-react';
 
+// --- COMPONENTE TAB ---
+const TabContent = ({ id, activeTab, children }) => {
+  return (
+    <div style={{ display: activeTab === id ? 'block' : 'none' }}>
+      {children}
+    </div>
+  );
+};
+
 export default function Home() {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // --- CACHE GLOBALE (Scarichiamo 1 volta e basta) ---
   const [globalChallenges, setGlobalChallenges] = useState([]);
   const [globalUsers, setGlobalUsers] = useState([]);
 
   const [activeTab, setActiveTab] = useState('feed'); 
   const [showProfile, setShowProfile] = useState(false); 
+
+  // --- FUNZIONE CACHE CON ON/OFF ---
+  const fetchWithCache = async (key, fetcher, expiryMinutes, isCacheEnabled) => {
+    // SE LA CACHE È SPENTA DAL SISTEMA -> SCARICA SEMPRE
+    if (!isCacheEnabled) {
+        console.warn(`CACHE DISABLED BY ADMIN for ${key}: Fetching fresh data.`);
+        // Puliamo anche la vecchia cache per evitare confusione futura
+        localStorage.removeItem(key);
+        return await fetcher();
+    }
+
+    try {
+        const cached = localStorage.getItem(key);
+        if (cached) {
+            const parsed = JSON.parse(cached);
+            const now = new Date().getTime();
+            if (now - parsed.timestamp < expiryMinutes * 60 * 1000) {
+                console.log(`Using cached ${key} (0 reads)`);
+                return parsed.data;
+            }
+        }
+        console.log(`Fetching new ${key} from DB...`);
+        const data = await fetcher();
+        localStorage.setItem(key, JSON.stringify({
+            data: data,
+            timestamp: new Date().getTime()
+        }));
+        return data;
+    } catch (e) {
+        return await fetcher();
+    }
+  };
 
   useEffect(() => {
     let unsubscribeUser = () => {}; 
@@ -40,22 +80,29 @@ export default function Home() {
         setUser(firebaseUser);
         setActiveTab('feed'); 
         
-        // 1. Ascolto Utente Corrente (Realtime)
         const userRef = doc(db, 'users', firebaseUser.uid);
         unsubscribeUser = onSnapshot(userRef, (docSnap) => {
           if (docSnap.exists()) setUserData({ id: docSnap.id, ...docSnap.data() });
           setLoading(false);
         });
 
-        // 2. SCARICHIAMO DATI PESANTI UNA VOLTA SOLA
+        // --- LOGICA DI CARICAMENTO ---
         try {
+            // 1. Scarichiamo i settings
+            const settings = await getSystemSettings();
+            const isCacheEnabled = settings?.cacheEnabled ?? true; 
+            const cacheTime = settings?.cacheDuration ?? 30; // <--- NUOVO: Legge la durata dal DB
+
+            console.log(`System Cache: ${isCacheEnabled ? 'ON' : 'OFF'}, Duration: ${cacheTime} min`);
+
+            // 2. Passiamo 'cacheTime' invece di 30 fisso
             const [challengesData, usersData] = await Promise.all([
-                getChallenges(),
-                getAllUsers()
+                fetchWithCache('cache_challenges', getChallenges, cacheTime, isCacheEnabled),
+                fetchWithCache('cache_users', getAllUsers, cacheTime, isCacheEnabled) // Uso lo stesso tempo per entrambi per semplicità
             ]);
             setGlobalChallenges(challengesData);
             setGlobalUsers(usersData);
-        } catch(e) { console.error("Errore cache:", e); }
+        } catch(e) { console.error("Errore caricamento dati:", e); }
 
       } else {
         setUser(null);
@@ -64,6 +111,8 @@ export default function Home() {
         setGlobalUsers([]);
         unsubscribeUser(); 
         setLoading(false);
+        localStorage.removeItem('cache_challenges');
+        localStorage.removeItem('cache_users');
       }
     });
     return () => { unsubscribeAuth(); unsubscribeUser(); };
@@ -80,13 +129,6 @@ export default function Home() {
 
   const isSuperAdmin = userData.role === 'super-admin';
   const isAdminOrSuper = userData.role === 'admin' || isSuperAdmin;
-
-  // Funzione helper per nascondere/mostrare senza smontare (RISPARMIO LETTURE)
-  const TabContent = ({ id, children }) => (
-    <div style={{ display: activeTab === id ? 'block' : 'none' }}>
-      {children}
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
@@ -117,19 +159,13 @@ export default function Home() {
           <button onClick={handleLogout} className="p-2 bg-white rounded-xl shadow-sm border border-gray-200 text-gray-500 hover:text-red-600 transition-colors"><LogOut size={18} /></button>
         </div>
 
-        {/* ============================================================ */}
-        {/* IL TRUCCO SALVA-SOLDI: RENDERIZZIAMO TUTTO MA NASCONDIAMO    */}
-        {/* ============================================================ */}
-
-        {/* 1. Feed (Tutti) - Carica 20 docs 1 volta sola */}
-        <TabContent id="feed">
+        <TabContent id="feed" activeTab={activeTab}>
            <NewsFeed />
         </TabContent>
 
         {userData.role === 'matricola' ? (
           <>
-            {/* 2. Sfide (Matricola) */}
-            <TabContent id="home">
+            <TabContent id="home" activeTab={activeTab}>
                 <div className="bg-gradient-to-br from-red-600 to-orange-500 rounded-3xl p-6 text-white mb-6 shadow-xl relative overflow-hidden">
                   <div className="relative z-10 flex items-center justify-between">
                     <div>
@@ -139,41 +175,34 @@ export default function Home() {
                     <div className="bg-white/20 p-3 rounded-full backdrop-blur-sm"><Trophy size={32} /></div>
                   </div>
                 </div>
-                {/* MODIFICA: Passiamo preloadedChallenges */}
                 <ChallengeList currentUser={userData} preloadedChallenges={globalChallenges} />
             </TabContent>
 
-            {/* 3. Lista Regole */}
-            <TabContent id="lista">
-                {/* MODIFICA: Passiamo preloadedChallenges */}
+            <TabContent id="lista" activeTab={activeTab}>
                 <BonusMalusList currentUser={userData} preloadedChallenges={globalChallenges} />
             </TabContent>
 
-            {/* 4. Storico */}
-            <TabContent id="percorso">
+            <TabContent id="percorso" activeTab={activeTab}>
                 <StoricoPunti currentUser={userData} />
             </TabContent>
           </>
         ) : (
-          /* VISTA NON-MATRICOLA */
           <>
-            <TabContent id="squadra">
-                 <SquadraMercato currentUser={userData} onUpdate={refreshUserData} />
+            <TabContent id="squadra" activeTab={activeTab}>
+                 <SquadraMercato currentUser={userData} onUpdate={refreshUserData} preloadedUsers={globalUsers} />
             </TabContent>
             
-            <TabContent id="classifiche">
-                 {/* MODIFICA: Passiamo preloadedUsers */}
+            <TabContent id="classifiche" activeTab={activeTab}>
                  <Classifiche preloadedUsers={globalUsers} />
             </TabContent>
             
-            <TabContent id="lista">
-                 {/* MODIFICA: Passiamo preloadedChallenges */}
+            <TabContent id="lista" activeTab={activeTab}>
                  <BonusMalusList currentUser={userData} preloadedChallenges={globalChallenges} />
             </TabContent>
 
             {activeTab === 'admin-sfide' && isAdminOrSuper && <AdminSfideManager />}
             {activeTab === 'admin-matricole' && isAdminOrSuper && <AdminMatricolaHistory />}
-            {activeTab === 'admin-utenti' && isSuperAdmin && <AdminUserList currentUser={userData} />}
+            {activeTab === 'admin-utenti' && isSuperAdmin && <AdminUserList currentUser={userData} preloadedUsers={globalUsers} />}
           </>
         )}
 
@@ -182,6 +211,7 @@ export default function Home() {
       {showProfile && user && (
           <EditProfile user={userData} onClose={() => setShowProfile(false)} onUpdate={refreshUserData} />
       )}
+      
       
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} role={userData.role} />
     </div>
