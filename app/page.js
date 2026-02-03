@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { auth, db, getUserData, signOutUser } from '@/lib/firebase';
+// AGGIUNTO getChallenges e getAllUsers
+import { auth, db, getUserData, signOutUser, getChallenges, getAllUsers } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore'; 
 
@@ -25,23 +26,42 @@ export default function Home() {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   
+  // --- CACHE GLOBALE (Scarichiamo 1 volta e basta) ---
+  const [globalChallenges, setGlobalChallenges] = useState([]);
+  const [globalUsers, setGlobalUsers] = useState([]);
+
   const [activeTab, setActiveTab] = useState('feed'); 
   const [showProfile, setShowProfile] = useState(false); 
 
   useEffect(() => {
     let unsubscribeUser = () => {}; 
-    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
         setActiveTab('feed'); 
+        
+        // 1. Ascolto Utente Corrente (Realtime)
         const userRef = doc(db, 'users', firebaseUser.uid);
         unsubscribeUser = onSnapshot(userRef, (docSnap) => {
           if (docSnap.exists()) setUserData({ id: docSnap.id, ...docSnap.data() });
           setLoading(false);
         });
+
+        // 2. SCARICHIAMO DATI PESANTI UNA VOLTA SOLA
+        try {
+            const [challengesData, usersData] = await Promise.all([
+                getChallenges(),
+                getAllUsers()
+            ]);
+            setGlobalChallenges(challengesData);
+            setGlobalUsers(usersData);
+        } catch(e) { console.error("Errore cache:", e); }
+
       } else {
         setUser(null);
         setUserData(null);
+        setGlobalChallenges([]);
+        setGlobalUsers([]);
         unsubscribeUser(); 
         setLoading(false);
       }
@@ -50,7 +70,6 @@ export default function Home() {
   }, []);
 
   const refreshUserData = async () => {
-    // Non serve quasi più grazie a onSnapshot, ma lo lasciamo per sicurezza
     if (user) { const data = await getUserData(user.uid); setUserData(data); }
   };
 
@@ -109,7 +128,7 @@ export default function Home() {
 
         {userData.role === 'matricola' ? (
           <>
-            {/* 2. Sfide (Matricola) - Carica ~10 docs 1 volta sola */}
+            {/* 2. Sfide (Matricola) */}
             <TabContent id="home">
                 <div className="bg-gradient-to-br from-red-600 to-orange-500 rounded-3xl p-6 text-white mb-6 shadow-xl relative overflow-hidden">
                   <div className="relative z-10 flex items-center justify-between">
@@ -120,15 +139,17 @@ export default function Home() {
                     <div className="bg-white/20 p-3 rounded-full backdrop-blur-sm"><Trophy size={32} /></div>
                   </div>
                 </div>
-                <ChallengeList currentUser={userData} />
+                {/* MODIFICA: Passiamo preloadedChallenges */}
+                <ChallengeList currentUser={userData} preloadedChallenges={globalChallenges} />
             </TabContent>
 
-            {/* 3. Lista Regole - Carica ~10 docs (cache sfide) */}
+            {/* 3. Lista Regole */}
             <TabContent id="lista">
-                <BonusMalusList currentUser={userData} />
+                {/* MODIFICA: Passiamo preloadedChallenges */}
+                <BonusMalusList currentUser={userData} preloadedChallenges={globalChallenges} />
             </TabContent>
 
-            {/* 4. Storico - Carica solo le tue richieste */}
+            {/* 4. Storico */}
             <TabContent id="percorso">
                 <StoricoPunti currentUser={userData} />
             </TabContent>
@@ -141,14 +162,15 @@ export default function Home() {
             </TabContent>
             
             <TabContent id="classifiche">
-                 <Classifiche />
+                 {/* MODIFICA: Passiamo preloadedUsers */}
+                 <Classifiche preloadedUsers={globalUsers} />
             </TabContent>
             
             <TabContent id="lista">
-                 <BonusMalusList currentUser={userData} />
+                 {/* MODIFICA: Passiamo preloadedChallenges */}
+                 <BonusMalusList currentUser={userData} preloadedChallenges={globalChallenges} />
             </TabContent>
 
-            {/* Le parti Admin le lasciamo smontabili perché si usano poco e vogliamo dati freschi */}
             {activeTab === 'admin-sfide' && isAdminOrSuper && <AdminSfideManager />}
             {activeTab === 'admin-matricole' && isAdminOrSuper && <AdminMatricolaHistory />}
             {activeTab === 'admin-utenti' && isSuperAdmin && <AdminUserList currentUser={userData} />}
@@ -161,7 +183,6 @@ export default function Home() {
           <EditProfile user={userData} onClose={() => setShowProfile(false)} onUpdate={refreshUserData} />
       )}
       
-      <AccountGenerator />
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} role={userData.role} />
     </div>
   );

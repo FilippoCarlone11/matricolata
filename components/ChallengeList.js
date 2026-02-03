@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getChallenges, createRequest, getUserRequests } from '@/lib/firebase';
+import { createRequest, getUserRequests } from '@/lib/firebase'; // RIMOSSO getChallenges
 import { Send, Plus, Zap, Search, Clock, Hourglass, Camera, Loader2, Info, X } from 'lucide-react';
 
-export default function ChallengeList({ currentUser }) {
+// AGGIUNTO PROP: preloadedChallenges
+export default function ChallengeList({ currentUser, preloadedChallenges = [] }) {
   const [challenges, setChallenges] = useState([]);
   const [myRequests, setMyRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,11 +16,19 @@ export default function ChallengeList({ currentUser }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [flippedId, setFlippedId] = useState(null);
 
-  useEffect(() => { loadData(); }, [currentUser]);
+  useEffect(() => {
+    // 1. Usiamo le sfide passate da page.js (Costo: 0 letture)
+    if (preloadedChallenges.length > 0) {
+        setChallenges(preloadedChallenges);
+    }
+    
+    // 2. Scarichiamo solo lo stato delle MIE richieste (Costo basso: solo le mie)
+    loadUserStatus();
+  }, [currentUser, preloadedChallenges]);
 
-  const loadData = async () => {
-    const [challs, reqs] = await Promise.all([ getChallenges(), getUserRequests(currentUser.id) ]);
-    setChallenges(challs);
+  const loadUserStatus = async () => {
+    if (!currentUser?.id) return;
+    const reqs = await getUserRequests(currentUser.id);
     setMyRequests(reqs);
     setLoading(false);
   };
@@ -55,10 +64,21 @@ export default function ChallengeList({ currentUser }) {
         photoString = await compressImage(selectedFile);
       }
 
-      await createRequest(currentUser.id, challenge.id, challenge.punti, photoString);
+      // --- MODIFICA CHIAVE: Passiamo currentUser e challenge interi ---
+      // Questo evita che il backend debba leggerli di nuovo (Risparmio: 2 letture)
+      await createRequest(
+          currentUser.id, 
+          challenge.id, 
+          challenge.punti, 
+          photoString,
+          currentUser, // Passiamo l'oggetto utente
+          challenge    // Passiamo l'oggetto sfida
+      );
       
+      // Ricarichiamo solo le mie richieste per aggiornare lo stato UI
       const newReqs = await getUserRequests(currentUser.id);
       setMyRequests(newReqs);
+      
       setSearchTerm(''); 
       setSelectedFile(null);
       setActiveCardId(null);
@@ -73,10 +93,17 @@ export default function ChallengeList({ currentUser }) {
     if (approved) {
         if (challengeType === 'daily') {
             const today = new Date().toDateString();
-            const reqDate = approved.approvedAt?.toDate().toDateString();
+            // Gestione sicura della data (timestamp firestore vs date js)
+            let reqDate = null;
+            if (approved.approvedAt?.toDate) {
+                reqDate = approved.approvedAt.toDate().toDateString();
+            } else if (approved.createdAt?.toDate) {
+                reqDate = approved.createdAt.toDate().toDateString();
+            }
+            
             if (reqDate === today) return false; 
         } else {
-            return false; 
+            return false; // Oneshot già fatta
         }
     }
     const pending = reqs.find(r => r.status === 'pending');
@@ -84,14 +111,21 @@ export default function ChallengeList({ currentUser }) {
     return true;
   };
 
+  // Filtriamo solo sfide attive, visibili e non ancora fatte
   const activeChallenges = challenges.filter(c => c.punti > 0 && !c.hidden && isRequestable(c.id, c.type));
   const filteredList = activeChallenges.filter(c => c.titolo.toLowerCase().includes(searchTerm.toLowerCase()));
+  
+  // Mappiamo le richieste pendenti recuperando i titoli dalle sfide in memoria
   const pendingRequests = myRequests.filter(r => r.status === 'pending').map(req => {
         const originalChallenge = challenges.find(c => c.id === req.challengeId);
-        return { ...req, titolo: originalChallenge ? originalChallenge.titolo : 'Bonus Sconosciuto', punti: originalChallenge ? originalChallenge.punti : '?' };
+        return { 
+            ...req, 
+            titolo: originalChallenge ? originalChallenge.titolo : (req.challengeTitle || 'Bonus'), 
+            punti: originalChallenge ? originalChallenge.punti : req.puntiRichiesti 
+        };
     });
 
-  if (loading) return <div className="text-center py-8">Caricamento...</div>;
+  if (loading && challenges.length === 0) return <div className="text-center py-8"><Loader2 className="animate-spin mx-auto"/></div>;
 
   return (
     <div className="space-y-8 mb-8">
@@ -155,7 +189,7 @@ export default function ChallengeList({ currentUser }) {
                             </div>
                         </div>
 
-                        {/* RETRO (Aggiornato: Sfondo Bianco) */}
+                        {/* RETRO */}
                         <div className="absolute inset-0 bg-white p-4 rounded-xl shadow-md border-2 border-gray-100 flex flex-col justify-between backface-hidden"
                              style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
                             <div>

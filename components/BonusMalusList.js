@@ -1,30 +1,27 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getChallenges } from '@/lib/firebase';
+// RIMOSSO: import { getChallenges } from '@/lib/firebase';
 import { ThumbsUp, ThumbsDown, EyeOff, Zap, Repeat, Lock, RotateCcw } from 'lucide-react';
 
-export default function BonusMalusList({ currentUser }) {
+// AGGIUNTO PROP: preloadedChallenges
+export default function BonusMalusList({ currentUser, preloadedChallenges = [] }) {
   const [challenges, setChallenges] = useState([]);
   const [view, setView] = useState('bonus'); 
-  const [loading, setLoading] = useState(true);
+  // Rimosso loading locale perché i dati arrivano istantaneamente dal padre
   
-  // Stato per tracciare quale card è girata (solo una alla volta o multiple)
   const [flippedId, setFlippedId] = useState(null);
 
   const canSeeHidden = currentUser && currentUser.role !== 'matricola';
 
   useEffect(() => {
-    const load = async () => {
-      const data = await getChallenges();
-      setChallenges(data);
-      setLoading(false);
-    };
-    load();
-  }, []);
+    // USIAMO I DATI DAL PADRE (0 Letture)
+    if (preloadedChallenges.length > 0) {
+      setChallenges(preloadedChallenges);
+    }
+  }, [preloadedChallenges]);
 
   const handleCardClick = (id) => {
-    // Se clicco sulla stessa, la chiudo (null), altrimenti apro quella nuova
     setFlippedId(flippedId === id ? null : id);
   };
 
@@ -58,7 +55,7 @@ export default function BonusMalusList({ currentUser }) {
         key={c.id} 
         onClick={() => handleCardClick(c.id)}
         className="relative w-full h-20 mb-3 cursor-pointer perspective-1000 group"
-        style={{ perspective: '1000px' }} // Fallback style
+        style={{ perspective: '1000px' }} 
       >
         {/* INNER CONTAINER (Quello che ruota) */}
         <div 
@@ -81,7 +78,6 @@ export default function BonusMalusList({ currentUser }) {
                                     <EyeOff size={8}/> Segreto
                                 </span>
                             )}
-                            {/* Mostra "Tap per info" se c'è descrizione */}
                             {c.description && (
                                 <span className="text-[9px] text-gray-400 flex items-center gap-1 animate-pulse">
                                     <RotateCcw size={8}/> Info
@@ -104,7 +100,6 @@ export default function BonusMalusList({ currentUser }) {
                     {c.description || "Nessuna descrizione disponibile."}
                 </p>
                 <span className="text-[9px] text-gray-400 mt-1 uppercase font-bold tracking-wider">
-                    {/* MODIFICA NOMI QUI */}
                     {c.type === 'daily' ? 'GIORNALIERO' : 'SPECIALE'}
                 </span>
             </div>
@@ -113,8 +108,6 @@ export default function BonusMalusList({ currentUser }) {
       </div>
     );
   };
-
-  if (loading) return <div className="text-center py-12">Caricamento lista...</div>;
 
   return (
     <div>
