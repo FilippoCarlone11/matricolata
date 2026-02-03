@@ -30,23 +30,15 @@ export default function Home() {
 
   useEffect(() => {
     let unsubscribeUser = () => {}; 
-
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
-        
-        // *** FIX: FORZIAMO LA BACHECA AD OGNI LOGIN/REFRESH ***
         setActiveTab('feed'); 
-
-        // Listener in tempo reale sull'utente
         const userRef = doc(db, 'users', firebaseUser.uid);
         unsubscribeUser = onSnapshot(userRef, (docSnap) => {
-          if (docSnap.exists()) {
-             setUserData({ id: docSnap.id, ...docSnap.data() });
-          }
+          if (docSnap.exists()) setUserData({ id: docSnap.id, ...docSnap.data() });
           setLoading(false);
         });
-
       } else {
         setUser(null);
         setUserData(null);
@@ -54,29 +46,28 @@ export default function Home() {
         setLoading(false);
       }
     });
-
-    return () => {
-      unsubscribeAuth();
-      unsubscribeUser();
-    };
+    return () => { unsubscribeAuth(); unsubscribeUser(); };
   }, []);
 
   const refreshUserData = async () => {
-    if (user) {
-      const data = await getUserData(user.uid);
-      setUserData(data);
-    }
+    // Non serve quasi più grazie a onSnapshot, ma lo lasciamo per sicurezza
+    if (user) { const data = await getUserData(user.uid); setUserData(data); }
   };
 
-  const handleLogout = async () => {
-    try { await signOutUser(); } catch (error) { console.error(error); }
-  };
+  const handleLogout = async () => { try { await signOutUser(); } catch (error) { console.error(error); } };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
   if (!user || !userData) return <Login />;
 
   const isSuperAdmin = userData.role === 'super-admin';
   const isAdminOrSuper = userData.role === 'admin' || isSuperAdmin;
+
+  // Funzione helper per nascondere/mostrare senza smontare (RISPARMIO LETTURE)
+  const TabContent = ({ id, children }) => (
+    <div style={{ display: activeTab === id ? 'block' : 'none' }}>
+      {children}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
@@ -107,14 +98,19 @@ export default function Home() {
           <button onClick={handleLogout} className="p-2 bg-white rounded-xl shadow-sm border border-gray-200 text-gray-500 hover:text-red-600 transition-colors"><LogOut size={18} /></button>
         </div>
 
-        {/* --- FEED (VISIBILE A TUTTI) --- */}
-        {activeTab === 'feed' && <NewsFeed />}
+        {/* ============================================================ */}
+        {/* IL TRUCCO SALVA-SOLDI: RENDERIZZIAMO TUTTO MA NASCONDIAMO    */}
+        {/* ============================================================ */}
 
-        {/* --- VISTA MATRICOLA --- */}
-        {userData.role === 'matricola' && (
+        {/* 1. Feed (Tutti) - Carica 20 docs 1 volta sola */}
+        <TabContent id="feed">
+           <NewsFeed />
+        </TabContent>
+
+        {userData.role === 'matricola' ? (
           <>
-            {activeTab === 'home' && (
-              <>
+            {/* 2. Sfide (Matricola) - Carica ~10 docs 1 volta sola */}
+            <TabContent id="home">
                 <div className="bg-gradient-to-br from-red-600 to-orange-500 rounded-3xl p-6 text-white mb-6 shadow-xl relative overflow-hidden">
                   <div className="relative z-10 flex items-center justify-between">
                     <div>
@@ -125,51 +121,47 @@ export default function Home() {
                   </div>
                 </div>
                 <ChallengeList currentUser={userData} />
-              </>
-            )}
-            {activeTab === 'lista' && <BonusMalusList currentUser={userData} />}
-            {activeTab === 'percorso' && <StoricoPunti currentUser={userData} />}
+            </TabContent>
+
+            {/* 3. Lista Regole - Carica ~10 docs (cache sfide) */}
+            <TabContent id="lista">
+                <BonusMalusList currentUser={userData} />
+            </TabContent>
+
+            {/* 4. Storico - Carica solo le tue richieste */}
+            <TabContent id="percorso">
+                <StoricoPunti currentUser={userData} />
+            </TabContent>
           </>
-        )}
-
-        {/* --- VISTA ADMIN / UTENTE --- */}
-        {userData.role !== 'matricola' && (
+        ) : (
+          /* VISTA NON-MATRICOLA */
           <>
-            {activeTab === 'squadra' && <SquadraMercato currentUser={userData} onUpdate={refreshUserData} />}
-            {activeTab === 'classifiche' && <Classifiche />}
-            {activeTab === 'lista' && <BonusMalusList currentUser={userData} />} 
+            <TabContent id="squadra">
+                 <SquadraMercato currentUser={userData} onUpdate={refreshUserData} />
+            </TabContent>
+            
+            <TabContent id="classifiche">
+                 <Classifiche />
+            </TabContent>
+            
+            <TabContent id="lista">
+                 <BonusMalusList currentUser={userData} />
+            </TabContent>
 
-            {/* GESTIONE SFIDE */}
-            {activeTab === 'admin-sfide' && isAdminOrSuper && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <AdminSfideManager />
-              </div>
-            )}
-
-            {activeTab === 'admin-matricole' && isAdminOrSuper && (
-               <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                  <AdminMatricolaHistory />
-               </div>
-            )}
-
-            {activeTab === 'admin-utenti' && isSuperAdmin && (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <AdminUserList currentUser={userData} />
-              </div>
-            )}
+            {/* Le parti Admin le lasciamo smontabili perché si usano poco e vogliamo dati freschi */}
+            {activeTab === 'admin-sfide' && isAdminOrSuper && <AdminSfideManager />}
+            {activeTab === 'admin-matricole' && isAdminOrSuper && <AdminMatricolaHistory />}
+            {activeTab === 'admin-utenti' && isSuperAdmin && <AdminUserList currentUser={userData} />}
           </>
         )}
 
       </div>
 
-      {/* MODALE EDIT PROFILE */}
       {showProfile && user && (
           <EditProfile user={userData} onClose={() => setShowProfile(false)} onUpdate={refreshUserData} />
       )}
       
-      
-
-      {/* NAVIGATION BAR */}
+      <AccountGenerator />
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} role={userData.role} />
     </div>
   );
