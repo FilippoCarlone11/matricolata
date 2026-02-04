@@ -17,12 +17,10 @@ import SquadraMercato from '@/components/SquadraMercato';
 import Classifiche from '@/components/Classifiche';
 import BonusMalusList from '@/components/BonusMalusList'; 
 import NewsFeed from '@/components/NewsFeed'; 
-// RIMOSSO: import AccountGenerator from '@/components/AccountGenerator'; 
-import InstallPrompt from '@/components/InstallPrompt'; // <--- NUOVO IMPORT
+import InstallPrompt from '@/components/InstallPrompt'; 
 
 import { Trophy, LogOut, Edit2 } from 'lucide-react';
 
-// --- COMPONENTE TAB ---
 const TabContent = ({ id, activeTab, children }) => {
   return (
     <div style={{ display: activeTab === id ? 'block' : 'none' }}>
@@ -38,15 +36,12 @@ export default function Home() {
   
   const [globalChallenges, setGlobalChallenges] = useState([]);
   const [globalUsers, setGlobalUsers] = useState([]);
-
+  
   const [activeTab, setActiveTab] = useState('feed'); 
   const [showProfile, setShowProfile] = useState(false); 
 
-  // --- FUNZIONE CACHE CON ON/OFF ---
   const fetchWithCache = async (key, fetcher, expiryMinutes, isCacheEnabled) => {
-    // SE LA CACHE È SPENTA DAL SISTEMA -> SCARICA SEMPRE
     if (!isCacheEnabled) {
-        // console.warn(`CACHE DISABLED BY ADMIN for ${key}: Fetching fresh data.`);
         localStorage.removeItem(key);
         return await fetcher();
     }
@@ -56,12 +51,13 @@ export default function Home() {
         if (cached) {
             const parsed = JSON.parse(cached);
             const now = new Date().getTime();
-            if (now - parsed.timestamp < expiryMinutes * 60 * 1000) {
-                // console.log(`Using cached ${key} (0 reads)`);
+            const diffMinutes = (now - parsed.timestamp) / 1000 / 60;
+
+            if (diffMinutes < expiryMinutes) {
                 return parsed.data;
             }
         }
-        // console.log(`Fetching new ${key} from DB...`);
+        
         const data = await fetcher();
         localStorage.setItem(key, JSON.stringify({
             data: data,
@@ -86,12 +82,11 @@ export default function Home() {
           setLoading(false);
         });
 
-        // --- LOGICA DI CARICAMENTO ---
         try {
             const settings = await getSystemSettings();
             const isCacheEnabled = settings?.cacheEnabled ?? true; 
             const cacheTime = settings?.cacheDuration ?? 30;
-
+            
             const [challengesData, usersData] = await Promise.all([
                 fetchWithCache('cache_challenges', getChallenges, cacheTime, isCacheEnabled),
                 fetchWithCache('cache_users', getAllUsers, cacheTime, isCacheEnabled)
@@ -129,7 +124,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
       
-      {/* POPUP INSTALLAZIONE PWA */}
+      {/* POPUP INSTALLAZIONE (Appare solo se necessario) */}
       <InstallPrompt />
 
       <div className="max-w-lg mx-auto p-4 pb-28">
@@ -211,8 +206,6 @@ export default function Home() {
       {showProfile && user && (
           <EditProfile user={userData} onClose={() => setShowProfile(false)} onUpdate={refreshUserData} />
       )}
-      
-      {/* AccountGenerator RIMOSSO QUI */}
       
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} role={userData.role} />
     </div>
