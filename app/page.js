@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// IMPORTA getSystemSettings
 import { auth, db, getUserData, signOutUser, getChallenges, getAllUsers, getSystemSettings } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore'; 
@@ -18,7 +17,9 @@ import SquadraMercato from '@/components/SquadraMercato';
 import Classifiche from '@/components/Classifiche';
 import BonusMalusList from '@/components/BonusMalusList'; 
 import NewsFeed from '@/components/NewsFeed'; 
-import AccountGenerator from '@/components/AccountGenerator'; 
+// RIMOSSO: import AccountGenerator from '@/components/AccountGenerator'; 
+import InstallPrompt from '@/components/InstallPrompt'; // <--- NUOVO IMPORT
+
 import { Trophy, LogOut, Edit2 } from 'lucide-react';
 
 // --- COMPONENTE TAB ---
@@ -45,8 +46,7 @@ export default function Home() {
   const fetchWithCache = async (key, fetcher, expiryMinutes, isCacheEnabled) => {
     // SE LA CACHE È SPENTA DAL SISTEMA -> SCARICA SEMPRE
     if (!isCacheEnabled) {
-        console.warn(`CACHE DISABLED BY ADMIN for ${key}: Fetching fresh data.`);
-        // Puliamo anche la vecchia cache per evitare confusione futura
+        // console.warn(`CACHE DISABLED BY ADMIN for ${key}: Fetching fresh data.`);
         localStorage.removeItem(key);
         return await fetcher();
     }
@@ -57,11 +57,11 @@ export default function Home() {
             const parsed = JSON.parse(cached);
             const now = new Date().getTime();
             if (now - parsed.timestamp < expiryMinutes * 60 * 1000) {
-                console.log(`Using cached ${key} (0 reads)`);
+                // console.log(`Using cached ${key} (0 reads)`);
                 return parsed.data;
             }
         }
-        console.log(`Fetching new ${key} from DB...`);
+        // console.log(`Fetching new ${key} from DB...`);
         const data = await fetcher();
         localStorage.setItem(key, JSON.stringify({
             data: data,
@@ -88,17 +88,13 @@ export default function Home() {
 
         // --- LOGICA DI CARICAMENTO ---
         try {
-            // 1. Scarichiamo i settings
             const settings = await getSystemSettings();
             const isCacheEnabled = settings?.cacheEnabled ?? true; 
-            const cacheTime = settings?.cacheDuration ?? 30; // <--- NUOVO: Legge la durata dal DB
+            const cacheTime = settings?.cacheDuration ?? 30;
 
-            console.log(`System Cache: ${isCacheEnabled ? 'ON' : 'OFF'}, Duration: ${cacheTime} min`);
-
-            // 2. Passiamo 'cacheTime' invece di 30 fisso
             const [challengesData, usersData] = await Promise.all([
                 fetchWithCache('cache_challenges', getChallenges, cacheTime, isCacheEnabled),
-                fetchWithCache('cache_users', getAllUsers, cacheTime, isCacheEnabled) // Uso lo stesso tempo per entrambi per semplicità
+                fetchWithCache('cache_users', getAllUsers, cacheTime, isCacheEnabled)
             ]);
             setGlobalChallenges(challengesData);
             setGlobalUsers(usersData);
@@ -132,6 +128,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+      
+      {/* POPUP INSTALLAZIONE PWA */}
+      <InstallPrompt />
+
       <div className="max-w-lg mx-auto p-4 pb-28">
         
         {/* HEADER */}
@@ -212,6 +212,7 @@ export default function Home() {
           <EditProfile user={userData} onClose={() => setShowProfile(false)} onUpdate={refreshUserData} />
       )}
       
+      {/* AccountGenerator RIMOSSO QUI */}
       
       <Navigation activeTab={activeTab} setActiveTab={setActiveTab} role={userData.role} />
     </div>
