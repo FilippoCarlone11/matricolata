@@ -1,8 +1,8 @@
 export default function manifest() {
   return {
-    name: 'Nome Completo App', // Es: FantaCollegio 2025
-    short_name: 'FantaApp',    // Nome corto che appare sotto l'icona (max 12 caratteri)
-    description: 'La migliore app per gestire il Fanta Collegio',
+    name: 'Matricolata.it', // Es: FantaCollegio 2025
+    short_name: 'Matricolata.it',    // Nome corto che appare sotto l'icona (max 12 caratteri)
+    description: 'L\'app della fantamatricolata',
     start_url: '/',
     display: 'standalone',     // Fa sembrare l'app nativa (nasconde la barra URL)
     background_color: '#ffffff', // Colore sfondo splash screen
