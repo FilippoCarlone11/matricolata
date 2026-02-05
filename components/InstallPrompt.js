@@ -9,53 +9,57 @@ export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
 
   useEffect(() => {
-    // 1. Controlla se l'app è già installata
+    // 1. Controlla se l'app è già installata (Standalone mode)
+    // Se l'utente sta già usando l'app installata, non mostriamo nulla.
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    if (isStandalone) return; 
+    
+    if (isStandalone) {
+      return; 
+    }
 
-    // 2. Controlla iOS
+    // 2. Controlla se è un dispositivo iOS
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     setIsIOS(isIosDevice);
 
-    // 3. Gestione Android/Chrome
+    // 3. Gestione Android/Chrome (Cattura l'evento REALE di installazione)
     const handleBeforeInstallPrompt = (e) => {
+      // Blocchiamo il banner standard di Chrome per mostrare il nostro più bello
       e.preventDefault(); 
+      // Salviamo l'evento "magico" che ci permette di lanciare l'installazione dopo
       setDeferredPrompt(e); 
+      // Ora possiamo mostrare il nostro popup
       setShowPrompt(true); 
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // --- DEBUG: FORZA IL POPUP DOPO 1 SECONDO ---
-    // Questo serve per vedere la grafica anche se il browser non vuole.
-    // RICORDATI DI TOGLIERE QUESTO TIMEOUT QUANDO HAI FINITO DI TESTARE!
-    const timer = setTimeout(() => {
-        setShowPrompt(true);
-    }, 1000);
-    // ---------------------------------------------
+    // 4. Gestione iOS (Nessun evento, mostriamo dopo un ritardo)
+    if (isIosDevice) {
+      // Aspettiamo 3 secondi per non aggredire l'utente appena entra
+      setTimeout(() => setShowPrompt(true), 3000);
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      clearTimeout(timer);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-        // Se siamo in modalità "forzata" e non c'è l'evento reale,
-        // mostriamo un alert per dire che graficamente è ok.
-        alert("Grafica OK! (Su un telefono vero qui partirebbe l'installazione)");
-        setShowPrompt(false);
-        return;
-    }
+    // Se siamo qui, siamo su Android e abbiamo l'evento salvato
+    if (!deferredPrompt) return;
     
+    // Lanciamo il prompt nativo del sistema
     deferredPrompt.prompt(); 
+    
+    // Attendiamo la scelta dell'utente
     const { outcome } = await deferredPrompt.userChoice;
     
+    // Se accetta o rifiuta, chiudiamo comunque il nostro popup
     if (outcome === 'accepted') {
-      setShowPrompt(false);
+      console.log('Utente ha accettato installazione');
     }
+    setShowPrompt(false);
     setDeferredPrompt(null);
   };
 
@@ -79,10 +83,11 @@ export default function InstallPrompt() {
           
           <h3 className="text-xl font-bold text-gray-900 mb-2">Installa l'App</h3>
           <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-            Per un'esperienza migliore, aggiungi questa app alla schermata Home.
+            Per un'esperienza migliore, aggiungi questa app alla schermata Home. Funziona come un'app nativa!
           </p>
 
           {isIOS ? (
+            /* ISTRUZIONI IOS (Perché Apple non permette il tasto installa) */
             <div className="w-full bg-gray-50 rounded-xl p-4 border border-gray-100 text-left space-y-3">
                <div className="flex items-center gap-3 text-sm text-gray-700">
                   <span className="bg-white p-1.5 rounded-md shadow-sm border"><Share size={18} className="text-blue-500"/></span>
@@ -95,6 +100,7 @@ export default function InstallPrompt() {
                </div>
             </div>
           ) : (
+            /* BOTTONE ANDROID (Lancia l'evento reale) */
             <button 
               onClick={handleInstallClick}
               className="w-full py-3 bg-black text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
