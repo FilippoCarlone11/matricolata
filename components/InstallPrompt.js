@@ -1,69 +1,68 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Share, PlusSquare, Smartphone, Download } from 'lucide-react';
+import { X, Share, PlusSquare, Smartphone, Download, MoreVertical } from 'lucide-react';
 
 export default function InstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isStandalone, setIsStandalone] = useState(true); 
 
   useEffect(() => {
-    // 1. Controlla se l'app è già installata (Standalone mode)
-    // Se l'utente sta già usando l'app installata, non mostriamo nulla.
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    
-    if (isStandalone) {
-      return; 
-    }
-
-    // 2. Controlla se è un dispositivo iOS
+    // 0. CONTROLLO DISPOSITIVO: Se è un PC, fermati subito.
     const userAgent = window.navigator.userAgent.toLowerCase();
+    const isMobile = /iphone|ipad|ipod|android|blackberry|iemobile/i.test(userAgent);
+    
+    // Se NON è mobile, non fare nulla (esci dalla funzione)
+    if (!isMobile) return;
+
+    // 1. Controlla se l'app è già installata
+    const checkStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    setIsStandalone(checkStandalone);
+    if (checkStandalone) return; 
+
+    // 2. Rileva iOS
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     setIsIOS(isIosDevice);
 
-    // 3. Gestione Android/Chrome (Cattura l'evento REALE di installazione)
+    // 3. Cattura l'evento di installazione (Solo Android/Chrome)
     const handleBeforeInstallPrompt = (e) => {
-      // Blocchiamo il banner standard di Chrome per mostrare il nostro più bello
       e.preventDefault(); 
-      // Salviamo l'evento "magico" che ci permette di lanciare l'installazione dopo
       setDeferredPrompt(e); 
-      // Ora possiamo mostrare il nostro popup
+      // Se Android ci dà l'evento, mostriamo subito il popup col tasto nero
       setShowPrompt(true); 
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // 4. Gestione iOS (Nessun evento, mostriamo dopo un ritardo)
-    if (isIosDevice) {
-      // Aspettiamo 3 secondi per non aggredire l'utente appena entra
-      setTimeout(() => setShowPrompt(true), 3000);
-    }
+    // 4. TIMER DI SICUREZZA (SOLO PER MOBILE)
+    // Se dopo 3 secondi non è successo nulla (es. iOS o Android "pigro"), 
+    // forziamo l'apertura del popup con le istruzioni manuali.
+    const timer = setTimeout(() => {
+        if (!checkStandalone) {
+            setShowPrompt(true);
+        }
+    }, 3000);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      clearTimeout(timer);
     };
   }, []);
 
   const handleInstallClick = async () => {
-    // Se siamo qui, siamo su Android e abbiamo l'evento salvato
     if (!deferredPrompt) return;
-    
-    // Lanciamo il prompt nativo del sistema
     deferredPrompt.prompt(); 
-    
-    // Attendiamo la scelta dell'utente
     const { outcome } = await deferredPrompt.userChoice;
-    
-    // Se accetta o rifiuta, chiudiamo comunque il nostro popup
     if (outcome === 'accepted') {
-      console.log('Utente ha accettato installazione');
+      setShowPrompt(false);
     }
-    setShowPrompt(false);
     setDeferredPrompt(null);
   };
 
-  if (!showPrompt) return null;
+  // Se è già installata o non dobbiamo mostrarlo, non renderizziamo nulla
+  if (isStandalone || !showPrompt) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
@@ -83,30 +82,49 @@ export default function InstallPrompt() {
           
           <h3 className="text-xl font-bold text-gray-900 mb-2">Installa l'App</h3>
           <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-            Per un'esperienza migliore, aggiungi questa app alla schermata Home. Funziona come un'app nativa!
+            Aggiungi l'app alla Home per ricevere notifiche e accedere velocemente.
           </p>
 
-          {isIOS ? (
-            /* ISTRUZIONI IOS (Perché Apple non permette il tasto installa) */
-            <div className="w-full bg-gray-50 rounded-xl p-4 border border-gray-100 text-left space-y-3">
-               <div className="flex items-center gap-3 text-sm text-gray-700">
-                  <span className="bg-white p-1.5 rounded-md shadow-sm border"><Share size={18} className="text-blue-500"/></span>
-                  <span>1. Tocca <b>Condividi</b></span>
-               </div>
-               <div className="h-px bg-gray-200 w-full"></div>
-               <div className="flex items-center gap-3 text-sm text-gray-700">
-                  <span className="bg-white p-1.5 rounded-md shadow-sm border"><PlusSquare size={18} className="text-gray-600"/></span>
-                  <span>2. Seleziona <b>"Aggiungi alla Home"</b></span>
-               </div>
-            </div>
-          ) : (
-            /* BOTTONE ANDROID (Lancia l'evento reale) */
+          {/* CASO 1: Abbiamo il "bottone magico" di Android */}
+          {deferredPrompt ? (
             <button 
               onClick={handleInstallClick}
               className="w-full py-3 bg-black text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all"
             >
               <Download size={20} /> Installa Ora
             </button>
+          ) : (
+            /* CASO 2: Istruzioni Manuali (iOS o Android senza evento) */
+            <div className="w-full bg-gray-50 rounded-xl p-4 border border-gray-100 text-left space-y-3">
+               
+               {isIOS ? (
+                 // Istruzioni iOS
+                 <>
+                   <div className="flex items-center gap-3 text-sm text-gray-700">
+                      <span className="bg-white p-1.5 rounded-md shadow-sm border"><Share size={18} className="text-blue-500"/></span>
+                      <span>1. Tocca <b>Condividi</b></span>
+                   </div>
+                   <div className="h-px bg-gray-200 w-full"></div>
+                   <div className="flex items-center gap-3 text-sm text-gray-700">
+                      <span className="bg-white p-1.5 rounded-md shadow-sm border"><PlusSquare size={18} className="text-gray-600"/></span>
+                      <span>2. <b>"Aggiungi alla Home"</b></span>
+                   </div>
+                 </>
+               ) : (
+                 // Istruzioni Android Manuali (Fallback)
+                 <>
+                   <div className="flex items-center gap-3 text-sm text-gray-700">
+                      <span className="bg-white p-1.5 rounded-md shadow-sm border"><MoreVertical size={18} className="text-gray-600"/></span>
+                      <span>1. Tocca i <b>3 puntini</b> in alto</span>
+                   </div>
+                   <div className="h-px bg-gray-200 w-full"></div>
+                   <div className="flex items-center gap-3 text-sm text-gray-700">
+                      <span className="bg-white p-1.5 rounded-md shadow-sm border"><Smartphone size={18} className="text-gray-600"/></span>
+                      <span>2. <b>"Installa app"</b> o <b>"Aggiungi a Home"</b></span>
+                   </div>
+                 </>
+               )}
+            </div>
           )}
         </div>
       </div>
