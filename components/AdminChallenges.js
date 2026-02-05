@@ -179,15 +179,15 @@ export default function AdminChallenges() {
                 >
                     <Zap size={12}/> Speciale
                 </button>
-                <button 
-                    type="button" 
-                    onClick={() => setForm({...form, type: 'daily'})}
-                    className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-lg flex items-center justify-center gap-1 transition-all ${
-                        form.type === 'daily' ? 'bg-purple-100 text-purple-700 shadow-sm' : 'text-gray-400 hover:bg-gray-50'
-                    }`}
-                >
-                    <Repeat size={12}/> Giornaliero
-                </button>
+               <button 
+                  type="button" 
+                  onClick={() => setForm({...form, type: 'daily'})} 
+                  className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-lg flex items-center justify-center gap-1 transition-all ${
+                      form.type === 'daily' ? 'bg-[#B41F35]/10 text-[#B41F35] shadow-sm' : 'text-gray-400 hover:bg-gray-50'
+                  }`}
+              >
+                  <Repeat size={12}/> Giornaliero
+              </button>
             </div>
                     
             {/* 3b. INPUT ICONA (MANUALE) */}
@@ -225,7 +225,7 @@ export default function AdminChallenges() {
         </div>
 
         {/* SUBMIT */}
-        <button type="submit" className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold text-sm hover:bg-black shadow-lg flex items-center justify-center gap-2 mt-2">
+        <button type="submit" className="w-full bg-[#B41F35] text-white font-bold py-3 rounded-xl hover:bg-[#90192a] transition-all shadow-lg flex justify-center items-center gap-2">
             <Plus size={18}/> AGGIUNGI BONUS
         </button>
 
@@ -251,7 +251,11 @@ export default function AdminChallenges() {
                       <span className={`text-[10px] font-bold px-1.5 rounded ${c.punti > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {c.punti > 0 ? '+' : ''}{c.punti} pt
                       </span>
-                      {c.type === 'daily' && <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 rounded font-bold flex items-center gap-1"><Repeat size={8}/> Giornaliero</span>}
+                      {c.type === 'daily' && (
+                      <span className="text-[10px] bg-[#B41F35]/10 text-[#B41F35] px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
+                        <Repeat size={10}/> Giornaliero
+                      </span>
+                      )}
                       {c.hidden && <span className="text-[10px] bg-gray-800 text-white px-1.5 rounded flex items-center gap-1"><EyeOff size={8}/> Nascosto</span>}
                   </div>
                </div>

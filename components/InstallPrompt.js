@@ -7,40 +7,57 @@ export default function InstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(true); // Parte true per non flashare
+  const [isStandalone, setIsStandalone] = useState(true); // Parte true per nascondere tutto all'inizio
 
   useEffect(() => {
-    // 0. BLOCCO PC: Se non è un telefono/tablet, fermati subito.
+    // FUNZIONE PER CAPIRE SE SIAMO GIA' DENTRO L'APP INSTALLATA
+    const checkIfStandalone = () => {
+      // Controllo standard (Android/PC)
+      const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches;
+      // Controllo iOS (iPhone)
+      const isIOSStandalone = window.navigator.standalone === true;
+      
+      return isStandaloneMode || isIOSStandalone;
+    };
+
+    // 0. BLOCCO PC (Se non è mobile, esci)
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isMobile = /iphone|ipad|ipod|android|blackberry|iemobile/i.test(userAgent);
     
-    if (!isMobile) return; // Se sei su PC, il componente muore qui.
+    // Se siamo su PC o siamo già in modalità APP, fermiamo tutto.
+    if (!isMobile || checkIfStandalone()) {
+        setIsStandalone(true);
+        return;
+    } else {
+        setIsStandalone(false);
+    }
 
-    // 1. Controlla se l'app è già installata
-    const checkStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    setIsStandalone(checkStandalone);
-    if (checkStandalone) return; 
-
-    // 2. Rileva se è iOS (iPhone/iPad)
+    // 1. Rileva iOS
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     setIsIOS(isIosDevice);
 
-    // 3. LOGICA ANDROID AUTOMATICA (Il bottone magico)
+    // 2. LOGICA ANDROID AUTOMATICA (Cattura evento)
     const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault(); // Blocca il banner brutto di Chrome
-      setDeferredPrompt(e); // Salviamo l'evento "magico"
-      setShowPrompt(true); // Mostriamo subito il nostro popup
-      console.log("Evento installazione catturato! Mostro bottone.");
+      e.preventDefault(); 
+      setDeferredPrompt(e); 
+      // Se Chrome ci dice "Puoi installare", allora NON siamo installati. Mostra popup.
+      setShowPrompt(true); 
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // 4. TIMER DI RISERVA (Per iOS o se Android è lento)
-    // Se dopo 3 secondi non è successo nulla (nessun evento catturato), 
-    // mostriamo comunque il popup con le istruzioni manuali.
+    // 3. TIMER DI RISERVA (Con doppio controllo)
     const timer = setTimeout(() => {
-        if (!checkStandalone) {
-            setShowPrompt(true);
+        // RICONTROLLIAMO ADESSO se siamo in standalone (importante!)
+        const currentlyStandalone = checkIfStandalone();
+        
+        // Mostriamo il popup solo se NON siamo in app e non è già apparso
+        if (!currentlyStandalone) {
+             setShowPrompt(prev => {
+                 // Se è già true (grazie all'evento automatico), non facciamo nulla
+                 if (prev) return true;
+                 return true; 
+             });
         }
     }, 3000);
 
@@ -51,7 +68,6 @@ export default function InstallPrompt() {
   }, []);
 
   const handleInstallClick = async () => {
-    // Se abbiamo il "bottone magico" salvato, usiamolo
     if (deferredPrompt) {
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
@@ -60,11 +76,11 @@ export default function InstallPrompt() {
         }
         setDeferredPrompt(null);
     } else {
-        // Caso impossibile se il codice è giusto, ma per sicurezza chiudiamo
         setShowPrompt(false);
     }
   };
 
+  // Se siamo in modalità app (standalone) o se il prompt è spento, non mostrare nulla
   if (isStandalone || !showPrompt) return null;
 
   return (
@@ -88,11 +104,6 @@ export default function InstallPrompt() {
             Aggiungi l'app alla Home per un'esperienza migliore e per ricevere le notifiche.
           </p>
 
-          {/* LOGICA VISIVA: 
-              Se abbiamo catturato l'evento (deferredPrompt esiste) -> Mostra Bottone AUTOMATICO.
-              Se NO (es: iOS o Android senza evento) -> Mostra ISTRUZIONI MANUALI.
-          */}
-          
           {deferredPrompt ? (
             <button 
               onClick={handleInstallClick}

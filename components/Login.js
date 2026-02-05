@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { signInWithGoogle, registerWithEmail, loginWithEmail } from '@/lib/firebase';
-import { Trophy, Mail, Lock, User, Loader2 } from 'lucide-react';
+import { Trophy, Mail, Lock, User, Loader2 } from 'lucide-react'; // Trophy lasciato nell'import ma non usato, puoi rimuoverlo se vuoi
 
 export default function Login() {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -49,18 +49,18 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-3xl shadow-xl overflow-hidden">
         
-        {/* HEADER */}
-        <div className="bg-gradient-to-br from-red-600 to-orange-500 p-8 text-center text-white">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full mb-4 shadow-inner">
-            <Trophy size={32} className="text-white" />
+        {/* HEADER MODIFICATO: Rosso rubino e Logo */}
+        <div className="bg-[#B41F35] p-8 text-center text-white">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white p-2 rounded-2xl mb-4 shadow-lg transform hover:scale-105 transition-transform duration-300">
+            {/* LOGO PNG al posto del Trofeo */}
+            <img src="icon-512.png" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-black tracking-tight">Matricolata.it</h1>
-          <p className="text-red-100 text-sm mt-1 font-medium">L'app ufficiale per veri fantallenatori</p>
         </div>
 
         <div className="p-8">
           
-          {/* GOOGLE BUTTON (Sempre comodo) */}
+          {/* GOOGLE BUTTON (Invariato) */}
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
@@ -90,7 +90,8 @@ export default function Login() {
                 <input 
                   type="text" placeholder="Nome e Cognome" required={isRegistering}
                   value={name} onChange={e => setName(e.target.value)}
-                  className="w-full pl-10 p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                  // Modificato focus ring colore
+                  className="w-full pl-10 p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#B41F35] outline-none transition-all"
                 />
               </div>
             )}
@@ -100,7 +101,8 @@ export default function Login() {
               <input 
                 type="email" placeholder="Email" required
                 value={email} onChange={e => setEmail(e.target.value)}
-                className="w-full pl-10 p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                // Modificato focus ring colore
+                className="w-full pl-10 p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#B41F35] outline-none transition-all"
               />
             </div>
 
@@ -109,7 +111,8 @@ export default function Login() {
               <input 
                 type="password" placeholder="Password" required minLength={6}
                 value={password} onChange={e => setPassword(e.target.value)}
-                className="w-full pl-10 p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                // Modificato focus ring colore
+                className="w-full pl-10 p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#B41F35] outline-none transition-all"
               />
             </div>
 
@@ -117,7 +120,8 @@ export default function Login() {
 
             <button 
               type="submit" disabled={loading}
-              className="w-full bg-gray-900 text-white font-bold py-3 rounded-xl hover:bg-black transition-all shadow-lg flex justify-center items-center gap-2"
+              // Bottone modificato per usare il rosso
+              className="w-full bg-[#B41F35] text-white font-bold py-3 rounded-xl hover:bg-[#90192a] transition-all shadow-lg flex justify-center items-center gap-2"
             >
               {loading ? <Loader2 className="animate-spin" size={20} /> : (isRegistering ? 'Crea Account' : 'Entra')}
             </button>
@@ -128,7 +132,8 @@ export default function Login() {
             {isRegistering ? "Hai già un account?" : "Non hai un account?"}
             <button 
               onClick={() => { setIsRegistering(!isRegistering); setError(null); }}
-              className="font-bold text-orange-600 ml-1 hover:underline"
+              // Testo modificato per usare il rosso
+              className="font-bold text-[#B41F35] ml-1 hover:underline"
             >
               {isRegistering ? "Accedi" : "Registrati"}
             </button>

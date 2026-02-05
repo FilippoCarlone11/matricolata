@@ -170,7 +170,11 @@ export default function ChallengeList({ currentUser, preloadedChallenges = [] })
                                         <h3 className="font-bold text-gray-900 leading-tight">{c.titolo}</h3>
                                         <div className="flex items-center gap-2 mt-1">
                                             <span className="text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1 bg-green-100 text-green-700"><Plus size={10}/> {c.punti} pt</span>
-                                            {c.type === 'daily' && <span className="text-[10px] text-purple-600 bg-purple-50 px-1 rounded font-bold border border-purple-100">GIORNALIERO</span>}
+                                            {c.type === 'daily' && (
+                                                                    <span className="text-[10px] text-[#B41F35] bg-[#B41F35]/10 px-1 rounded font-bold border border-[#B41F35]/20">
+                                                                        GIORNALIERO
+                                                                    </span>
+                                                                    )}
                                         </div>
                                     </div>
                                 </div>
@@ -187,8 +191,11 @@ export default function ChallengeList({ currentUser, preloadedChallenges = [] })
                                     />
                                     <Camera size={20} />
                                 </label>
-                                <button onClick={() => handleSendRequest(c)} disabled={isSending} 
-                                    className={`flex-1 px-4 py-2 bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-700 hover:to-orange-600 text-white shadow-md rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition-all ${isSending ? 'opacity-70' : ''}`}>
+                                <button 
+                                    onClick={() => handleSendRequest(c)} 
+                                    disabled={isSending} 
+                                    className={`flex-1 px-4 py-2 bg-[#B41F35] hover:bg-[#90192a] text-white shadow-md rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition-all ${isSending ? 'opacity-70' : ''}`}
+                                >
                                     {isSending ? <Loader2 className="animate-spin" size={16}/> : <><Send size={16}/> Richiedi {hasFile && 'con Foto'}</>}
                                 </button>
                             </div>

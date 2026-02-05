@@ -117,7 +117,7 @@ export default function AdminMatricolaHistory() {
     return (
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Search size={24} className="text-blue-600"/> Cerca Matricola
+            <Search size={24} className="text-[#B41F35]"/> Cerca Matricola
         </h2>
         
         <div className="relative">
@@ -128,29 +128,31 @@ export default function AdminMatricolaHistory() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-2 max-h-[60vh] overflow-y-auto pr-1">
-          {filteredUsers.map(u => {
-             const count = squadCounts[u.id] || 0;
-             return (
-                <button 
-                    key={u.id} onClick={() => handleSelectUser(u)} 
-                    className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl hover:bg-purple-50 hover:border-purple-200 transition-all text-left shadow-sm group"
-                >
-                <img src={u.photoURL || '/default-avatar.png'} className="w-12 h-12 rounded-full border border-gray-100 object-cover" />
-                <div className="flex-1">
-                    <p className="font-bold text-gray-900 text-lg leading-tight group-hover:text-purple-700">{u.displayName}</p>
-                    <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{u.punti} pt</span>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1 ${count > 0 ? 'bg-blue-100 text-blue-700' : 'bg-gray-50 text-gray-400'}`}>
-                            <Users size={12} /> {count} Squadre
-                        </span>
-                    </div>
-                </div>
-                </button>
-             );
-          })}
-          {filteredUsers.length === 0 && <p className="text-center text-gray-400 py-4">Nessuna matricola trovata.</p>}
+       <div className="grid grid-cols-1 gap-2 max-h-[60vh] overflow-y-auto pr-1">
+  {filteredUsers.map(u => {
+     const count = squadCounts[u.id] || 0;
+     return (
+        <button 
+           key={u.id} onClick={() => handleSelectUser(u)} 
+           // MODIFICATO QUI: Sfondo hover leggerissimo (5%) e bordo hover
+           className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-xl hover:bg-[#B41F35]/5 hover:border-[#B41F35]/30 transition-all text-left shadow-sm group"
+        >
+        <img src={u.photoURL || '/default-avatar.png'} className="w-12 h-12 rounded-full border border-gray-100 object-cover" />
+        <div className="flex-1">
+            {/* MODIFICATO QUI: Testo rosso all'hover */}
+            <p className="font-bold text-gray-900 text-lg leading-tight group-hover:text-[#B41F35]">{u.displayName}</p>
+            <div className="flex items-center gap-3 mt-1">
+                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{u.punti} pt</span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1 ${count > 0 ? 'bg-[#B41F35]/10 text-[#B41F35]' : 'bg-gray-50 text-gray-400'}`}>
+                    <Users size={12} /> {count} Squadre
+                </span>
+            </div>
         </div>
+        </button>
+          );
+        })}
+        {filteredUsers.length === 0 && <p className="text-center text-gray-400 py-4">Nessuna matricola trovata.</p>}
+      </div>
       </div>
     );
   }
@@ -160,33 +162,38 @@ export default function AdminMatricolaHistory() {
     <div className="space-y-6 animate-in fade-in zoom-in duration-200">
       
       {/* HEADER DETTAGLIO */}
-      <div className="flex items-center gap-4 bg-purple-50 p-4 rounded-2xl border border-purple-100 shadow-sm relative overflow-hidden">
-        <button onClick={() => setSelectedUser(null)} className="bg-white p-2 rounded-full shadow hover:bg-gray-50 text-gray-600 z-10">
-            <ArrowLeft size={20}/>
-        </button>
-        <img src={selectedUser.photoURL || '/default-avatar.png'} className="w-14 h-14 rounded-full border-2 border-white shadow z-10" />
-        
-        <div className="flex-1 z-10">
-          <h2 className="font-bold text-xl text-purple-900 leading-tight">{selectedUser.displayName}</h2>
-          <div className="flex gap-2 mt-1">
-             <span className="text-[10px] font-bold bg-white text-gray-600 px-2 py-0.5 rounded border border-purple-100">
-                In {squadCounts[selectedUser.id] || 0} squadre
-             </span>
-          </div>
-        </div>
-
-        {/* BOX PUNTI (NUOVO) */}
-        <div className="bg-white px-3 py-2 rounded-xl shadow-sm border border-purple-100 text-center min-w-[70px] z-10">
-            <span className="block text-[10px] uppercase text-gray-400 font-bold">Totale</span>
-            <span className="block text-xl font-black text-purple-600">{selectedUser.punti || 0}</span>
-        </div>
+      <div className="flex items-center gap-4 bg-[#B41F35]/5 p-4 rounded-2xl border border-[#B41F35]/20 shadow-sm relative overflow-hidden">
+    <button onClick={() => setSelectedUser(null)} className="bg-white p-2 rounded-full shadow hover:bg-gray-50 text-gray-600 z-10">
+        <ArrowLeft size={20}/>
+    </button>
+    <img src={selectedUser.photoURL || '/default-avatar.png'} className="w-14 h-14 rounded-full border-2 border-white shadow z-10" />
+    
+    <div className="flex-1 z-10">
+      {/* Nome utente in rosso */}
+      <h2 className="font-bold text-xl text-[#B41F35] leading-tight">{selectedUser.displayName}</h2>
+      <div className="flex gap-2 mt-1">
+         {/* Badge con bordino rosso chiaro */}
+         <span className="text-[10px] font-bold bg-white text-gray-600 px-2 py-0.5 rounded border border-[#B41F35]/20">
+            In {squadCounts[selectedUser.id] || 0} squadre
+         </span>
       </div>
+    </div>
+
+    {/* BOX PUNTI */}
+    <div className="bg-white px-3 py-2 rounded-xl shadow-sm border border-[#B41F35]/20 text-center min-w-[70px] z-10">
+        <span className="block text-[10px] uppercase text-gray-400 font-bold">Totale</span>
+        {/* Punti in rosso */}
+        <span className="block text-xl font-black text-[#B41F35]">{selectedUser.punti || 0}</span>
+    </div>
+  </div>
       
       {/* Toolbar Azioni */}
       <div className="flex gap-3">
-          <button onClick={openAssignModal} className="flex-1 bg-blue-600 text-white p-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg hover:bg-blue-700 active:scale-95 transition-all">
-            <Zap size={18}/> Assegna Bonus
-          </button>
+          <button onClick={openAssignModal} 
+              className="flex-1 bg-[#B41F35] text-white p-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg hover:bg-[#90192a] active:scale-95 transition-all"
+            >
+              <Zap size={18}/> Assegna Bonus
+            </button>
           <button onClick={handleAddManual} className="flex-1 bg-gray-800 text-white p-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg hover:bg-gray-900 active:scale-95 transition-all">
             <PlusCircle size={18}/> Manuale
           </button>

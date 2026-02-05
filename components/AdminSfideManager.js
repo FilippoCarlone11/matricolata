@@ -33,7 +33,7 @@ export default function AdminSfideManager() {
             onClick={() => setActiveView('settings')}
             className={`flex-1 py-2.5 rounded-lg text-sm font-bold flex justify-center items-center gap-2 transition-all duration-200 ${
               activeView === 'settings' 
-                ? 'bg-white shadow text-purple-600' 
+                ? 'bg-white shadow text-[#B41F35]' 
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >

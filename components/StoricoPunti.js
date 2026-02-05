@@ -29,7 +29,7 @@ export default function StoricoPunti({ currentUser }) {
   return (
     <div className="mt-8 pb-12">
       <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2 mb-6">
-        <Award size={28} className="text-red-600" /> Il Tuo Storico
+        <Award size={28} className="text-[#B41F35]" /> Il Tuo Storico
       </h2>
 
       {Object.keys(groupedHistory).length === 0 ? (
@@ -43,7 +43,7 @@ export default function StoricoPunti({ currentUser }) {
               <div className="absolute left-2.5 top-8 bottom-0 w-0.5 bg-gray-200"></div>
               
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-5 h-5 rounded-full bg-red-100 border-2 border-red-500 z-10"></div>
+                <div className="w-5 h-5 rounded-full bg-red-100 border-2 border-[#B41F35] z-10"></div>
                 <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider capitalize">{date}</h3>
               </div>
 

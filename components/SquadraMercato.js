@@ -101,7 +101,7 @@ export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers =
       {/* HEADER ROSA */}
       <div className="bg-white rounded-2xl shadow border border-gray-200 p-5">
         <div className="flex justify-between items-center mb-4 border-b pb-2">
-            <h2 className="text-xl font-bold flex items-center gap-2"><Users className="text-blue-600"/> La Tua Squadra ({currentSquadSize}/3)</h2>
+            <h2 className="text-xl font-bold flex items-center gap-2"><Users className="text-[#B41F35]"/> La Tua Squadra ({currentSquadSize}/3)</h2>
             
             {/* SOLO SUPER ADMIN APRE/CHIUDE */}
             {isSuperAdmin ? (
@@ -154,7 +154,7 @@ export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers =
 
 {/* LISTA SVINCOLATI */}
       <div>
-        <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><UserPlus className="text-green-600"/> Lista Matricole</h3>
+        <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><UserPlus className="text-[#B41F35]"/> Lista Matricole</h3>
         <input type="text" placeholder="Cerca..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="w-full mb-4 p-2 border rounded-xl text-sm" />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -163,15 +163,15 @@ export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers =
                 <div className="flex items-center gap-3">
                     <img src={m.photoURL || '/default-avatar.png'} className="w-10 h-10 rounded-full" />
                     <div>
-                        <p className="font-bold text-sm">{m.displayName}</p>
+                        <p className="font-bold text-sm">{m.displayName}  </p>
                     </div>
                 </div>
                 <button 
                     onClick={() => handleRecruit(m)} 
                     disabled={isSquadFull || (!marketOpen && !isSuperAdmin)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 ${isSquadFull || (!marketOpen && !isSuperAdmin) ? 'bg-gray-100 text-gray-400' : 'bg-green-600 text-white'}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 ${isSquadFull || (!marketOpen && !isSuperAdmin) ? 'bg-gray-100 text-gray-400' : 'bg-[#B41F35] text-white'}`}
                 >
-                    <UserPlus size={14} /> Prendi
+                    <UserPlus size={14} /> 
                 </button>
             </div>
             ))}

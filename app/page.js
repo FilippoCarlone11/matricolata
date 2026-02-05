@@ -146,7 +146,7 @@ export default function Home() {
                  {userData.displayName}
               </h1>
               {userData.role !== 'matricola' && userData.teamName && (
-                  <span className="text-xs font-bold text-purple-600 block">{userData.teamName}</span>
+                  <span className="text-xs font-bold text-[#B41F35] block">{userData.teamName}</span>
               )}
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block mt-0.5">{userData.role}</span>
             </div>
@@ -160,18 +160,27 @@ export default function Home() {
 
         {userData.role === 'matricola' ? (
           <>
-            <TabContent id="home" activeTab={activeTab}>
-                <div className="bg-gradient-to-br from-red-600 to-orange-500 rounded-3xl p-6 text-white mb-6 shadow-xl relative overflow-hidden">
-                  <div className="relative z-10 flex items-center justify-between">
-                    <div>
-                      <span className="text-red-100 font-medium text-sm uppercase tracking-wide">Punteggio Attuale</span>
-                      <div className="text-5xl font-black mt-1">{userData.punti || 0}</div>
-                    </div>
-                    <div className="bg-white/20 p-3 rounded-full backdrop-blur-sm"><Trophy size={32} /></div>
+          <TabContent id="home" activeTab={activeTab}>
+              {/* BOX PUNTEGGIO AGGIORNATO (ROSSO) */}
+              <div className="bg-[#B41F35] rounded-3xl p-6 text-white mb-6 shadow-xl shadow-red-900/20 relative overflow-hidden">
+                {/* Decorazione sfondo sfumata */}
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                
+                <div className="relative z-10 flex items-center justify-between">
+                  <div>
+                    <span className="text-red-100 font-medium text-sm uppercase tracking-wide">Punteggio Attuale</span>
+                    <div className="text-5xl font-black mt-1">{userData.punti || 0}</div>
+                  </div>
+                  <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm border border-white/10">
+                      {/* Se vuoi il logo anche qui, usa <img src="/logo.png" className="w-8 h-8"/> */}
+                      {/* Altrimenti lascia il Trofeo */}
+                      <Trophy size={32} className="text-white" />
                   </div>
                 </div>
-                <ChallengeList currentUser={userData} preloadedChallenges={globalChallenges} />
-            </TabContent>
+              </div>
+
+              <ChallengeList currentUser={userData} preloadedChallenges={globalChallenges} />
+          </TabContent>
 
             <TabContent id="lista" activeTab={activeTab}>
                 <BonusMalusList currentUser={userData} preloadedChallenges={globalChallenges} />
