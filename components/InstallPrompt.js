@@ -5,40 +5,39 @@ import { X, Share, PlusSquare, Smartphone, Download, MoreVertical } from 'lucide
 
 export default function InstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [isStandalone, setIsStandalone] = useState(true); 
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(true); // Parte true per non flashare
 
   useEffect(() => {
-    // 0. CONTROLLO DISPOSITIVO: Se è un PC, fermati subito.
+    // 0. BLOCCO PC: Se non è un telefono/tablet, fermati subito.
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isMobile = /iphone|ipad|ipod|android|blackberry|iemobile/i.test(userAgent);
     
-    // Se NON è mobile, non fare nulla (esci dalla funzione)
-    if (!isMobile) return;
+    if (!isMobile) return; // Se sei su PC, il componente muore qui.
 
     // 1. Controlla se l'app è già installata
     const checkStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
     setIsStandalone(checkStandalone);
     if (checkStandalone) return; 
 
-    // 2. Rileva iOS
+    // 2. Rileva se è iOS (iPhone/iPad)
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     setIsIOS(isIosDevice);
 
-    // 3. Cattura l'evento di installazione (Solo Android/Chrome)
+    // 3. LOGICA ANDROID AUTOMATICA (Il bottone magico)
     const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault(); 
-      setDeferredPrompt(e); 
-      // Se Android ci dà l'evento, mostriamo subito il popup col tasto nero
-      setShowPrompt(true); 
+      e.preventDefault(); // Blocca il banner brutto di Chrome
+      setDeferredPrompt(e); // Salviamo l'evento "magico"
+      setShowPrompt(true); // Mostriamo subito il nostro popup
+      console.log("Evento installazione catturato! Mostro bottone.");
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // 4. TIMER DI SICUREZZA (SOLO PER MOBILE)
-    // Se dopo 3 secondi non è successo nulla (es. iOS o Android "pigro"), 
-    // forziamo l'apertura del popup con le istruzioni manuali.
+    // 4. TIMER DI RISERVA (Per iOS o se Android è lento)
+    // Se dopo 3 secondi non è successo nulla (nessun evento catturato), 
+    // mostriamo comunque il popup con le istruzioni manuali.
     const timer = setTimeout(() => {
         if (!checkStandalone) {
             setShowPrompt(true);
@@ -52,16 +51,20 @@ export default function InstallPrompt() {
   }, []);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt(); 
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setShowPrompt(false);
+    // Se abbiamo il "bottone magico" salvato, usiamolo
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            setShowPrompt(false);
+        }
+        setDeferredPrompt(null);
+    } else {
+        // Caso impossibile se il codice è giusto, ma per sicurezza chiudiamo
+        setShowPrompt(false);
     }
-    setDeferredPrompt(null);
   };
 
-  // Se è già installata o non dobbiamo mostrarlo, non renderizziamo nulla
   if (isStandalone || !showPrompt) return null;
 
   return (
@@ -82,10 +85,14 @@ export default function InstallPrompt() {
           
           <h3 className="text-xl font-bold text-gray-900 mb-2">Installa l'App</h3>
           <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-            Aggiungi l'app alla Home per ricevere notifiche e accedere velocemente.
+            Aggiungi l'app alla Home per un'esperienza migliore e per ricevere le notifiche.
           </p>
 
-          {/* CASO 1: Abbiamo il "bottone magico" di Android */}
+          {/* LOGICA VISIVA: 
+              Se abbiamo catturato l'evento (deferredPrompt esiste) -> Mostra Bottone AUTOMATICO.
+              Se NO (es: iOS o Android senza evento) -> Mostra ISTRUZIONI MANUALI.
+          */}
+          
           {deferredPrompt ? (
             <button 
               onClick={handleInstallClick}
@@ -94,11 +101,8 @@ export default function InstallPrompt() {
               <Download size={20} /> Installa Ora
             </button>
           ) : (
-            /* CASO 2: Istruzioni Manuali (iOS o Android senza evento) */
             <div className="w-full bg-gray-50 rounded-xl p-4 border border-gray-100 text-left space-y-3">
-               
                {isIOS ? (
-                 // Istruzioni iOS
                  <>
                    <div className="flex items-center gap-3 text-sm text-gray-700">
                       <span className="bg-white p-1.5 rounded-md shadow-sm border"><Share size={18} className="text-blue-500"/></span>
@@ -111,7 +115,6 @@ export default function InstallPrompt() {
                    </div>
                  </>
                ) : (
-                 // Istruzioni Android Manuali (Fallback)
                  <>
                    <div className="flex items-center gap-3 text-sm text-gray-700">
                       <span className="bg-white p-1.5 rounded-md shadow-sm border"><MoreVertical size={18} className="text-gray-600"/></span>
@@ -120,7 +123,7 @@ export default function InstallPrompt() {
                    <div className="h-px bg-gray-200 w-full"></div>
                    <div className="flex items-center gap-3 text-sm text-gray-700">
                       <span className="bg-white p-1.5 rounded-md shadow-sm border"><Smartphone size={18} className="text-gray-600"/></span>
-                      <span>2. <b>"Installa app"</b> o <b>"Aggiungi a Home"</b></span>
+                      <span>2. <b>"Installa app"</b></span>
                    </div>
                  </>
                )}
