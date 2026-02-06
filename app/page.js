@@ -125,7 +125,7 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
       
       {/* POPUP INSTALLAZIONE (Appare solo se necessario) */}
-      <InstallPrompt />
+      {/*<InstallPrompt />*/}
 
       <div className="max-w-lg mx-auto p-4 pb-28">
         
@@ -196,16 +196,18 @@ export default function Home() {
                  <SquadraMercato currentUser={userData} onUpdate={refreshUserData} preloadedUsers={globalUsers} />
             </TabContent>
             
-            <TabContent id="classifiche" activeTab={activeTab}>
-                 <Classifiche preloadedUsers={globalUsers} />
-            </TabContent>
+
+          <TabContent id="classifiche" activeTab={activeTab}>
+              {/* PASSAGGIO FONDAMENTALE DI currentUser */}
+              <Classifiche preloadedUsers={globalUsers} currentUser={userData} />
+          </TabContent>
             
             <TabContent id="lista" activeTab={activeTab}>
                  <BonusMalusList currentUser={userData} preloadedChallenges={globalChallenges} />
             </TabContent>
 
             {activeTab === 'admin-sfide' && isAdminOrSuper && <AdminSfideManager />}
-            {activeTab === 'admin-matricole' && isAdminOrSuper && <AdminMatricolaHistory />}
+            
             {activeTab === 'admin-utenti' && isSuperAdmin && <AdminUserList currentUser={userData} preloadedUsers={globalUsers} />}
           </>
         )}

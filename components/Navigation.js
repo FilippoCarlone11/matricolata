@@ -9,7 +9,7 @@ export default function Navigation({ activeTab, setActiveTab, role }) {
 
   // CASO 1: MATRICOLA
   if (role === 'matricola') {
-    tabs.push({ id: 'home', label: 'Richieste', icon: Target }); // Ho rinominato 'Home' in 'Sfide' per chiarezza
+    tabs.push({ id: 'home', label: 'Richieste', icon: Target }); 
     tabs.push({ id: 'percorso', label: 'Archivio', icon: Flag });
     tabs.push({ id: 'lista', label: 'Bonus/Malus', icon: List });
   } 
@@ -28,7 +28,7 @@ export default function Navigation({ activeTab, setActiveTab, role }) {
   // CASO 3: TAB AMMINISTRATIVI (Solo Admin/SuperAdmin)
   if (role === 'admin' || role === 'super-admin') {
     tabs.push({ id: 'admin-sfide', label: 'Bonus/Malus', icon: Target });
-    tabs.push({ id: 'admin-matricole', label: 'Matricole', icon: BookOpen });
+    //tabs.push({ id: 'admin-matricole', label: 'Matricole', icon: BookOpen }); // Integrato in Classifiche
   }
 
   // CASO 4: TAB SUPER ADMIN
@@ -43,15 +43,12 @@ export default function Navigation({ activeTab, setActiveTab, role }) {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           
-          const isAdminTab = tab.id.startsWith('admin');
-          const activeColor = isAdminTab ? 'text-blue-600' : 'text-red-600';
-
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 py-3 min-w-[70px] flex flex-col items-center gap-1 transition-all ${
-                isActive ? activeColor : 'text-gray-400 hover:text-gray-600'
+                isActive ? 'text-[#B41F35]' : 'text-gray-400 hover:text-gray-600'
               }`}
             >
               <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
