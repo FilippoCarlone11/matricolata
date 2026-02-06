@@ -37,7 +37,7 @@ export default function Navigation({ activeTab, setActiveTab, role }) {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-50 pb-safe">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-50 pb-6 md:pb-0">
       <div className="max-w-lg mx-auto flex overflow-x-auto no-scrollbar">
         {tabs.map(tab => {
           const Icon = tab.icon;
