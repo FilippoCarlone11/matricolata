@@ -4,17 +4,79 @@ import { useState, useEffect } from 'react';
 import { createChallenge, getChallenges, deleteChallenge } from '@/lib/firebase';
 import { Trash2, Plus, Zap, Eye, EyeOff, Repeat, AlignLeft, AlertCircle } from 'lucide-react';
 
+// --- COMPONENTE CARD CON FLIP (Invariato) ---
+const ChallengeCard = ({ c, onDelete }) => {
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  return (
+    <div 
+      className="relative w-full h-[72px] cursor-pointer" 
+      style={{ perspective: '1000px' }}
+      onClick={() => setIsFlipped(!isFlipped)}
+    >
+      <div 
+        className="w-full h-full relative transition-all duration-500"
+        style={{ 
+          transformStyle: 'preserve-3d', 
+          transform: isFlipped ? 'rotateX(180deg)' : 'rotateX(0deg)' 
+        }}
+      >
+        {/* FRONTE */}
+        <div 
+          className="absolute inset-0 bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center"
+          style={{ backfaceVisibility: 'hidden' }}
+        >
+            <div className="flex items-center gap-3">
+                <span className="text-2xl w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full select-none">{c.icon}</span>
+                <div>
+                    <p className="font-bold text-sm text-gray-900 leading-tight">{c.titolo}</p>
+                    <div className="flex gap-2 mt-0.5">
+                        <span className={`text-[10px] font-bold px-1.5 rounded ${c.punti > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            {c.punti > 0 ? '+' : ''}{c.punti} pt
+                        </span>
+                        {c.type === 'daily' && (
+                        <span className="text-[10px] bg-[#B41F35]/10 text-[#B41F35] px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
+                            <Repeat size={10}/> Giornaliero
+                        </span>
+                        )}
+                        {c.hidden && <span className="text-[10px] bg-gray-800 text-white px-1.5 rounded flex items-center gap-1"><EyeOff size={8}/> Nascosto</span>}
+                    </div>
+                </div>
+            </div>
+            
+            <button 
+                onClick={(e) => { e.stopPropagation(); onDelete(c.id); }} 
+                className="text-gray-300 hover:text-red-500 p-2 transition-colors z-10"
+            >
+                <Trash2 size={18} />
+            </button>
+        </div>
+
+        {/* RETRO */}
+        <div 
+          className="absolute inset-0 bg-gray-100 p-3 rounded-xl border border-gray-200 shadow-inner flex items-center justify-center text-center"
+          style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
+        >
+           <p className="text-xs text-gray-600 font-medium leading-relaxed px-4 overflow-hidden">
+             {c.description ? c.description : <span className="text-gray-400 italic">Nessuna descrizione inserita.</span>}
+           </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- COMPONENTE PRINCIPALE ---
 export default function AdminChallenges() {
   const [challenges, setChallenges] = useState([]);
   
-  // STATO FORM
   const [form, setForm] = useState({ 
     titolo: '', 
     punti: '', 
     icon: '', 
     type: 'oneshot', 
     description: '', 
-    hidden: false // Questo deve comandare, sempre.
+    hidden: false 
   });
   
   const [errors, setErrors] = useState({ titolo: false, punti: false, icon: false });
@@ -38,7 +100,6 @@ export default function AdminChallenges() {
   const handleCreate = async (e) => {
     e.preventDefault();
     
-    // VALIDAZIONE
     const newErrors = {
         titolo: !form.titolo,
         punti: !form.punti,
@@ -52,9 +113,6 @@ export default function AdminChallenges() {
 
     setErrors({ titolo: false, punti: false, icon: false });
     
-    // --- FIX BUG ---
-    // Prima c'era un controllo che sovrascriveva isHidden in base al filtro attivo.
-    // L'abbiamo rimosso. Ora usiamo SOLO quello che l'utente ha scelto nel form.
     const isHidden = form.hidden;
     const finalPunti = parseInt(form.punti);
     const isMalus = finalPunti < 0;
@@ -66,11 +124,8 @@ export default function AdminChallenges() {
       category: 'Custom' 
     });
     
-    // Reset del form
     setForm({ titolo: '', punti: '', icon: '', type: 'oneshot', description: '', hidden: false });
     
-    // --- UX IMPROVEMENT ---
-    // Spostiamo automaticamente il filtro per mostrare ciò che abbiamo appena creato
     if (isHidden) {
         setActiveFilter(isMalus ? 'malus_hidden' : 'bonus_hidden');
     } else {
@@ -104,6 +159,10 @@ export default function AdminChallenges() {
 
   const filteredList = getFilteredList();
 
+  // --- SEPARAZIONE LISTE ---
+  const dailyItems = filteredList.filter(c => c.type === 'daily');
+  const oneshotItems = filteredList.filter(c => c.type !== 'daily');
+
   const FilterButton = ({ id, label, icon: Icon, colorClass }) => (
     <button 
       onClick={() => setActiveFilter(id)}
@@ -120,13 +179,11 @@ export default function AdminChallenges() {
   return (
     <div>
       <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-        <Zap className="text-blue-600" /> Gestione Bonus & Malus
+        <Zap className="text-[#B41F35]" /> Gestione Bonus & Malus
       </h2>
 
-      {/* FORM CREAZIONE */}
+      {/* FORM CREAZIONE (Identico a prima) */}
       <form onSubmit={handleCreate} className="bg-gray-100 p-4 rounded-xl mb-6 space-y-3 border border-gray-200 shadow-inner">
-        
-        {/* RIGA 1: Titolo e Punti */}
         <div className="flex gap-2">
            <input 
              type="text" 
@@ -154,7 +211,6 @@ export default function AdminChallenges() {
            />
         </div>
 
-        {/* RIGA 2: DESCRIZIONE */}
         <div className="relative">
             <AlignLeft size={16} className="absolute top-3 left-3 text-gray-400" />
             <textarea
@@ -165,10 +221,7 @@ export default function AdminChallenges() {
             />
         </div>
 
-        {/* RIGA 3: TIPO + ICONA (Input Manuale) + VISIBILITÀ */}
         <div className="flex gap-2 items-center">
-            
-            {/* 3a. SWITCH TIPO */}
             <div className="flex bg-white rounded-xl border border-gray-300 p-1 flex-1">
                 <button 
                     type="button" 
@@ -189,8 +242,6 @@ export default function AdminChallenges() {
                   <Repeat size={12}/> Giornaliero
               </button>
             </div>
-                    
-            {/* 3b. INPUT ICONA (MANUALE) */}
             <div className="relative w-14 h-[46px]">
                  <input 
                     type="text" 
@@ -207,15 +258,11 @@ export default function AdminChallenges() {
                 />
                 {errors.icon && <div className="absolute -top-1 -right-1 bg-red-500 rounded-full p-0.5 border-2 border-white"><AlertCircle size={8} className="text-white"/></div>}
             </div>
-
-            {/* 3c. VISIBILITÀ */}
             <label className={`cursor-pointer w-12 h-[46px] flex items-center justify-center rounded-xl border transition-all ${form.hidden ? 'bg-gray-800 border-gray-800 text-white' : 'bg-white border-gray-300 text-gray-400'}`}>
                 <input type="checkbox" checked={form.hidden} onChange={e => setForm({...form, hidden: e.target.checked})} className="hidden"/>
                 {form.hidden ? <EyeOff size={20}/> : <Eye size={20}/>}
             </label>
-
         </div>
-        {/* RIGA 4: EMOJI PICKER (Scorrevole) */}
         <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide pt-1">
             {PRESET_EMOJIS.map(emoji => (
                 <button key={emoji} type="button" onClick={() => setForm({...form, icon: emoji})} className={`min-w-[36px] h-9 rounded-lg text-lg flex items-center justify-center transition-all ${form.icon === emoji ? 'bg-blue-600 text-white scale-110 shadow-md' : 'bg-white border hover:bg-gray-50'}`}>
@@ -223,12 +270,9 @@ export default function AdminChallenges() {
                 </button>
             ))}
         </div>
-
-        {/* SUBMIT */}
         <button type="submit" className="w-full bg-[#B41F35] text-white font-bold py-3 rounded-xl hover:bg-[#90192a] transition-all shadow-lg flex justify-center items-center gap-2">
             <Plus size={18}/> AGGIUNGI BONUS
         </button>
-
       </form>
 
       {/* FILTRI */}
@@ -239,35 +283,45 @@ export default function AdminChallenges() {
         <FilterButton id="malus_hidden" label="Malus Segreti" icon={EyeOff} colorClass="bg-gray-800 border-gray-900 text-white" />
       </div>
 
-      {/* LISTA */}
+      {/* LISTA SUDDIVISA */}
       <div className="space-y-2 pb-20">
-        {filteredList.map(c => (
-          <div key={c.id} className="flex justify-between items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm animate-in fade-in">
-            <div className="flex items-center gap-3">
-               <span className="text-2xl w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full">{c.icon}</span>
-               <div>
-                  <p className="font-bold text-sm text-gray-900 leading-tight">{c.titolo}</p>
-                  <div className="flex gap-2 mt-0.5">
-                      <span className={`text-[10px] font-bold px-1.5 rounded ${c.punti > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {c.punti > 0 ? '+' : ''}{c.punti} pt
-                      </span>
-                      {c.type === 'daily' && (
-                      <span className="text-[10px] bg-[#B41F35]/10 text-[#B41F35] px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
-                        <Repeat size={10}/> Giornaliero
-                      </span>
-                      )}
-                      {c.hidden && <span className="text-[10px] bg-gray-800 text-white px-1.5 rounded flex items-center gap-1"><EyeOff size={8}/> Nascosto</span>}
-                  </div>
-               </div>
+        
+        {/* SEZIONE GIORNALIERI */}
+        {dailyItems.length > 0 && (
+            <div className="space-y-2">
+                <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1 mt-2 mb-1 flex items-center gap-1">
+                    <Repeat size={10}/> Giornalieri
+                </h3>
+                {dailyItems.map(c => <ChallengeCard key={c.id} c={c} onDelete={handleDelete} />)}
             </div>
-            <button onClick={() => handleDelete(c.id)} className="text-gray-300 hover:text-red-500 p-2 transition-colors"><Trash2 size={18} /></button>
-          </div>
-        ))}
+        )}
+
+        {/* LINEA DI SEPARAZIONE (Solo se ci sono entrambi) */}
+        {dailyItems.length > 0 && oneshotItems.length > 0 && (
+             <div className="relative py-4 flex items-center justify-center">
+                 <div className="absolute inset-0 flex items-center">
+                     <div className="w-full border-t-2 border-dashed border-gray-200"></div>
+                 </div>
+             </div>
+        )}
+
+        {/* SEZIONE SPECIALI / ONE-SHOT */}
+        {oneshotItems.length > 0 && (
+            <div className="space-y-2">
+                 <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1 mt-2 mb-1 flex items-center gap-1">
+                    <Zap size={10}/> Speciali
+                </h3>
+                {oneshotItems.map(c => <ChallengeCard key={c.id} c={c} onDelete={handleDelete} />)}
+            </div>
+        )}
+
+        {/* NESSUN ELEMENTO */}
         {filteredList.length === 0 && (
-            <div className="text-center py-4 text-gray-400 text-xs italic">
+            <div className="text-center py-8 text-gray-400 text-xs italic bg-gray-50 rounded-xl border border-dashed border-gray-200">
                 Nessun elemento in questa categoria.
             </div>
         )}
+
       </div>
     </div>
   );
