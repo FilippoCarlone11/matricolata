@@ -1,39 +1,42 @@
 'use client';
 import { Users, Trophy, Target, Shield, BookOpen, List, Flag, Newspaper } from 'lucide-react';
 
-export default function Navigation({ activeTab, setActiveTab, role }) {
+// AGGIUNTO 't' ALLE PROPS
+export default function Navigation({ activeTab, setActiveTab, role, t }) {
   const tabs = [];
 
-  // --- TAB COMUNE A TUTTI (IL FEED) ---
-  tabs.push({ id: 'feed', label: 'Feed', icon: Newspaper });
+  // Funzione helper sicura: se t esiste lo usa, altrimenti usa il testo originale
+  const tr = (text) => (t ? t(text) : text);
+
+  // --- TAB COMUNE A TUTTI ---
+  tabs.push({ id: 'feed', label: tr('Feed'), icon: Newspaper });
 
   // CASO 1: MATRICOLA
   if (role === 'matricola') {
-    tabs.push({ id: 'home', label: 'Richieste', icon: Target }); 
-    tabs.push({ id: 'percorso', label: 'Archivio', icon: Flag });
-    tabs.push({ id: 'lista', label: 'Bonus/Malus', icon: List });
+    tabs.push({ id: 'home', label: tr('Richieste'), icon: Target }); 
+    tabs.push({ id: 'percorso', label: tr('Archivio'), icon: Flag });
+    tabs.push({ id: 'lista', label: tr('Bonus/Malus'), icon: List });
   } 
   
   // CASO 2: ALTRI (Utente, Admin, Super Admin)
   else {
-    tabs.push({ id: 'squadra', label: 'Squadra', icon: Users });
-    tabs.push({ id: 'classifiche', label: 'Classifiche', icon: Trophy });
+    tabs.push({ id: 'squadra', label: tr('Squadra'), icon: Users });
+    tabs.push({ id: 'classifiche', label: tr('Classifiche'), icon: Trophy });
 
     // CASO 2b: SOLO UTENTE SEMPLICE (Non Admin) vede la lista consultativa
     if (role === 'utente') {
-        tabs.push({ id: 'lista', label: 'Bonus/Malus', icon: List });
+        tabs.push({ id: 'lista', label: tr('Bonus/Malus'), icon: List });
     }
   }
 
   // CASO 3: TAB AMMINISTRATIVI (Solo Admin/SuperAdmin)
   if (role === 'admin' || role === 'super-admin') {
-    tabs.push({ id: 'admin-sfide', label: 'Bonus/Malus', icon: Target });
-    //tabs.push({ id: 'admin-matricole', label: 'Matricole', icon: BookOpen }); // Integrato in Classifiche
+    tabs.push({ id: 'admin-sfide', label: tr('Bonus/Malus'), icon: Target });
   }
 
   // CASO 4: TAB SUPER ADMIN
   if (role === 'super-admin') {
-    tabs.push({ id: 'admin-utenti', label: 'Utenti', icon: Shield });
+    tabs.push({ id: 'admin-utenti', label: tr('Utenti'), icon: Shield });
   }
 
   return (

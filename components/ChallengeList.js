@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { createRequest, getUserRequests } from '@/lib/firebase'; 
 import { Send, Plus, Zap, Search, Clock, Hourglass, Camera, Loader2, Info, X } from 'lucide-react';
 
-export default function ChallengeList({ currentUser, preloadedChallenges = [] }) {
+export default function ChallengeList({ currentUser, preloadedChallenges = [], t }) {
   const [challenges, setChallenges] = useState([]);
   const [myRequests, setMyRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const tr = (text) => (t ? t(text) : text);
   
   const [sendingId, setSendingId] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
@@ -137,7 +138,7 @@ export default function ChallengeList({ currentUser, preloadedChallenges = [] })
       <div>
         <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <Zap size={24} className="text-yellow-500 fill-yellow-500" /> Richiedi Bonus
+                <Zap size={24} className="text-yellow-500 fill-yellow-500" /> {tr("Richiedi Bonus")}
             </h2>
         </div>
 
@@ -172,7 +173,7 @@ export default function ChallengeList({ currentUser, preloadedChallenges = [] })
                                             <span className="text-xs font-bold px-2 py-0.5 rounded flex items-center gap-1 bg-green-100 text-green-700"><Plus size={10}/> {c.punti} pt</span>
                                             {c.type === 'daily' && (
                                                                     <span className="text-[10px] text-[#B41F35] bg-[#B41F35]/10 px-1 rounded font-bold border border-[#B41F35]/20">
-                                                                        GIORNALIERO
+                                                                        {tr("GIORNALIERO")}
                                                                     </span>
                                                                     )}
                                         </div>
@@ -196,7 +197,7 @@ export default function ChallengeList({ currentUser, preloadedChallenges = [] })
                                     disabled={isSending} 
                                     className={`flex-1 px-4 py-2 bg-[#B41F35] hover:bg-[#90192a] text-white shadow-md rounded-xl text-sm font-bold flex justify-center items-center gap-2 transition-all ${isSending ? 'opacity-70' : ''}`}
                                 >
-                                    {isSending ? <Loader2 className="animate-spin" size={16}/> : <><Send size={16}/> Richiedi {hasFile && 'con Foto'}</>}
+                                    {isSending ? <Loader2 className="animate-spin" size={16}/> : <><Send size={16}/> {tr("Richiedi")} {hasFile && 'con Foto'}</>}
                                 </button>
                             </div>
                         </div>

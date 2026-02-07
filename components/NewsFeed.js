@@ -4,10 +4,14 @@ import { useState, useEffect } from 'react';
 import { getGlobalFeed } from '@/lib/firebase';
 import { Clock, User, Hourglass, CheckCircle, ShieldAlert, EyeOff, XCircle, Camera, X } from 'lucide-react';
 
-export default function NewsFeed() {
+// CORREZIONE QUI: aggiunto { t } invece di t
+export default function NewsFeed({ t }) {
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null); 
+
+  // Helper traduzione sicura: se t esiste lo usa, altrimenti restituisce il testo originale
+  const tr = (text) => (t ? t(text) : text);
 
   useEffect(() => {
     loadFeed();
@@ -16,8 +20,6 @@ export default function NewsFeed() {
   const loadFeed = async () => {
     try {
       const data = await getGlobalFeed();
-      // MODIFICA: Ora mostriamo TUTTO, anche i rejected
-      // const visibleFeed = data.filter(item => item.status !== 'rejected'); <--- RIMOSSO
       setFeed(data);
     } catch (e) {
       console.error(e);
@@ -33,32 +35,33 @@ export default function NewsFeed() {
   };
 
   const getDateLabel = (timestamp) => {
-    if (!timestamp) return 'Data sconosciuta';
+    if (!timestamp) return tr('Data sconosciuta');
     const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
 
-    if (date.toDateString() === today.toDateString()) return 'Oggi';
-    if (date.toDateString() === yesterday.toDateString()) return 'Ieri';
+    if (date.toDateString() === today.toDateString()) return tr('Oggi');
+    if (date.toDateString() === yesterday.toDateString()) return tr('Ieri');
+    
     return date.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
   };
 
-  if (loading) return <div className="text-center py-10 text-gray-400">Caricamento bacheca...</div>;
+  if (loading) return <div className="text-center py-10 text-gray-400">{tr("Caricamento...")}</div>;
 
   return (
     <div className="space-y-6 pb-24">
       
       {feed.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-200 shadow-sm mt-4">
-           <p className="text-gray-400">Tutto tace nel collegio... 🤫</p>
+           <p className="text-gray-400">{tr("Nessun dato.")}</p>
         </div>
       ) : (
         feed.map((item, index) => {
           const isMalus = item.puntiRichiesti < 0;
           const isPending = item.status === 'pending';
           const isManual = item.manual === true;
-          const isRejected = item.status === 'rejected'; // NUOVO STATO
+          const isRejected = item.status === 'rejected'; 
           const isPhoto = !!item.photoProof;
           const isHidden = item.isHidden === true; 
           
@@ -69,33 +72,36 @@ export default function NewsFeed() {
           const prevDateLabel = index > 0 ? getDateLabel(prevDateRef) : null;
           const showDivider = currentDateLabel !== prevDateLabel;
 
-          // LOGICA TESTI E COLORI
+          // LOGICA TESTI E COLORI (Con Traduzione)
           let statusLabel = "";
           let statusColor = "";
           let actionText = "";
-          let cardOpacity = "opacity-100"; // Per i rifiutati usiamo un po' di trasparenza
+          let cardOpacity = "opacity-100"; 
 
           if (isRejected) {
-              statusLabel = "Rifiutato";
+              statusLabel = tr("Rifiutato");
               statusColor = "bg-red-50 text-red-500 border-red-100";
-              actionText = "Richiesta Rifiutata:";
-              cardOpacity = "opacity-75 grayscale-[0.5]"; // Effetto visivo "spento"
+              actionText = tr("Richiesta Rifiutata") + ":"; 
+              cardOpacity = "opacity-75 grayscale-[0.5]"; 
           } else if (isPending) {
-              statusLabel = "In Attesa";
+              statusLabel = tr("In Attesa di Approvazione"); 
               statusColor = "bg-yellow-100 text-yellow-700 border-yellow-200";
-              actionText = "Ha inviato una richiesta:";
+              actionText = tr("Richiesta inviata") + ":"; 
           } else if (isManual) {
-              statusLabel = "Admin";
+              statusLabel = tr("Admin");
               statusColor = "bg-purple-100 text-purple-700 border-purple-200";
+              
               if (isHidden) {
-                  actionText = isMalus ? "Ha preso un Malus Nascosto:" : "Ha preso un Bonus Nascosto:";
+                  // Nota: Assicurati che le chiavi nel dizionario in page.js coincidano esattamente
+                  actionText = isMalus ? tr("Ha preso un Malus Nascosto:") : tr("Ha preso un Bonus Nascosto:");
               } else {
-                  actionText = isMalus ? "Ha preso un Malus:" : "Ha preso un Bonus:";
+                  actionText = isMalus ? tr("Ha preso un Malus:") : tr("Ha preso un Bonus:"); 
+                  // Se vuoi tradurre anche questi, aggiungili al dizionario in page.js
               }
           } else {
-              statusLabel = "Approvato";
+              statusLabel = tr("Approvato");
               statusColor = "bg-green-100 text-green-700 border-green-200";
-              actionText = "Richiesta approvata:";
+              actionText = tr("Richiesta approvata") + ":"; 
           }
 
           return (
@@ -115,19 +121,19 @@ export default function NewsFeed() {
                 
                 <div className="p-3 flex items-center justify-between border-b border-gray-50 bg-gray-50/50">
                   <div className="flex items-center gap-3">
-                     <div className={`w-9 h-9 rounded-full flex items-center justify-center border bg-white ${isMalus ? 'border-red-200' : 'border-blue-200'}`}>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center border bg-white ${isMalus ? 'border-red-200' : 'border-blue-200'}`}>
                         {item.userPhoto ? (
                           <img src={item.userPhoto} className="w-full h-full rounded-full object-cover" />
                         ) : (
                           <User size={18} className={isMalus ? "text-red-400" : "text-blue-400"}/>
                         )}
-                     </div>
-                     <div>
+                      </div>
+                      <div>
                         <p className={`font-bold text-sm leading-tight ${isRejected ? 'line-through text-gray-500' : 'text-gray-900'}`}>{item.userName}</p>
                         <p className="text-[10px] text-gray-400 flex items-center gap-1">
                           <Clock size={10}/> {formatTime(dateRef)}
                         </p>
-                     </div>
+                      </div>
                   </div>
 
                   <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border ${statusColor}`}>
@@ -166,7 +172,7 @@ export default function NewsFeed() {
                       <img src={item.photoProof} className={`w-full h-auto object-cover max-h-[400px] min-h-[200px] ${isRejected ? 'grayscale' : ''}`} alt="Prova"/>
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                           <div className="bg-black/70 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-2">
-                             <Camera size={14} /> Ingrandisci
+                             <Camera size={14} /> {tr("Ingrandisci")}
                           </div>
                       </div>
                   </div>

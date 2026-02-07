@@ -6,7 +6,8 @@ import { recruitMatricola, releaseMatricola, setSquadCaptain, getMarketStatus, t
 import { UserPlus, Search, Users, Crown, Trash2, Lock, Unlock } from 'lucide-react';
 
 // AGGIUNTO PROP: preloadedUsers
-export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers = [] }) {
+export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers = [], t }) {
+    const tr = (text) => (t ? t(text) : text);
   const [matricole, setMatricole] = useState([]);
   const [mySquadDetails, setMySquadDetails] = useState([]);
   const [marketOpen, setMarketOpen] = useState(true);
@@ -101,7 +102,7 @@ export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers =
       {/* HEADER ROSA */}
       <div className="bg-white rounded-2xl shadow border border-gray-200 p-5">
         <div className="flex justify-between items-center mb-4 border-b pb-2">
-            <h2 className="text-xl font-bold flex items-center gap-2"><Users className="text-[#B41F35]"/> La Tua Squadra ({currentSquadSize}/3)</h2>
+            <h2 className="text-xl font-bold flex items-center gap-2"><Users className="text-[#B41F35]"/> {tr("La Tua Squadra")} ({currentSquadSize}/3)</h2>
             
             {/* SOLO SUPER ADMIN APRE/CHIUDE */}
             {isSuperAdmin ? (
@@ -154,7 +155,7 @@ export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers =
 
 {/* LISTA SVINCOLATI */}
       <div>
-        <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><UserPlus className="text-[#B41F35]"/> Lista Matricole</h3>
+        <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><UserPlus className="text-[#B41F35]"/> {tr("Lista Matricole")}</h3>
         <input type="text" placeholder="Cerca..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)} className="w-full mb-4 p-2 border rounded-xl text-sm" />
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
