@@ -5,7 +5,7 @@ import AdminRequests from '@/components/AdminRequests';
 import AdminChallenges from '@/components/AdminChallenges';
 import { Inbox, Settings2 } from 'lucide-react';
 
-export default function AdminSfideManager() {
+export default function AdminSfideManager({t}) {
   const [activeView, setActiveView] = useState('requests'); // 'requests' | 'settings'
 
   return (
@@ -46,9 +46,9 @@ export default function AdminSfideManager() {
       {/* CONTENUTO DINAMICO */}
       <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
         {activeView === 'requests' ? (
-           <AdminRequests />
+           <AdminRequests t = {t}/>
         ) : (
-           <AdminChallenges />
+           <AdminChallenges t = {t}/>
         )}
       </div>
 

@@ -5,9 +5,9 @@ import { createChallenge, getChallenges, deleteChallenge } from '@/lib/firebase'
 import { Trash2, Plus, Zap, Eye, EyeOff, Repeat, AlignLeft, AlertCircle } from 'lucide-react';
 
 // --- COMPONENTE CARD CON FLIP (Invariato) ---
-const ChallengeCard = ({ c, onDelete }) => {
+const ChallengeCard = ({ c, onDelete, t }) => {
   const [isFlipped, setIsFlipped] = useState(false);
-
+  const tr = (text) => (t ? t(text) : text);
   return (
     <div 
       className="relative w-full h-[72px] cursor-pointer" 
@@ -36,10 +36,10 @@ const ChallengeCard = ({ c, onDelete }) => {
                         </span>
                         {c.type === 'daily' && (
                         <span className="text-[10px] bg-[#B41F35]/10 text-[#B41F35] px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
-                            <Repeat size={10}/> Giornaliero
+                            <Repeat size={10}/> {tr("Giornaliero")}
                         </span>
                         )}
-                        {c.hidden && <span className="text-[10px] bg-gray-800 text-white px-1.5 rounded flex items-center gap-1"><EyeOff size={8}/> Nascosto</span>}
+                        {c.hidden && <span className="text-[10px] bg-gray-800 text-white px-1.5 rounded flex items-center gap-1"><EyeOff size={8}/> {tr("Nascosto")}</span>}
                     </div>
                 </div>
             </div>
@@ -58,7 +58,7 @@ const ChallengeCard = ({ c, onDelete }) => {
           style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
         >
            <p className="text-xs text-gray-600 font-medium leading-relaxed px-4 overflow-hidden">
-             {c.description ? c.description : <span className="text-gray-400 italic">Nessuna descrizione inserita.</span>}
+             {c.description ? c.description : <span className="text-gray-400 italic">{tr("Nessuna descrizione inserita.")}</span>}
            </p>
         </div>
       </div>
@@ -67,7 +67,8 @@ const ChallengeCard = ({ c, onDelete }) => {
 };
 
 // --- COMPONENTE PRINCIPALE ---
-export default function AdminChallenges() {
+export default function AdminChallenges({t}) {
+  const tr = (text) => (t ? t(text) : text);
   const [challenges, setChallenges] = useState([]);
   
   const [form, setForm] = useState({ 
@@ -230,7 +231,7 @@ export default function AdminChallenges() {
                         form.type === 'oneshot' ? 'bg-orange-100 text-orange-700 shadow-sm' : 'text-gray-400 hover:bg-gray-50'
                     }`}
                 >
-                    <Zap size={12}/> Speciale
+                    <Zap size={12}/> {tr("Speciale")}
                 </button>
                <button 
                   type="button" 
@@ -239,7 +240,7 @@ export default function AdminChallenges() {
                       form.type === 'daily' ? 'bg-[#B41F35]/10 text-[#B41F35] shadow-sm' : 'text-gray-400 hover:bg-gray-50'
                   }`}
               >
-                  <Repeat size={12}/> Giornaliero
+                  <Repeat size={12}/> {tr("Giornaliero")}
               </button>
             </div>
             <div className="relative w-14 h-[46px]">
@@ -271,7 +272,7 @@ export default function AdminChallenges() {
             ))}
         </div>
         <button type="submit" className="w-full bg-[#B41F35] text-white font-bold py-3 rounded-xl hover:bg-[#90192a] transition-all shadow-lg flex justify-center items-center gap-2">
-            <Plus size={18}/> AGGIUNGI BONUS
+            <Plus size={18}/> {tr("AGGIUNGI BONUS")}
         </button>
       </form>
 
@@ -290,9 +291,9 @@ export default function AdminChallenges() {
         {dailyItems.length > 0 && (
             <div className="space-y-2">
                 <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1 mt-2 mb-1 flex items-center gap-1">
-                    <Repeat size={10}/> Giornalieri
+                    <Repeat size={10}/> {tr("Giornalieri")}
                 </h3>
-                {dailyItems.map(c => <ChallengeCard key={c.id} c={c} onDelete={handleDelete} />)}
+                {dailyItems.map(c => <ChallengeCard key={c.id} c={c} onDelete={handleDelete} t = {t}/>)}
             </div>
         )}
 
@@ -309,9 +310,9 @@ export default function AdminChallenges() {
         {oneshotItems.length > 0 && (
             <div className="space-y-2">
                  <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1 mt-2 mb-1 flex items-center gap-1">
-                    <Zap size={10}/> Speciali
+                    <Zap size={10}/> {tr("Speciali")}
                 </h3>
-                {oneshotItems.map(c => <ChallengeCard key={c.id} c={c} onDelete={handleDelete} />)}
+                {oneshotItems.map(c => <ChallengeCard key={c.id} c={c} onDelete={handleDelete} t  ={t}/>)}
             </div>
         )}
 

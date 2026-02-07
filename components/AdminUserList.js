@@ -6,7 +6,8 @@ import { updateUserRole, deleteUserDocument, getSystemSettings, toggleRegistrati
 // AGGIUNTO: Ghost
 import { Users, UserCheck, Crown, Trash2, Key, Search, Lock, Unlock, ShieldAlert, Zap, Clock, Save, Ghost } from 'lucide-react';
 
-export default function AdminUserList({ currentUser, preloadedUsers = [] }) {
+export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
+    const tr = (text) => (t ? t(text) : text);
   const [users, setUsers] = useState(preloadedUsers);
   const [updatingUser, setUpdatingUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState(''); 
@@ -114,7 +115,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] }) {
             
             <div className="flex items-center gap-2 mb-6 border-b border-slate-700 pb-3 relative z-10">
                  <ShieldAlert className="text-yellow-400" size={20} />
-                 <h3 className="font-bold text-lg leading-tight">System Control</h3>
+                 <h3 className="font-bold text-lg leading-tight">{tr("System Control")}</h3>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
@@ -122,7 +123,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] }) {
                 <div className="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700">
                     <div>
                         <span className="block text-sm font-bold text-gray-200">Registrazioni</span>
-                        <span className="text-[10px] text-gray-400">Permetti nuovi iscritti</span>
+                        <span className="text-[10px] text-gray-400">{tr("Permetti nuovi iscritti")}</span>
                     </div>
                     <button 
                         onClick={handleToggleReg}
@@ -175,7 +176,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] }) {
                 <div className="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700 md:col-span-2">
                     <div>
                         <span className="block text-sm font-bold text-gray-200 flex items-center gap-2">
-                           Blackout Matricole <Ghost size={14} className={blurEnabled ? "text-purple-400" : "text-gray-500"}/>
+                           {tr("Blackout Matricole")} <Ghost size={14} className={blurEnabled ? "text-purple-400" : "text-gray-500"}/>
                         </span>
                         <span className="text-[10px] text-gray-400">Oscura il sito alle matricole</span>
                     </div>
@@ -186,7 +187,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] }) {
                             blurEnabled ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'bg-gray-600 text-gray-300'
                         }`}
                     >
-                        {blurEnabled ? 'ATTIVO' : 'SPENTO'}
+                        {blurEnabled ? tr('ATTIVO') : tr('SPENTO')}
                     </button>
                 </div>
 
@@ -197,10 +198,10 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] }) {
       {/* DASHBOARD CONTEGGI */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
-            { label: 'Matricole', count: counts.matricola, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-            { label: 'Utenti', count: counts.utente, icon: UserCheck, color: 'text-green-600', bg: 'bg-green-50' },
-            { label: 'Admin', count: counts.admin, icon: Key, color: 'text-purple-600', bg: 'bg-purple-50' },
-            { label: 'Super', count: counts['super-admin'], icon: Crown, color: 'text-yellow-600', bg: 'bg-yellow-50' }
+            { label: tr('Matricole'), count: counts.matricola, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: tr('Utenti'), count: counts.utente, icon: UserCheck, color: 'text-green-600', bg: 'bg-green-50' },
+            { label: tr('Admin'), count: counts.admin, icon: Key, color: 'text-purple-600', bg: 'bg-purple-50' },
+            { label: tr('Super'), count: counts['super-admin'], icon: Crown, color: 'text-yellow-600', bg: 'bg-yellow-50' }
           ].map((stat, i) => (
              <div key={i} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
                  <div className={`${stat.bg} ${stat.color} p-2 rounded-full mb-1`}>

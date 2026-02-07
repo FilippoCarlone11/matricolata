@@ -44,6 +44,7 @@ const NAP_DICT = {
     "Matricola": "Muccus",
     "Admin": "Mast",
     "Super Admin": "Capo mast",
+    "Super" : "Capo mast",
     "Utente": "Uaglion",
 
     // Tabs & Navigazione
@@ -53,7 +54,7 @@ const NAP_DICT = {
     "Bonus/Malus": "Bonus/Malùs",
     "Squadra": "O Napl",
     "Classifiche": "Classifiche",
-    "Utenti": "e Uagliun",
+    "Utenti": "Uagliun",
     
     // Azioni
     "Esci": "Vattenne",
@@ -104,7 +105,23 @@ const NAP_DICT = {
     "Lista Matricole": "Tutti i muccusielli",
     "Richiedi Bonus" : "Chier o favor",
     "Richiedi": "Chier",
-    "GIORNALIERO" : "Tutt e iuorn"
+    "GIORNALIERO" : "Tutt e iuorn",
+    "Giornaliero" : "Tutt e iuorn",
+    "Giornalieri" : "Tutt e iuorn",
+    "Richieste In Attesa": "Fatt a risolve",
+    "Nessuna richiesta da approvare al momento." : "Nisciuno fatt a risolve pe mo.",
+    "Nascosto" : "Nascuost",
+    "Nessuna descrizione inserita." : "Niscuna descrizione mess",
+    "Speciale" : "Special",
+    "Speciali" : "Special",
+    "AGGIUNGI BONUS" : "Miett nu bonus",
+    "System Control": "Controll ro sistem",
+    "Permetti nuovi iscritti" : "Permiett nuovi iscritti",
+    "Blackout Matricole" : "Annascunn tutt",
+    "Matricole" : "Muccus",
+    "ATTIVO" : "APPICCIAT",
+    "SPENTO" : "STUTAT"
+
 };
 
 export default function Home() {
@@ -169,7 +186,18 @@ export default function Home() {
         
         const userRef = doc(db, 'users', firebaseUser.uid);
         unsubscribeUser = onSnapshot(userRef, (docSnap) => {
-          if (docSnap.exists()) setUserData({ id: docSnap.id, ...docSnap.data() });
+          if (docSnap.exists()) {
+              const data = { id: docSnap.id, ...docSnap.data() };
+              setUserData(data);
+              
+              // --- CARICA LA LINGUA SALVATA ---
+              // Se nel DB c'è scritto che è napoletano, attiva la modalità
+              if (data.isNeapolitan) {
+                  setNeapolitanMode(true);
+              } else {
+                  setNeapolitanMode(false);
+              }
+          }
           setLoading(false);
         });
 
@@ -349,8 +377,8 @@ export default function Home() {
                  <BonusMalusList currentUser={userData} preloadedChallenges={globalChallenges} />
             </TabContent>
 
-            {activeTab === 'admin-sfide' && isAdminOrSuper && <AdminSfideManager />}
-            {activeTab === 'admin-utenti' && isSuperAdmin && <AdminUserList currentUser={userData} preloadedUsers={globalUsers} />}
+            {activeTab === 'admin-sfide' && isAdminOrSuper && <AdminSfideManager t = {t}/>}
+            {activeTab === 'admin-utenti' && isSuperAdmin && <AdminUserList currentUser={userData} preloadedUsers={globalUsers} t = {t}/>}
           </>
         )}
 
@@ -361,8 +389,6 @@ export default function Home() {
               user={userData} 
               onClose={() => setShowProfile(false)} 
               onUpdate={refreshUserData}
-              isNeapolitan={neapolitanMode} 
-              onToggleLanguage={triggerNeapolitan}
               t={t} 
           />
       )}

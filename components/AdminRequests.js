@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { onPendingRequestsChange, approveRequest, rejectRequest } from '@/lib/firebase';
 import { Check, X, Clock, Camera } from 'lucide-react';
 
-export default function AdminRequests() {
+export default function AdminRequests({t}) {
+  const tr = (text) => (t ? t(text) : text);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(null);
@@ -38,12 +39,12 @@ export default function AdminRequests() {
   return (
     <div className="bg-orange-50 rounded-2xl shadow-sm border border-orange-100 p-5 mb-8">
       <h3 className="text-lg font-bold text-orange-800 mb-4 flex items-center gap-2">
-        <Clock size={20} /> Richieste In Attesa
+        <Clock size={20} /> {tr("Richieste In Attesa")}
         {requests.length > 0 && <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded-full animate-pulse">{requests.length}</span>}
       </h3>
 
       {requests.length === 0 ? (
-        <p className="text-sm text-orange-400 italic">Nessuna richiesta da approvare al momento.</p>
+        <p className="text-sm text-orange-400 italic">{tr("Nessuna richiesta da approvare al momento.")}</p>
       ) : (
         <div className="space-y-3">
           {requests.map(req => (
