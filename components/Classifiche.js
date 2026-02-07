@@ -11,7 +11,7 @@ import {
 } from '@/lib/firebase';
 import { Trophy, User, Users, Shield, X, Crown, ArrowLeft, Zap, PlusCircle, Calendar, Trash2, EyeOff, Loader2 } from 'lucide-react';
 
-export default function Classifiche({ preloadedUsers = [], currentUser }) {
+export default function Classifiche({ preloadedUsers = [], currentUser, onTriggerYellow }) {
   const [matricole, setMatricole] = useState([]);
   const [fantallenatori, setFantallenatori] = useState([]);
   const [squadCounts, setSquadCounts] = useState({});
@@ -28,6 +28,9 @@ export default function Classifiche({ preloadedUsers = [], currentUser }) {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [availableChallenges, setAvailableChallenges] = useState([]);
   const [isAdminLoading, setIsAdminLoading] = useState(false);
+
+  // --- EASTER EGG BCIENZ (Locale) ---
+  const [showBcienzEffect, setShowBcienzEffect] = useState(false);
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super-admin';
 
@@ -77,6 +80,18 @@ export default function Classifiche({ preloadedUsers = [], currentUser }) {
 
   // --- LOGICA CLICK LISTA ---
   const handleItemClick = (item) => {
+      const name = item.displayName ? item.displayName.toLowerCase() : '';
+
+      // 🐟 EASTER EGG BCIENZ (Pesci - Locale)
+      if (name.includes('bcienz')) {
+          triggerBcienzEffect();
+      }
+
+      // 🍋 EASTER EGG FISI (Tema Giallo - Globale)
+      if (name.includes('fisi') && onTriggerYellow) {
+          onTriggerYellow();
+      }
+
       if (view === 'fanta') {
           if (!item.mySquad || item.mySquad.length === 0) return;
           setSelectedTeam(item);
@@ -87,6 +102,12 @@ export default function Classifiche({ preloadedUsers = [], currentUser }) {
       if (view === 'matricole' && isAdmin) {
           handleAdminSelectUser(item);
       }
+  };
+
+  const triggerBcienzEffect = () => {
+      setShowBcienzEffect(true);
+      // Dura 5 secondi (tempo che cadano tutti)
+      setTimeout(() => setShowBcienzEffect(false), 5000);
   };
 
 
@@ -171,7 +192,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser }) {
                     <img src={adminSelectedUser.photoURL || '/default-avatar.png'} className="w-16 h-16 rounded-full border-2 border-white shadow z-10" />
                     <div className="flex-1 z-10">
                         <h2 className="font-bold text-xl text-[#B41F35] leading-tight">{adminSelectedUser.displayName}</h2>
-                        {/* BADGE SQUADRE NEL DETTAGLIO */}
                         <span className={`text-xs font-bold px-2 py-0.5 rounded inline-flex items-center gap-1 mt-1 ${squadCounts[adminSelectedUser.id] > 0 ? 'bg-[#B41F35]/10 text-[#B41F35]' : 'bg-white text-gray-500 border'}`}>
                              <Users size={12} /> In {squadCounts[adminSelectedUser.id] || 0} Squadre
                         </span>
@@ -267,6 +287,28 @@ export default function Classifiche({ preloadedUsers = [], currentUser }) {
   // VISTA PRINCIPALE (LISTA CLASSIFICA)
   return (
     <div>
+      {/* 🐟 ANIMAZIONE PIOGGIA PESCI (Locale) 🐟 */}
+      {showBcienzEffect && (
+        <div className="fixed inset-0 z-[100] pointer-events-none overflow-hidden">
+            <style jsx>{`
+              @keyframes fishFall {
+                0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+                100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+              }
+            `}</style>
+            {Array.from({ length: 50 }).map((_, i) => {
+                const left = Math.random() * 100;
+                const duration = Math.random() * 2 + 2; 
+                const delay = Math.random() * 2; 
+                return (
+                <div key={i} className="absolute text-4xl" style={{ left: `${left}%`, top: `-10%`, animation: `fishFall ${duration}s linear infinite`, animationDelay: `${delay}s` }}>
+                    🐟 
+                </div>
+                );
+            })}
+        </div>
+      )}
+
       <div className="flex bg-gray-200 p-1 rounded-xl mb-6">
         <button onClick={() => setView('fanta')} className={`flex-1 py-2 rounded-lg text-sm font-bold flex justify-center items-center gap-2 transition-all ${view === 'fanta' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}><Shield size={16} /> Squadre</button>
         <button onClick={() => setView('matricole')} className={`flex-1 py-2 rounded-lg text-sm font-bold flex justify-center items-center gap-2 transition-all ${view === 'matricole' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}><Users size={16} /> Matricole</button>
@@ -274,7 +316,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser }) {
 
       <div className="space-y-3">
         {listItems.map((item, index) => {
-            const count = squadCounts[item.id] || 0; // Calcolo conteggio
+            const count = squadCounts[item.id] || 0; 
             let medalColor = 'bg-white border-gray-200';
             let rankIcon = <span className="font-black text-xl text-gray-400 italic w-8 text-center">#{index + 1}</span>;
             
@@ -290,8 +332,8 @@ export default function Classifiche({ preloadedUsers = [], currentUser }) {
             return (
             <div 
                 key={item.id} 
-                onClick={() => isClickable && handleItemClick(item)}
-                className={`flex items-center p-3 rounded-2xl border-2 shadow-sm transition-all ${medalColor} ${isClickable ? 'cursor-pointer hover:scale-[1.02] active:scale-95' : ''}`}
+                onClick={() => handleItemClick(item)}
+                className={`flex items-center p-3 rounded-2xl border-2 shadow-sm transition-all ${medalColor} cursor-pointer active:scale-95`}
             >
                 {rankIcon}
                 <img src={item.photoURL || '/default-avatar.png'} className="w-12 h-12 rounded-full object-cover mx-3 border border-gray-100" />
@@ -299,13 +341,11 @@ export default function Classifiche({ preloadedUsers = [], currentUser }) {
                     <h3 className={`font-bold text-gray-900 truncate text-lg leading-tight ${view === 'matricole' && isAdmin ? 'group-hover:text-[#B41F35]' : ''}`}>{title}</h3>
                     <div className="text-xs text-gray-500 truncate flex items-center gap-1 mt-0.5">
                         {isFanta ? (
-                             // --- VISTA SQUADRE: Mostra nome allenatore + bottone vedi ---
                              <>
                                 {item.teamName && <User size={10} />} {subTitle}
                                 {isClickable && <span className="text-[9px] bg-[#B41F35]/10 text-[#B41F35] font-bold px-1.5 rounded ml-2">Vedi Squadra</span>}
                              </>
                         ) : (
-                             // --- VISTA MATRICOLE: Mostra conteggio squadre rosso ---
                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${count > 0 ? 'bg-[#B41F35]/10 text-[#B41F35]' : 'bg-gray-50 text-gray-400'}`}>
                                 <Users size={12} /> {count} Squadre
                              </span>

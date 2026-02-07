@@ -19,7 +19,7 @@ import BonusMalusList from '@/components/BonusMalusList';
 import NewsFeed from '@/components/NewsFeed'; 
 import InstallPrompt from '@/components/InstallPrompt'; 
 
-import { Trophy, LogOut, Edit2, LockKeyhole } from 'lucide-react'; // Aggiunto LockKeyhole
+import { Trophy, LogOut, Edit2, LockKeyhole } from 'lucide-react'; 
 
 const TabContent = ({ id, activeTab, children }) => {
   return (
@@ -36,10 +36,13 @@ export default function Home() {
   
   const [globalChallenges, setGlobalChallenges] = useState([]);
   const [globalUsers, setGlobalUsers] = useState([]);
-  const [systemSettings, setSystemSettings] = useState({}); // NUOVO STATO
+  const [systemSettings, setSystemSettings] = useState({}); 
   
   const [activeTab, setActiveTab] = useState('feed'); 
   const [showProfile, setShowProfile] = useState(false); 
+
+  // --- STATO EASTER EGG GIALLO ---
+  const [yellowTheme, setYellowTheme] = useState(false);
 
   const fetchWithCache = async (key, fetcher, expiryMinutes, isCacheEnabled) => {
     if (!isCacheEnabled) {
@@ -118,6 +121,13 @@ export default function Home() {
 
   const handleLogout = async () => { try { await signOutUser(); } catch (error) { console.error(error); } };
 
+  // --- FUNZIONE ATTIVAZIONE TEMA GIALLO ---
+  const triggerYellowTheme = () => {
+      setYellowTheme(true);
+      // Disattiva dopo 10 secondi
+      setTimeout(() => setYellowTheme(false), 10000);
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div></div>;
   if (!user || !userData) return <Login />;
 
@@ -133,7 +143,19 @@ export default function Home() {
       {/* POPUP INSTALLAZIONE (Appare solo se necessario) */}
       {/*<InstallPrompt />*/}
 
-      {/* --- OVERLAY BLURRED (NUOVO) --- */}
+      {/* --- EASTER EGG: OVERLAY TEMA GIALLO --- */}
+      {yellowTheme && (
+        <div 
+            className="fixed inset-0 z-[9999] pointer-events-none animate-in fade-in duration-500"
+            style={{
+                backgroundColor: 'rgba(253, 224, 71, 0.4)', // Giallo semi-trasparente
+                mixBlendMode: 'color', // Tinge di giallo tutto ciò che c'è sotto
+                backdropFilter: 'sepia(100%)' // Aggiunge effetto foto antica
+            }}
+        />
+      )}
+
+      {/* --- OVERLAY BLURRED (NEBBIA MATRICOLE) --- */}
       {isBlurActive && (
         <div className="fixed inset-0 z-[100] backdrop-blur-xl bg-white/30 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
             
@@ -164,10 +186,10 @@ export default function Home() {
         </div>
       )}
 
-      {/* Container Principale (si sfoca se attivo) */}
+      {/* Container Principale (si sfoca se il blur è attivo) */}
       <div className={`max-w-lg mx-auto p-4 pb-28 ${isBlurActive ? 'filter blur-sm pointer-events-none overflow-hidden h-screen' : ''}`}>
         
-        {/* HEADER (Questo si vedrà sfocato sotto) */}
+        {/* HEADER */}
         <div className="flex items-center justify-between mb-6">
           <div 
             className="flex items-center gap-3 cursor-pointer group p-2 -ml-2 rounded-xl hover:bg-white hover:shadow-sm transition-all select-none"
@@ -232,7 +254,12 @@ export default function Home() {
             </TabContent>
             
             <TabContent id="classifiche" activeTab={activeTab}>
-                 <Classifiche preloadedUsers={globalUsers} currentUser={userData} />
+                 {/* PASSAGGIO DELLA FUNZIONE PER IL TEMA GIALLO */}
+                 <Classifiche 
+                    preloadedUsers={globalUsers} 
+                    currentUser={userData} 
+                    onTriggerYellow={triggerYellowTheme} 
+                 />
             </TabContent>
             
             <TabContent id="lista" activeTab={activeTab}>
