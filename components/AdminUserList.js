@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { updateUserRole, deleteUserDocument, getSystemSettings, toggleRegistrations, updateCacheSettings } from '@/lib/firebase';
-import { Users, UserCheck, Crown, Trash2, Key, Search, Lock, Unlock, ShieldAlert, Zap, Clock, Save, MoreHorizontal } from 'lucide-react';
+// AGGIUNTO: toggleMatricolaBlur
+import { updateUserRole, deleteUserDocument, getSystemSettings, toggleRegistrations, updateCacheSettings, toggleMatricolaBlur } from '@/lib/firebase';
+// AGGIUNTO: Ghost
+import { Users, UserCheck, Crown, Trash2, Key, Search, Lock, Unlock, ShieldAlert, Zap, Clock, Save, Ghost } from 'lucide-react';
 
 export default function AdminUserList({ currentUser, preloadedUsers = [] }) {
   const [users, setUsers] = useState(preloadedUsers);
@@ -13,6 +15,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] }) {
   const [regOpen, setRegOpen] = useState(true);
   const [cacheEnabled, setCacheEnabled] = useState(true);
   const [cacheDuration, setCacheDuration] = useState(30);
+  const [blurEnabled, setBlurEnabled] = useState(false); // <--- NUOVO STATO
   const [settingsLoading, setSettingsLoading] = useState(true);
 
   const isSuperAdmin = currentUser?.role === 'super-admin';
@@ -30,6 +33,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] }) {
                 setRegOpen(settings?.registrationsOpen ?? true);
                 setCacheEnabled(settings?.cacheEnabled ?? true);
                 setCacheDuration(settings?.cacheDuration ?? 30);
+                setBlurEnabled(settings?.matricolaBlur ?? false); // <--- CARICA STATO BLUR
             } catch (e) { console.error(e); }
             finally { setSettingsLoading(false); }
         };
@@ -53,6 +57,18 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] }) {
         setCacheEnabled(!newEnabled);
     }
     finally { setSettingsLoading(false); }
+  };
+
+  // NUOVA FUNZIONE: Toggle Blur
+  const handleToggleBlur = async () => {
+    const newState = !blurEnabled;
+    setBlurEnabled(newState); // Aggiorna UI subito per reattività
+    try {
+        await toggleMatricolaBlur(newState);
+    } catch (e) {
+        alert("Errore aggiornamento blur");
+        setBlurEnabled(!newState); // Revert in caso di errore
+    }
   };
 
   const handleRoleChange = async (userId, newRole) => {
@@ -87,7 +103,9 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] }) {
 
   return (
     <div className="pb-20">
-      
+      <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <Users className="text-blue-600" /> Gestione Utenti
+      </h2>
 
       {/* --- PANNELLO CONTROLLO SUPER ADMIN (Ridisegnato) --- */}
       {isSuperAdmin && (
@@ -104,7 +122,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] }) {
                 <div className="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700">
                     <div>
                         <span className="block text-sm font-bold text-gray-200">Registrazioni</span>
-                       
+                        <span className="text-[10px] text-gray-400">Permetti nuovi iscritti</span>
                     </div>
                     <button 
                         onClick={handleToggleReg}
@@ -152,15 +170,31 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] }) {
                         </button>
                     </div>
                 </div>
+
+                {/* 3. NUOVO BLOCCO: MATRICOLA BLUR */}
+                <div className="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700 md:col-span-2">
+                    <div>
+                        <span className="block text-sm font-bold text-gray-200 flex items-center gap-2">
+                           Blackout Matricole <Ghost size={14} className={blurEnabled ? "text-purple-400" : "text-gray-500"}/>
+                        </span>
+                        <span className="text-[10px] text-gray-400">Oscura il sito alle matricole</span>
+                    </div>
+                    <button 
+                        onClick={handleToggleBlur}
+                        disabled={settingsLoading}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wide transition-all ${
+                            blurEnabled ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'bg-gray-600 text-gray-300'
+                        }`}
+                    >
+                        {blurEnabled ? 'ATTIVO' : 'SPENTO'}
+                    </button>
+                </div>
+
             </div>
         </div>
       )}
 
-      <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-        <Users className="text-[#B41F35]" /> Gestione Utenti
-      </h2>
-
-      {/* DASHBOARD CONTEGGI (Minimal) */}
+      {/* DASHBOARD CONTEGGI */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
             { label: 'Matricole', count: counts.matricola, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -190,7 +224,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] }) {
         />
       </div>
 
-      {/* LISTA UTENTI (Ridisegnata) */}
+      {/* LISTA UTENTI */}
       <div className="space-y-4">
         {filteredUsers.map(user => (
           <div key={user.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
@@ -231,7 +265,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] }) {
                 </div>
              </div>
 
-             {/* SELETTORE RUOLO (Super Admin Only) */}
+             {/* SELETTORE RUOLO */}
              {isSuperAdmin && (
                  <div className="bg-gray-50 p-3 border-t border-gray-100">
                     <div className="flex items-center justify-between gap-1 bg-gray-200/50 p-1 rounded-xl">

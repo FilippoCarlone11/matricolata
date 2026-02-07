@@ -9,7 +9,7 @@ import Login from '@/components/Login';
 import ChallengeList from '@/components/ChallengeList';
 import StoricoPunti from '@/components/StoricoPunti';
 import AdminUserList from '@/components/AdminUserList';
-import AdminMatricolaHistory from '@/components/AdminMatricolaHistory';
+// AdminMatricolaHistory non serve più, è integrato in Classifiche
 import AdminSfideManager from '@/components/AdminSfideManager'; 
 import EditProfile from '@/components/EditProfile'; 
 import Navigation from '@/components/Navigation';
@@ -19,7 +19,7 @@ import BonusMalusList from '@/components/BonusMalusList';
 import NewsFeed from '@/components/NewsFeed'; 
 import InstallPrompt from '@/components/InstallPrompt'; 
 
-import { Trophy, LogOut, Edit2 } from 'lucide-react';
+import { Trophy, LogOut, Edit2, LockKeyhole } from 'lucide-react'; // Aggiunto LockKeyhole
 
 const TabContent = ({ id, activeTab, children }) => {
   return (
@@ -36,6 +36,7 @@ export default function Home() {
   
   const [globalChallenges, setGlobalChallenges] = useState([]);
   const [globalUsers, setGlobalUsers] = useState([]);
+  const [systemSettings, setSystemSettings] = useState({}); // NUOVO STATO
   
   const [activeTab, setActiveTab] = useState('feed'); 
   const [showProfile, setShowProfile] = useState(false); 
@@ -84,6 +85,8 @@ export default function Home() {
 
         try {
             const settings = await getSystemSettings();
+            setSystemSettings(settings); // SALVIAMO SETTINGS NELLO STATO
+            
             const isCacheEnabled = settings?.cacheEnabled ?? true; 
             const cacheTime = settings?.cacheDuration ?? 30;
             
@@ -121,15 +124,50 @@ export default function Home() {
   const isSuperAdmin = userData.role === 'super-admin';
   const isAdminOrSuper = userData.role === 'admin' || isSuperAdmin;
 
+  // LOGICA BLUR: Attivo solo per matricole se impostato nel DB
+  const isBlurActive = userData.role === 'matricola' && systemSettings.matricolaBlur;
+
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans relative">
       
       {/* POPUP INSTALLAZIONE (Appare solo se necessario) */}
       {/*<InstallPrompt />*/}
 
-      <div className="max-w-lg mx-auto p-4 pb-28">
+      {/* --- OVERLAY BLURRED (NUOVO) --- */}
+      {isBlurActive && (
+        <div className="fixed inset-0 z-[100] backdrop-blur-xl bg-white/30 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
+            
+            {/* TASTO LOGOUT DI EMERGENZA (Sempre visibile sopra il blur) */}
+            <div className="absolute top-6 right-6">
+                <button 
+                    onClick={handleLogout} 
+                    className="bg-white p-3 rounded-full shadow-xl text-gray-500 hover:text-red-600 transition-all border border-gray-200 hover:scale-110"
+                    title="Esci"
+                >
+                    <LogOut size={20} />
+                </button>
+            </div>
+
+            <div className="bg-white/80 p-8 rounded-3xl shadow-2xl border border-white/50 backdrop-blur-md max-w-sm">
+                <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+                    <LockKeyhole size={32} className="text-red-600" />
+                </div>
+                <h1 className="text-2xl font-black text-gray-900 mb-2">Vista oscurata!</h1>
+                <p className="text-gray-600 mb-6">
+                    Stiamo preparando una sorpresa. 
+                    <br/><span className="font-bold text-[#B41F35]">Tornate a studiare!</span>
+                </p>
+                <button onClick={() => window.location.reload()} className="bg-[#B41F35] text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-transform">
+                    Riprova
+                </button>
+            </div>
+        </div>
+      )}
+
+      {/* Container Principale (si sfoca se attivo) */}
+      <div className={`max-w-lg mx-auto p-4 pb-28 ${isBlurActive ? 'filter blur-sm pointer-events-none overflow-hidden h-screen' : ''}`}>
         
-        {/* HEADER */}
+        {/* HEADER (Questo si vedrà sfocato sotto) */}
         <div className="flex items-center justify-between mb-6">
           <div 
             className="flex items-center gap-3 cursor-pointer group p-2 -ml-2 rounded-xl hover:bg-white hover:shadow-sm transition-all select-none"
@@ -163,7 +201,6 @@ export default function Home() {
           <TabContent id="home" activeTab={activeTab}>
               {/* BOX PUNTEGGIO AGGIORNATO (ROSSO) */}
               <div className="bg-[#B41F35] rounded-3xl p-6 text-white mb-6 shadow-xl shadow-red-900/20 relative overflow-hidden">
-                {/* Decorazione sfondo sfumata */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
                 
                 <div className="relative z-10 flex items-center justify-between">
@@ -172,8 +209,6 @@ export default function Home() {
                     <div className="text-5xl font-black mt-1">{userData.punti || 0}</div>
                   </div>
                   <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm border border-white/10">
-                      {/* Se vuoi il logo anche qui, usa <img src="/logo.png" className="w-8 h-8"/> */}
-                      {/* Altrimenti lascia il Trofeo */}
                       <Trophy size={32} className="text-white" />
                   </div>
                 </div>
@@ -196,11 +231,9 @@ export default function Home() {
                  <SquadraMercato currentUser={userData} onUpdate={refreshUserData} preloadedUsers={globalUsers} />
             </TabContent>
             
-
-          <TabContent id="classifiche" activeTab={activeTab}>
-              {/* PASSAGGIO FONDAMENTALE DI currentUser */}
-              <Classifiche preloadedUsers={globalUsers} currentUser={userData} />
-          </TabContent>
+            <TabContent id="classifiche" activeTab={activeTab}>
+                 <Classifiche preloadedUsers={globalUsers} currentUser={userData} />
+            </TabContent>
             
             <TabContent id="lista" activeTab={activeTab}>
                  <BonusMalusList currentUser={userData} preloadedChallenges={globalChallenges} />
@@ -218,7 +251,10 @@ export default function Home() {
           <EditProfile user={userData} onClose={() => setShowProfile(false)} onUpdate={refreshUserData} />
       )}
       
-      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} role={userData.role} />
+      {/* Se il blur è attivo, nascondiamo la navigazione per evitare interazioni */}
+      {!isBlurActive && (
+         <Navigation activeTab={activeTab} setActiveTab={setActiveTab} role={userData.role} />
+      )}
     </div>
   );
 }
