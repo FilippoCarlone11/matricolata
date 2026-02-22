@@ -18,7 +18,7 @@ import BonusMalusList from '@/components/BonusMalusList';
 import NewsFeed from '@/components/NewsFeed'; 
 import InstallPrompt from '@/components/InstallPrompt'; 
 
-import { Trophy, LogOut, Edit2, LockKeyhole, Pizza } from 'lucide-react'; 
+import { Trophy, LogOut, Edit2, LockKeyhole, Pizza, AlertCircle, Crown, Users } from 'lucide-react'; 
 
 const TabContent = ({ id, activeTab, children }) => {
   return (
@@ -59,8 +59,9 @@ const NAP_DICT = {
     // Azioni
     "Esci": "Vattenne",
     "Vedi Squadra": "Uard a squadra",
-    "In Attesa di Approvazione": "stamm aspettan",
-    "Richiesta inviata": "L'amm mannata", 
+    "In Attesa": "Stamm aspettan", 
+    "In Attesa di Approvazione": "stamm aspettan", 
+    "Richiesta inviata": "L'amm mannata",
     "Approvato": "Appost",
     "Rifiutato": "Lev mano",
     "Richiesta Rifiutata": "Nun va buon",
@@ -92,15 +93,13 @@ const NAP_DICT = {
     "Lingua App": "Comm'amma parlà?",
     
     // Feed Extra
-    "Oggi": "Oggi", 
-    "Ieri": "Aiere",
+    "Oggi": "Ogg", 
+    "Ieri": "Aier",
     "Ingrandisci": "Fa vedè gruoss", 
     "Ha preso un Malus Nascosto:": "Ha pigliat nu malus nascost",
     "Ha preso un Malus:": "Ha pigliat nu malus",
     "Ha preso un Bonus Nascosto:": "Ha pigliat nu bonus nascost",
     "Ha preso un Bonus:": "Ha pigliat nu bonus",
-    "Oggi" : "Ogg",
-    "Ieri" : "Aier",
     "La Tua Squadra": "A squadra toj",
     "Lista Matricole": "Tutti i muccusielli",
     "Richiedi Bonus" : "Chier o favor",
@@ -115,13 +114,18 @@ const NAP_DICT = {
     "Speciale" : "Special",
     "Speciali" : "Special",
     "AGGIUNGI BONUS" : "Miett nu bonus",
-    "System Control": "Controll ro sistem",
     "Permetti nuovi iscritti" : "Permiett nuovi iscritti",
-    "Blackout Matricole" : "Annascunn tutt",
     "Matricole" : "Muccus",
     "ATTIVO" : "APPICCIAT",
-    "SPENTO" : "STUTAT"
+    "SPENTO" : "STUTAT",
 
+    // BANNER CAPITANO E BLOCCO
+    "Capitano non impostato!": "Manca o' capitan!",
+    "Scegli il tuo capitano per raddoppiare i suoi punti!": "Scegl' o capitan !",
+    "Devi farlo prima di continuare!": "Le fa primm' e cuntinuà!",
+    "Vai alla Squadra": "Va a Squadra",
+    "AZIONE RICHIESTA": "MOVT!",
+    "Devi impostarlo per sbloccare l'app.": "L'é mett pe sblocca t cos."
 };
 
 export default function Home() {
@@ -191,7 +195,6 @@ export default function Home() {
               setUserData(data);
               
               // --- CARICA LA LINGUA SALVATA ---
-              // Se nel DB c'è scritto che è napoletano, attiva la modalità
               if (data.isNeapolitan) {
                   setNeapolitanMode(true);
               } else {
@@ -236,7 +239,6 @@ export default function Home() {
 
   const handleLogout = async () => { try { await signOutUser(); } catch (error) { console.error(error); } };
 
-  // --- TRIGGERS EASTER EGGS ---
   const triggerYellowTheme = () => {
       setYellowTheme(true);
       setTimeout(() => setYellowTheme(false), 10000);
@@ -252,6 +254,9 @@ export default function Home() {
   const isSuperAdmin = userData.role === 'super-admin';
   const isAdminOrSuper = userData.role === 'admin' || isSuperAdmin;
   const isBlurActive = userData.role === 'matricola' && systemSettings.matricolaBlur;
+
+  // --- LOGICA BLOCCO CAPITANO ---
+  const isCaptainMissing = userData.role !== 'matricola' && (!userData.captainId) && (userData.mySquad && userData.mySquad.length > 0);
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 font-sans relative">
@@ -275,7 +280,7 @@ export default function Home() {
           </div>
       )}
 
-      {/* BLUR NEBBIA */}
+      {/* BLUR NEBBIA MATRICOLE */}
       {isBlurActive && (
         <div className="fixed inset-0 z-[100] backdrop-blur-xl bg-white/30 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500">
             <div className="absolute top-6 right-6">
@@ -297,6 +302,30 @@ export default function Home() {
                 </button>
             </div>
         </div>
+      )}
+
+      {/* 🚨 OVERLAY BLOCCANTE CAPITANO TEMA ROSSO 🚨 */}
+      {isCaptainMissing && activeTab !== 'squadra' && !isBlurActive && (
+          <div className="fixed inset-0 z-[90] backdrop-blur-xl bg-white/60 flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
+              <div className="absolute top-6 right-6">
+                  <button onClick={handleLogout} className="bg-white p-3 rounded-full shadow-xl text-gray-500 hover:text-[#B41F35] transition-all border border-gray-200 hover:scale-110" title={t("Esci")}>
+                      <LogOut size={20} />
+                  </button>
+              </div>
+              <div className="bg-white/90 p-8 rounded-3xl shadow-2xl border border-[#B41F35]/30 backdrop-blur-md max-w-sm ring-4 ring-[#B41F35]/10">
+                  <div className="bg-[#B41F35]/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+                      <AlertCircle size={32} className="text-[#B41F35]" />
+                  </div>
+                  <h1 className="text-2xl font-black text-gray-900 mb-2">{t("Capitano non impostato!")}</h1>
+                  <p className="text-gray-600 mb-6 font-medium">
+                      {t("Scegli il tuo capitano per raddoppiare i suoi punti!")}
+                      <br/><span className="text-[#B41F35] font-bold block mt-2">{t("Devi farlo prima di continuare!")}</span>
+                  </p>
+                  <button onClick={() => setActiveTab('squadra')} className="w-full bg-[#B41F35] text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-[#90192a] active:scale-95 transition-all flex items-center justify-center gap-2">
+                      <Users size={18} /> {t("Vai alla Squadra")}
+                  </button>
+              </div>
+          </div>
       )}
 
       {/* Container Principale */}
@@ -323,10 +352,28 @@ export default function Home() {
               </span>
             </div>
           </div>
-          <button onClick={handleLogout} className="p-2 bg-white rounded-xl shadow-sm border border-gray-200 text-gray-500 hover:text-red-600 transition-colors">
+          <button onClick={handleLogout} className="p-2 bg-white rounded-xl shadow-sm border border-gray-200 text-gray-500 hover:text-[#B41F35] transition-colors">
               <LogOut size={18} />
           </button>
         </div>
+
+        {/* 🚨 BANNER CAPITANO INLINE (Nella tab squadra) TEMA ROSSO 🚨 */}
+        {isCaptainMissing && activeTab === 'squadra' && (
+            <div className="bg-[#B41F35] border-2 border-[#90192a] rounded-2xl p-4 mb-6 shadow-xl flex items-center justify-between animate-pulse">
+                <div>
+                    <h3 className="font-black text-white text-sm flex items-center gap-2 drop-shadow-sm">
+                        <AlertCircle size={18} /> {t("AZIONE RICHIESTA")}
+                    </h3>
+                    <p className="text-xs text-white/90 mt-1 font-medium leading-tight pr-2">
+                        {t("Scegli il tuo capitano per raddoppiare i suoi punti!")} <br/>
+                        <span className="font-bold text-white">{t("Devi impostarlo per sbloccare l'app.")}</span>
+                    </p>
+                </div>
+                <div className="bg-white/20 p-2.5 rounded-full text-white shadow-sm shrink-0 backdrop-blur-sm">
+                    <Crown size={20} />
+                </div>
+            </div>
+        )}
 
         <TabContent id="feed" activeTab={activeTab}>
            <NewsFeed t={t}/>
@@ -393,7 +440,8 @@ export default function Home() {
           />
       )}
       
-      {!isBlurActive && (
+      {/* SE MANCA IL CAPITANO NASCONDIAMO LA NAVBAR COSI' SONO INTRAPPOLATI NELLA SQUADRA! */}
+      {!isBlurActive && !isCaptainMissing && (
          <Navigation activeTab={activeTab} setActiveTab={setActiveTab} role={userData.role} t={t}/>
       )}
     </div>

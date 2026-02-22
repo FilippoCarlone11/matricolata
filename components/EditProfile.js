@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 import { updateUserProfile } from '@/lib/firebase';
 import { X, Save, RefreshCw, Camera, Upload, Shield, Globe, Pizza } from 'lucide-react';
 
-// AGGIUNTO t, isNeapolitan, onToggleLanguage ALLE PROPS
-export default function EditProfile({ user, onClose, onUpdate, isNeapolitan, onToggleLanguage, t }) {
+export default function EditProfile({ user, onClose, onUpdate, t }) {
   const [name, setName] = useState(user.displayName || '');
   const [teamName, setTeamName] = useState(user.teamName || '');
   const [photoType, setPhotoType] = useState('current'); 
@@ -13,6 +12,9 @@ export default function EditProfile({ user, onClose, onUpdate, isNeapolitan, onT
   const [uploadedBase64, setUploadedBase64] = useState(null);
   const [seed, setSeed] = useState(user.id);
   const [loading, setLoading] = useState(false);
+
+  // STATO LOCALE PER LA LINGUA (Inizializzato dai dati utente)
+  const [localNeapolitan, setLocalNeapolitan] = useState(user.isNeapolitan || false);
 
   // Helper per tradurre in sicurezza
   const tr = (text) => (t ? t(text) : text);
@@ -22,6 +24,7 @@ export default function EditProfile({ user, onClose, onUpdate, isNeapolitan, onT
       if (user) {
           setName(user.displayName || '');
           setTeamName(user.teamName || '');
+          setLocalNeapolitan(user.isNeapolitan || false);
       }
   }, [user]);
 
@@ -57,7 +60,8 @@ export default function EditProfile({ user, onClose, onUpdate, isNeapolitan, onT
     else if (photoType === 'upload' && uploadedBase64) finalPhoto = uploadedBase64;
 
     try {
-      await updateUserProfile(user.id, name, teamName, finalPhoto);
+      // SALVIAMO ANCHE LA LINGUA (localNeapolitan)
+      await updateUserProfile(user.id, name, teamName, finalPhoto, localNeapolitan);
       await onUpdate(); 
       onClose();
     } catch (error) {
@@ -70,24 +74,21 @@ export default function EditProfile({ user, onClose, onUpdate, isNeapolitan, onT
   const isMatricola = user.role === 'matricola';
 
   return (
-    // Aggiunto z-[60] per stare SICURAMENTE sopra la navigation (che è z-50)
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-start justify-center p-4 sm:items-center overflow-y-auto pt-10 pb-24">
-      {/* Aggiunto my-auto e rimosso max-h-[90vh] per farlo scorrere naturalmente con la pagina. Aggiunto mb-10 per sicurezza. */}
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative animate-in fade-in zoom-in duration-200 my-auto mb-20">
+    // FIX: Aggiunto z-[60] e spazio in basso per lo scroll (pb-32 e my-auto invece di items-center fisso)
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-start sm:items-center justify-center p-4 overflow-y-auto pt-10 pb-32">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative animate-in fade-in zoom-in duration-200 my-auto mb-10">
         
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"><X size={24} /></button>
-        {/* TITOLO TRADOTTO */}
         <h2 className="text-xl font-bold text-gray-900 mb-6">{tr("Personalizza Profilo")}</h2>
 
-        {/* Aggiunto pb-4 per dare respiro prima del bordo inferiore */}
-        <form onSubmit={handleSubmit} className="space-y-4 pb-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           
           {/* CAMPO 1: NOME UTENTE */}
           <div>
             <label className="block text-xs font-bold text-gray-500 mb-1 uppercase">{tr("Il tuo Nome")}</label>
             <input 
               type="text" value={name} onChange={(e) => setName(e.target.value)}
-              className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 outline-none font-bold"
+              className="w-full p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-[#B41F35] outline-none font-bold"
               placeholder={tr("Nome e Cognome...")} required
             />
           </div>
@@ -107,7 +108,7 @@ export default function EditProfile({ user, onClose, onUpdate, isNeapolitan, onT
             </div>
           )}
 
-          {/* CAMPO 3: LINGUA APP (NUOVO) */}
+          {/* CAMPO 3: LINGUA APP */}
           <div>
              <label className="block text-xs font-bold text-gray-500 mb-2 uppercase flex items-center gap-1">
                 <Globe size={12}/> {tr("Lingua App")}
@@ -115,29 +116,30 @@ export default function EditProfile({ user, onClose, onUpdate, isNeapolitan, onT
              <div className="grid grid-cols-2 gap-2">
                 <button 
                     type="button"
-                    onClick={() => isNeapolitan && onToggleLanguage && onToggleLanguage()}
-                    className={`py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border transition-all ${!isNeapolitan ? 'bg-green-50 border-green-500 text-green-700 shadow-sm ring-1 ring-green-500' : 'bg-white border-gray-200 text-gray-400'}`}
+                    onClick={() => setLocalNeapolitan(false)}
+                    className={`py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border transition-all ${!localNeapolitan ? 'bg-green-50 border-green-500 text-green-700 shadow-sm ring-1 ring-green-500' : 'bg-white border-gray-200 text-gray-400'}`}
                 >
                     🇮🇹 Italiano
                 </button>
                 <button 
                     type="button"
-                    onClick={() => !isNeapolitan && onToggleLanguage && onToggleLanguage()}
-                    className={`py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border transition-all ${isNeapolitan ? 'bg-sky-50 border-sky-500 text-sky-700 shadow-sm ring-1 ring-sky-500' : 'bg-white border-gray-200 text-gray-400'}`}
+                    onClick={() => setLocalNeapolitan(true)}
+                    className={`py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border transition-all ${localNeapolitan ? 'bg-sky-50 border-sky-500 text-sky-700 shadow-sm ring-1 ring-sky-500' : 'bg-white border-gray-200 text-gray-400'}`}
                 >
                     <Pizza size={16} /> Napoletano
                 </button>
              </div>
+             <p className="text-[10px] text-gray-400 mt-1 text-center">Salva per applicare.</p>
           </div>
 
           {/* CAMPO 4: FOTO */}
           <div>
             <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">{tr("Foto Profilo")}</label>
             <div className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-hide">
-              <button type="button" onClick={() => setPhotoType('current')} className={`px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap ${photoType === 'current' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white'}`}>{tr("Attuale")}</button>
+              <button type="button" onClick={() => setPhotoType('current')} className={`px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap ${photoType === 'current' ? 'bg-[#B41F35]/10 border-[#B41F35] text-[#B41F35]' : 'bg-white'}`}>{tr("Attuale")}</button>
               <button type="button" onClick={() => setPhotoType('upload')} className={`px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap flex items-center gap-1 ${photoType === 'upload' ? 'bg-orange-50 border-orange-500 text-orange-700' : 'bg-white'}`}><Camera size={14}/> {tr("Carica")}</button>
               <button type="button" onClick={() => setPhotoType('dicebear')} className={`px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap ${photoType === 'dicebear' ? 'bg-purple-50 border-purple-500 text-purple-700' : 'bg-white'}`}>{tr("Cartoon")}</button>
-             </div>
+            </div>
 
             <div className="flex items-center justify-center p-4 bg-gray-50 rounded-xl border border-gray-200 min-h-[120px]">
               {photoType === 'current' && <img src={user.photoURL || '/default-avatar.png'} className="w-20 h-20 rounded-full border-2 border-white shadow object-cover" />}
@@ -149,7 +151,7 @@ export default function EditProfile({ user, onClose, onUpdate, isNeapolitan, onT
                         ) : (
                             <div className="w-20 h-20 rounded-full mx-auto bg-white border border-gray-200 flex items-center justify-center text-gray-400 mb-2"><Upload size={24} /></div>
                         )}
-                        <span className="mt-2 inline-block text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">{uploadedBase64 ? tr('Cambia Foto') : tr('Scegli dalla Galleria')}</span>
+                        <span className="mt-2 inline-block text-xs font-bold text-[#B41F35] bg-[#B41F35]/10 px-3 py-1 rounded-full border border-[#B41F35]/20">{uploadedBase64 ? tr('Cambia Foto') : tr('Scegli dalla Galleria')}</span>
                         <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
                     </label>
                   </div>
@@ -169,7 +171,7 @@ export default function EditProfile({ user, onClose, onUpdate, isNeapolitan, onT
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg flex items-center justify-center gap-2">
+          <button type="submit" disabled={loading} className="w-full py-3 bg-[#B41F35] text-white rounded-xl font-bold hover:bg-[#90192a] shadow-lg flex items-center justify-center gap-2 mt-4">
             {loading ? tr('Salvataggio...') : <><Save size={18}/> {tr('Salva Profilo')}</>}
           </button>
         </form>
