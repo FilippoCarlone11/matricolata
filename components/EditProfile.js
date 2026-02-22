@@ -137,8 +137,7 @@ export default function EditProfile({ user, onClose, onUpdate, isNeapolitan, onT
               <button type="button" onClick={() => setPhotoType('current')} className={`px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap ${photoType === 'current' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white'}`}>{tr("Attuale")}</button>
               <button type="button" onClick={() => setPhotoType('upload')} className={`px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap flex items-center gap-1 ${photoType === 'upload' ? 'bg-orange-50 border-orange-500 text-orange-700' : 'bg-white'}`}><Camera size={14}/> {tr("Carica")}</button>
               <button type="button" onClick={() => setPhotoType('dicebear')} className={`px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap ${photoType === 'dicebear' ? 'bg-purple-50 border-purple-500 text-purple-700' : 'bg-white'}`}>{tr("Cartoon")}</button>
-              <button type="button" onClick={() => setPhotoType('url')} className={`px-3 py-2 rounded-lg border text-xs font-bold whitespace-nowrap ${photoType === 'url' ? 'bg-green-50 border-green-500 text-green-700' : 'bg-white'}`}>{tr("Link Web")}</button>
-            </div>
+             </div>
 
             <div className="flex items-center justify-center p-4 bg-gray-50 rounded-xl border border-gray-200 min-h-[120px]">
               {photoType === 'current' && <img src={user.photoURL || '/default-avatar.png'} className="w-20 h-20 rounded-full border-2 border-white shadow object-cover" />}
