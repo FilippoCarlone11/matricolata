@@ -3,14 +3,15 @@
 import { useState, useEffect } from 'react';
 import { 
     auth, db, getAllUsers, 
-    createEventTeam, deleteEventTeam, 
+    createEventTeam, deleteEventTeam, updateEventTeamName, // <-- IMPORTATA NUOVA FUNZIONE
     assignMatricolaToEventTeam, removeMatricolaFromEventTeam,
     createEventChallenge, deleteEventChallenge, resolveEventChallenge,
     revertEventChallenge, addManualPointsToEventTeams
 } from '@/lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, collection, query, orderBy, onSnapshot } from 'firebase/firestore'; 
-import { Settings, ShieldAlert, Loader2, LogOut, Plus, Trash2, Users, UserMinus, Swords, CheckCircle2, Trophy, Wrench, MonitorPlay, ArrowLeft, Minus, ChevronRight, RotateCcw } from 'lucide-react';
+// AGGIUNTE ICONE Edit2 e Check
+import { Settings, ShieldAlert, Loader2, LogOut, Plus, Trash2, Users, UserMinus, Swords, CheckCircle2, Trophy, Wrench, MonitorPlay, ArrowLeft, Minus, ChevronRight, RotateCcw, Edit2, Check } from 'lucide-react';
 import Login from '@/components/Login'; 
 
 const COLORS = [
@@ -35,6 +36,10 @@ export default function PuntiDashboard() {
   const [allMatricole, setAllMatricole] = useState([]);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamColor, setNewTeamColor] = useState(COLORS[0]);
+
+  // STATI MODIFICA NOME SQUADRA
+  const [editingTeamId, setEditingTeamId] = useState(null);
+  const [editingTeamName, setEditingTeamName] = useState('');
 
   // STATI REGIA SFIDE
   const [eventChallenges, setEventChallenges] = useState([]);
@@ -92,17 +97,7 @@ export default function PuntiDashboard() {
     };
   }, [selectedLiveChallenge]);
 
-  // --- GESTIONE LOGOUT ---
-  const handleLogout = async () => {
-      try {
-          await signOut(auth);
-          // Ricarichiamo la pagina per pulire qualsiasi stato residuo
-          window.location.reload(); 
-      } catch (error) {
-          console.error("Errore durante il logout:", error);
-      }
-  };
-
+  // --- AZIONI SQUADRE ---
   const handleCreateTeam = async (e) => {
       e.preventDefault();
       if (!newTeamName.trim()) return;
@@ -114,6 +109,25 @@ export default function PuntiDashboard() {
       if(confirm("Sei sicuro di voler eliminare questa squadra della serata?")) await deleteEventTeam(teamId);
   };
 
+  const handleStartEditTeam = (team) => {
+      setEditingTeamId(team.id);
+      setEditingTeamName(team.name);
+  };
+
+  const handleSaveTeamName = async (teamId) => {
+      if (!editingTeamName.trim()) {
+          setEditingTeamId(null);
+          return;
+      }
+      try {
+          await updateEventTeamName(teamId, editingTeamName);
+          setEditingTeamId(null);
+      } catch (error) {
+          alert("Errore durante il salvataggio: " + error.message);
+      }
+  };
+
+  // --- AZIONI SFIDE ---
   const handleCreateChallenge = async (e) => {
       e.preventDefault();
       if (!newChallengeTitle.trim()) return;
@@ -168,6 +182,13 @@ export default function PuntiDashboard() {
       } catch (e) { alert("Errore: " + e.message); }
   };
 
+  const handleLogout = async () => {
+      try {
+          await signOut(auth);
+          window.location.reload(); 
+      } catch (error) { console.error("Errore:", error); }
+  };
+
   const assignedMatricoleIds = eventTeams.flatMap(t => t.members || []);
   const availableMatricole = allMatricole.filter(m => !assignedMatricoleIds.includes(m.id));
 
@@ -180,7 +201,7 @@ export default function PuntiDashboard() {
                   <div className="bg-[#B41F35]/20 p-4 rounded-2xl inline-block mb-4 border border-[#B41F35]/30 shadow-lg">
                       <Settings size={48} className="text-[#B41F35]" />
                   </div>
-                  <h1 className="text-3xl font-black text-white tracking-wide">Regia Evento</h1>
+                  <h1 className="text-3xl font-black text-white tracking-wide">Gestione Punti</h1>
                   <p className="text-gray-400 font-medium mt-2 uppercase tracking-widest text-xs">Accesso Riservato</p>
               </div>
               <div className="w-full max-w-md">
@@ -190,26 +211,17 @@ export default function PuntiDashboard() {
       );
   }
 
-  // FIX: ACCESSO NEGATO (Ora il tasto Logout è chiaro e robusto)
   if (!userData || userData.role !== 'super-admin') {
       return (
           <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4 text-center">
               <ShieldAlert size={80} className="text-red-500 mb-6 drop-shadow-lg" />
               <h1 className="text-3xl font-black text-white mb-2">Accesso Negato</h1>
-              <p className="text-gray-400 mb-8 max-w-sm">
-                  Sembra che tu non abbia i permessi necessari. Questa area è riservata esclusivamente alla Regia dell'evento.
-              </p>
+              <p className="text-gray-400 mb-8 max-w-sm">Sembra che tu non abbia i permessi necessari. Questa area è riservata esclusivamente alla Regia dell'evento.</p>
               <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
-                  <button 
-                      onClick={handleLogout} 
-                      className="flex-1 bg-gray-800 text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 border border-gray-700"
-                  >
+                  <button onClick={handleLogout} className="flex-1 bg-gray-800 text-white px-6 py-3 rounded-xl font-bold hover:bg-gray-700 transition-colors flex items-center justify-center gap-2 border border-gray-700">
                       <LogOut size={18} /> Esci dall'Account
                   </button>
-                  <a 
-                      href="https://matricolata.it" 
-                      className="flex-1 bg-[#B41F35] text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-[#90192a] transition-all flex items-center justify-center"
-                  >
+                  <a href="https://matricolata.it" className="flex-1 bg-[#B41F35] text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-[#90192a] transition-all flex items-center justify-center">
                       Torna all'App
                   </a>
               </div>
@@ -223,7 +235,7 @@ export default function PuntiDashboard() {
             <div className="flex items-center gap-3 w-full md:w-auto">
                 <div className="bg-[#B41F35] p-2 rounded-lg"><Settings size={24} /></div>
                 <div>
-                    <h1 className="text-xl font-bold leading-tight">Regia Evento</h1>
+                    <h1 className="text-xl font-bold leading-tight">Gestione Punti</h1>
                     <p className="text-xs text-gray-400 uppercase tracking-widest">punti.matricolata.it</p>
                 </div>
             </div>
@@ -245,37 +257,73 @@ export default function PuntiDashboard() {
 
         <main className="max-w-7xl mx-auto pb-20">
             
+            {/* ========================================== */}
             {/* VISTA 1: SETUP */}
+            {/* ========================================== */}
             {activeView === 'setup' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in slide-in-from-left-4">
                     
                     {/* SETUP SQUADRE */}
                     <div className="space-y-6">
+                        {/* Box Creazione Squadra: layout verticale per far spazio su mobile */}
                         <div className="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-xl">
                             <h2 className="text-lg font-bold mb-4 flex items-center gap-2"><Users className="text-[#B41F35]" /> Crea Squadre Serata</h2>
-                            <form onSubmit={handleCreateTeam} className="flex flex-col sm:flex-row gap-4 items-end">
-                                <div className="flex-1 w-full">
+                            <form onSubmit={handleCreateTeam} className="flex flex-col gap-4">
+                                <div>
                                     <label className="text-xs text-gray-400 font-bold uppercase mb-1 block">Nome Squadra</label>
                                     <input type="text" value={newTeamName} onChange={e => setNewTeamName(e.target.value)} className="w-full bg-gray-900 border border-gray-700 rounded-xl p-3 text-white outline-none focus:border-[#B41F35]" placeholder="Es. Squadra Rossa" required />
                                 </div>
-                                <div className="flex gap-2">
-                                    {COLORS.map(c => (
-                                        <button key={c.name} type="button" onClick={() => setNewTeamColor(c)} className={`w-12 h-12 rounded-xl border-2 transition-all ${c.class} ${newTeamColor.name === c.name ? 'ring-4 ring-white border-transparent scale-110' : 'border-gray-800 opacity-50'}`} title={c.name}/>
-                                    ))}
+                                <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                                    <div className="flex gap-2">
+                                        {COLORS.map(c => (
+                                            <button key={c.name} type="button" onClick={() => setNewTeamColor(c)} className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl border-2 transition-all ${c.class} ${newTeamColor.name === c.name ? 'ring-4 ring-white border-transparent scale-110' : 'border-gray-800 opacity-50'}`} title={c.name}/>
+                                        ))}
+                                    </div>
+                                    <button type="submit" className="bg-[#B41F35] text-white py-3 px-6 rounded-xl font-bold w-full sm:w-auto flex items-center justify-center gap-2 shadow-lg hover:bg-[#90192a] transition-all">
+                                        <Plus size={20} /> CREA SQUADRA
+                                    </button>
                                 </div>
-                                <button type="submit" className="bg-[#B41F35] text-white p-3 rounded-xl font-bold w-full sm:w-auto"><Plus size={20} /></button>
                             </form>
                         </div>
 
+                        {/* LISTA SQUADRE E MODIFICA NOME */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {eventTeams.map(team => {
                                 const teamMembers = allMatricole.filter(m => (team.members || []).includes(m.id));
                                 return (
                                     <div key={team.id} className="bg-gray-800 border border-gray-700 rounded-2xl overflow-hidden shadow-xl flex flex-col">
                                         <div className={`${team.colorClass} p-3 flex justify-between items-center`}>
-                                            <h3 className="font-black text-white text-lg">{team.name}</h3>
-                                            <button onClick={() => handleDeleteTeam(team.id)} className="text-white/70 hover:text-white bg-black/20 p-1.5 rounded-lg"><Trash2 size={16}/></button>
+                                            
+                                            {/* SEZIONE EDIT NOME */}
+                                            {editingTeamId === team.id ? (
+                                                <div className="flex items-center gap-2 flex-1 mr-2">
+                                                    <input 
+                                                        type="text" 
+                                                        value={editingTeamName} 
+                                                        onChange={(e) => setEditingTeamName(e.target.value)}
+                                                        className="w-full bg-white/20 text-white placeholder-white/50 border border-white/30 rounded px-2 py-1 outline-none font-bold"
+                                                        autoFocus
+                                                    />
+                                                    <button onClick={() => handleSaveTeamName(team.id)} className="bg-white/20 hover:bg-white/40 p-1.5 rounded transition-colors text-white">
+                                                        <Check size={16} />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <h3 className="font-black text-white text-lg truncate flex-1">{team.name}</h3>
+                                            )}
+
+                                            <div className="flex items-center gap-1">
+                                                {editingTeamId !== team.id && (
+                                                    <button onClick={() => handleStartEditTeam(team)} className="text-white/70 hover:text-white bg-black/20 p-1.5 rounded-lg transition-colors">
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                )}
+                                                <button onClick={() => handleDeleteTeam(team.id)} className="text-white/70 hover:text-white bg-black/20 p-1.5 rounded-lg transition-colors">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
                                         </div>
+
                                         <div className="p-4 flex-1 flex flex-col">
                                             <span className="text-xs font-bold text-gray-400 mb-2">MEMBRI ({teamMembers.length})</span>
                                             <div className="space-y-2 mb-4 flex-1">
@@ -348,7 +396,9 @@ export default function PuntiDashboard() {
                 </div>
             )}
 
-            {/* VISTA 2: LIVE */}
+            {/* ========================================== */}
+            {/* VISTA 2: LIVE                               */}
+            {/* ========================================== */}
             {activeView === 'live' && (
                 <div className="animate-in fade-in slide-in-from-right-4">
                     
@@ -378,7 +428,6 @@ export default function PuntiDashboard() {
                                 <h2 className="text-lg font-bold text-gray-300 mb-4 flex items-center gap-2"><Swords size={20}/> Scegli la sfida da giocare</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     
-                                    {/* BOTTONE FISSO PUNTI MANUALI */}
                                     <button 
                                         onClick={() => setSelectedLiveChallenge({ id: 'manual', title: 'Aggiunta Manuale', isManual: true })}
                                         className="p-5 rounded-2xl border-2 border-dashed text-left transition-all relative overflow-hidden group bg-gray-900 border-gray-600 hover:border-white hover:shadow-xl cursor-pointer"
@@ -390,7 +439,6 @@ export default function PuntiDashboard() {
                                         <p className="text-xs text-gray-400 mt-1">Aggiungi o rimuovi punti liberamente alle squadre (es. penalità o bonus).</p>
                                     </button>
 
-                                    {/* SFIDE NORMALI */}
                                     {eventChallenges.map(challenge => {
                                         const isActive = challenge.status === 'active';
                                         return (
@@ -463,7 +511,6 @@ export default function PuntiDashboard() {
                             <div className="space-y-4 mb-8">
                                 {eventTeams.map(team => {
                                     const currentScore = (rawScoresInputs[selectedLiveChallenge.id] || {})[team.id] || 0;
-                                    
                                     const step = selectedLiveChallenge.isManual ? 10 : 1;
                                     const allowNegative = selectedLiveChallenge.isManual;
 
