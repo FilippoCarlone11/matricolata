@@ -236,7 +236,7 @@ export default function PuntiDashboard() {
                 <div className="bg-[#B41F35] p-2 rounded-lg"><Settings size={24} /></div>
                 <div>
                     <h1 className="text-xl font-bold leading-tight">Gestione Punti</h1>
-                    <p className="text-xs text-gray-400 uppercase tracking-widest">punti.matricolata.it</p>
+                  
                 </div>
             </div>
 
