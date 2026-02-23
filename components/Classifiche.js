@@ -15,21 +15,22 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   const [matricole, setMatricole] = useState([]);
   const [fantallenatori, setFantallenatori] = useState([]);
   const [squadCounts, setSquadCounts] = useState({});
+  const [captainCounts, setCaptainCounts] = useState({}); // NUOVO STATO
   
   const [view, setView] = useState('fanta'); 
   
-  // STATI PER UTENTI NORMALI (Vedi Squadra Fanta)
+  // STATI PER UTENTI NORMALI
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [teamDetails, setTeamDetails] = useState([]);
 
-  // STATI PER ADMIN (Gestione Matricola)
+  // STATI PER ADMIN
   const [adminSelectedUser, setAdminSelectedUser] = useState(null);
   const [adminHistory, setAdminHistory] = useState({});
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [availableChallenges, setAvailableChallenges] = useState([]);
   const [isAdminLoading, setIsAdminLoading] = useState(false);
 
-  // --- EASTER EGG BCIENZ (Locale) ---
+  // --- EASTER EGG BCIENZ ---
   const [showBcienzEffect, setShowBcienzEffect] = useState(false);
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super-admin';
@@ -68,29 +69,28 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
 
   const calculateSquadCounts = (users) => {
       const counts = {};
+      const capCounts = {}; // Contatore capitani
+      
       users.forEach(user => {
           if (user.mySquad && Array.isArray(user.mySquad)) {
               user.mySquad.forEach(mid => {
                   counts[mid] = (counts[mid] || 0) + 1;
               });
           }
+          if (user.captainId) {
+              capCounts[user.captainId] = (capCounts[user.captainId] || 0) + 1;
+          }
       });
       setSquadCounts(counts);
+      setCaptainCounts(capCounts); // Salviamo nello stato
   };
 
   // --- LOGICA CLICK LISTA ---
   const handleItemClick = (item) => {
       const name = item.displayName ? item.displayName.toLowerCase() : '';
 
-      // 🐟 EASTER EGG BCIENZ (Pesci - Locale)
-      if (name.includes('bcienz')) {
-          triggerBcienzEffect();
-      }
-
-      // 🍋 EASTER EGG FISI (Tema Giallo - Globale)
-      if (name.includes('fisi') && onTriggerYellow) {
-          onTriggerYellow();
-      }
+      if (name.includes('bcienz')) triggerBcienzEffect();
+      if (name.includes('fisi') && onTriggerYellow) onTriggerYellow();
 
       if (view === 'fanta') {
           if (!item.mySquad || item.mySquad.length === 0) return;
@@ -106,10 +106,8 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
 
   const triggerBcienzEffect = () => {
       setShowBcienzEffect(true);
-      // Dura 5 secondi (tempo che cadano tutti)
       setTimeout(() => setShowBcienzEffect(false), 5000);
   };
-
 
   // --- LOGICA ADMIN ---
   const handleAdminSelectUser = async (user) => {
@@ -176,7 +174,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   // --- RENDER COMPONENT ---
   const listItems = view === 'matricole' ? matricole : fantallenatori;
 
-  // OVERLAY ADMIN (Gestione Matricola)
+  // OVERLAY ADMIN
   if (adminSelectedUser && isAdmin) {
       return (
         <div className="fixed inset-0 bg-gray-50 z-[50] overflow-y-auto animate-in slide-in-from-right duration-300">
@@ -189,12 +187,20 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                 </div>
 
                 <div className="flex items-center gap-4 bg-[#B41F35]/5 p-4 rounded-2xl border border-[#B41F35]/20 shadow-sm relative overflow-hidden mb-6">
-                    <img src={adminSelectedUser.photoURL || '/default-avatar.png'} className="w-16 h-16 rounded-full border-2 border-white shadow z-10" />
+                    <img src={adminSelectedUser.photoURL || `https://api.dicebear.com/9.x/notionists/svg?seed=${adminSelectedUser.id}&backgroundColor=fecaca`} className="w-16 h-16 rounded-full border-2 border-white shadow z-10 bg-red-100 object-cover" />
                     <div className="flex-1 z-10">
                         <h2 className="font-bold text-xl text-[#B41F35] leading-tight">{adminSelectedUser.displayName}</h2>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded inline-flex items-center gap-1 mt-1 ${squadCounts[adminSelectedUser.id] > 0 ? 'bg-[#B41F35]/10 text-[#B41F35]' : 'bg-white text-gray-500 border'}`}>
-                             <Users size={12} /> In {squadCounts[adminSelectedUser.id] || 0} Squadre
-                        </span>
+                        
+                        <div className="flex gap-2 mt-1">
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded inline-flex items-center gap-1 ${squadCounts[adminSelectedUser.id] > 0 ? 'bg-[#B41F35]/10 text-[#B41F35]' : 'bg-white text-gray-500 border'}`}>
+                                 <Users size={12} /> In {squadCounts[adminSelectedUser.id] || 0} Squadre
+                            </span>
+                            {captainCounts[adminSelectedUser.id] > 0 && (
+                                <span className="text-xs font-bold px-2 py-0.5 rounded inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 border border-yellow-200">
+                                    <Crown size={12} /> Cap. {captainCounts[adminSelectedUser.id]}
+                                </span>
+                            )}
+                        </div>
                     </div>
                     <div className="bg-white px-4 py-3 rounded-xl shadow-sm border border-[#B41F35]/20 text-center min-w-[80px] z-10">
                         <span className="block text-[10px] uppercase text-gray-400 font-bold">Punti</span>
@@ -284,10 +290,9 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
       );
   }
 
-  // VISTA PRINCIPALE (LISTA CLASSIFICA)
+  // VISTA PRINCIPALE
   return (
     <div>
-      {/* 🐟 ANIMAZIONE PIOGGIA PESCI (Locale) 🐟 */}
       {showBcienzEffect && (
         <div className="fixed inset-0 z-[100] pointer-events-none overflow-hidden">
             <style jsx>{`
@@ -317,6 +322,8 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
       <div className="space-y-3">
         {listItems.map((item, index) => {
             const count = squadCounts[item.id] || 0; 
+            const capCount = captainCounts[item.id] || 0;
+
             let medalColor = 'bg-white border-gray-200';
             let rankIcon = <span className="font-black text-xl text-gray-400 italic w-8 text-center">#{index + 1}</span>;
             
@@ -336,19 +343,26 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                 className={`flex items-center p-3 rounded-2xl border-2 shadow-sm transition-all ${medalColor} cursor-pointer active:scale-95`}
             >
                 {rankIcon}
-                <img src={item.photoURL || '/default-avatar.png'} className="w-12 h-12 rounded-full object-cover mx-3 border border-gray-100" />
+                <img src={item.photoURL || `https://api.dicebear.com/9.x/notionists/svg?seed=${item.id}&backgroundColor=fecaca`} className="w-12 h-12 rounded-full object-cover mx-3 border border-gray-100 bg-red-50" />
                 <div className="flex-1 min-w-0">
                     <h3 className={`font-bold text-gray-900 truncate text-lg leading-tight ${view === 'matricole' && isAdmin ? 'group-hover:text-[#B41F35]' : ''}`}>{title}</h3>
-                    <div className="text-xs text-gray-500 truncate flex items-center gap-1 mt-0.5">
+                    <div className="text-xs text-gray-500 truncate flex items-center gap-1 mt-1">
                         {isFanta ? (
                              <>
                                 {item.teamName && <User size={10} />} {subTitle}
                                 {isClickable && <span className="text-[9px] bg-[#B41F35]/10 text-[#B41F35] font-bold px-1.5 rounded ml-2">Vedi Squadra</span>}
                              </>
                         ) : (
-                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${count > 0 ? 'bg-[#B41F35]/10 text-[#B41F35]' : 'bg-gray-50 text-gray-400'}`}>
-                                <Users size={12} /> {count} Squadre
-                             </span>
+                             <div className="flex gap-1">
+                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${count > 0 ? 'bg-[#B41F35]/10 text-[#B41F35]' : 'bg-gray-100 text-gray-400'}`}>
+                                    <Users size={10} /> {count} Squadre
+                                 </span>
+                                 {capCount > 0 && (
+                                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 bg-yellow-100 text-yellow-700 border border-yellow-200">
+                                         <Crown size={10} /> {capCount}
+                                     </span>
+                                 )}
+                             </div>
                         )}
                     </div>
                 </div>
@@ -380,7 +394,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                             return (
                             <div key={player.id} className={`flex items-center gap-3 p-3 rounded-xl border ${isCaptain ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100 bg-gray-50'}`}>
                                 <div className="relative">
-                                    <img src={player.photoURL || '/default-avatar.png'} className="w-10 h-10 rounded-full border border-white shadow-sm" />
+                                    <img src={player.photoURL || `https://api.dicebear.com/9.x/notionists/svg?seed=${player.id}&backgroundColor=fecaca`} className="w-10 h-10 rounded-full border border-white shadow-sm bg-red-50 object-cover" />
                                     {isCaptain && <div className="absolute -top-2 -right-1 bg-yellow-400 text-white p-0.5 rounded-full shadow"><Crown size={10} fill="white"/></div>}
                                 </div>
                                 <div className="flex-1">
