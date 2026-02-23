@@ -6,11 +6,10 @@ import {
     createEventTeam, deleteEventTeam, 
     assignMatricolaToEventTeam, removeMatricolaFromEventTeam,
     createEventChallenge, deleteEventChallenge, resolveEventChallenge,
-    revertEventChallenge // <--- IMPORTATA LA NUOVA FUNZIONE
+    revertEventChallenge, addManualPointsToEventTeams // <-- IMPORTATA NUOVA FUNZIONE
 } from '@/lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, collection, query, orderBy, onSnapshot } from 'firebase/firestore'; 
-// HO AGGIUNTO ROTATECCW (per il reset) 
 import { Settings, ShieldAlert, Loader2, LogOut, Plus, Trash2, Users, UserMinus, Swords, CheckCircle2, Trophy, Wrench, MonitorPlay, ArrowLeft, Minus, ChevronRight, RotateCcw } from 'lucide-react';
 import Login from '@/components/Login'; 
 
@@ -74,7 +73,7 @@ export default function PuntiDashboard() {
         snap.forEach(d => challenges.push({ id: d.id, ...d.data() }));
         setEventChallenges(challenges);
         
-        if (selectedLiveChallenge) {
+        if (selectedLiveChallenge && !selectedLiveChallenge.isManual) {
             const updatedChallenge = challenges.find(c => c.id === selectedLiveChallenge.id);
             if (updatedChallenge) setSelectedLiveChallenge(updatedChallenge);
         }
@@ -115,10 +114,12 @@ export default function PuntiDashboard() {
       } catch (err) { alert(err.message); }
   };
 
-  const incrementScore = (challengeId, teamId, delta) => {
+  // AGGIORNATO: allowNegative serve per far scendere sotto zero i punti manuali
+  const incrementScore = (challengeId, teamId, delta, allowNegative = false) => {
       setRawScoresInputs(prev => {
           const currentScore = (prev[challengeId] || {})[teamId] || 0;
-          const newScore = Math.max(0, currentScore + delta);
+          let newScore = currentScore + delta;
+          if (!allowNegative) newScore = Math.max(0, newScore); // Blocca a 0 solo se non è manuale
           return {
               ...prev,
               [challengeId]: { ...(prev[challengeId] || {}), [teamId]: newScore }
@@ -128,27 +129,40 @@ export default function PuntiDashboard() {
 
   const handleResolveChallenge = async (challenge) => {
       const rawScores = rawScoresInputs[challenge.id] || {};
-      
-      // Assicura che anche chi non è stato cliccato parta da 0 e finisca in classifica
       const finalScores = {};
-      eventTeams.forEach(t => {
-          finalScores[t.id] = rawScores[t.id] || 0;
-      });
+      eventTeams.forEach(t => { finalScores[t.id] = rawScores[t.id] || 0; });
 
       if(!confirm("Vuoi confermare e assegnare i punti?")) return;
 
       try {
           await resolveEventChallenge(challenge.id, finalScores, challenge.pointsScheme);
-          setSelectedLiveChallenge(null); // Chiude subito la schermata
+          setSelectedLiveChallenge(null); 
       } catch (e) { alert("Errore tecnico: " + e.message); }
   };
 
-  // Riapri una sfida e scala i punti
   const handleRevertChallenge = async (challengeId) => {
       if(!confirm("Vuoi riaprire questa sfida? I punti verranno sottratti alle squadre e ricalcolati da zero.")) return;
+      try { await revertEventChallenge(challengeId); } catch(e) { alert("Errore: " + e.message); }
+  };
+
+  // NUOVO: Assegnazione manuale
+  const handleApplyManualPoints = async () => {
+      const scores = rawScoresInputs['manual'] || {};
+      
+      // Controlla se c'è almeno un punto da assegnare
+      const hasPoints = Object.values(scores).some(val => val !== 0);
+      if (!hasPoints) {
+          alert("Non hai inserito nessun punteggio.");
+          return;
+      }
+
+      if(!confirm("Confermi di voler applicare questi punti manuali?")) return;
+
       try {
-          await revertEventChallenge(challengeId);
-      } catch(e) { alert("Errore: " + e.message); }
+          await addManualPointsToEventTeams(scores);
+          setRawScoresInputs(prev => ({ ...prev, manual: {} })); // Resetta i campi
+          setSelectedLiveChallenge(null);
+      } catch (e) { alert("Errore: " + e.message); }
   };
 
   const assignedMatricoleIds = eventTeams.flatMap(t => t.members || []);
@@ -160,7 +174,7 @@ export default function PuntiDashboard() {
       return (
           <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center">
               <div className="bg-gray-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full border border-gray-700">
-                  <h1 className="text-2xl font-bold text-white text-center mb-6">Regia Evento</h1>
+                  <h1 className="text-2xl font-bold text-white text-center mb-6">Punteggi matricolata</h1>
                   {user ? <p className="text-red-500 text-center font-bold">Accesso Negato. Solo Super Admin.</p> : <Login />}
               </div>
           </div>
@@ -173,12 +187,11 @@ export default function PuntiDashboard() {
             <div className="flex items-center gap-3 w-full md:w-auto">
                 <div className="bg-[#B41F35] p-2 rounded-lg"><Settings size={24} /></div>
                 <div>
-                    <h1 className="text-xl font-bold leading-tight">Regia Evento</h1>
-                    <p className="text-xs text-gray-400 uppercase tracking-widest">punti.matricolata.it</p>
+                    <h1 className="text-xl font-bold leading-tight">Punteggi matricolata</h1>
+                    <p className="text-xs text-gray-400 uppercase tracking-widest"></p>
                 </div>
             </div>
 
-            {/* SELETTORE VISTA */}
             <div className="flex bg-gray-800 p-1 rounded-xl w-full md:w-auto border border-gray-700">
                 <button onClick={() => { setActiveView('setup'); setSelectedLiveChallenge(null); }} className={`flex-1 md:px-6 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeView === 'setup' ? 'bg-gray-700 text-white shadow-md' : 'text-gray-400 hover:text-gray-200'}`}><Wrench size={16}/> SETUP</button>
                 <button onClick={() => { setActiveView('live'); setSelectedLiveChallenge(null); }} className={`flex-1 md:px-6 py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-all ${activeView === 'live' ? 'bg-[#B41F35] text-white shadow-md' : 'text-gray-400 hover:text-gray-200'}`}><MonitorPlay size={16}/> LIVE</button>
@@ -196,9 +209,7 @@ export default function PuntiDashboard() {
 
         <main className="max-w-7xl mx-auto">
             
-            {/* ========================================== */}
-            {/* VISTA 1: SETUP (Preparazione pre-serata)   */}
-            {/* ========================================== */}
+            {/* VISTA 1: SETUP */}
             {activeView === 'setup' && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in slide-in-from-left-4">
                     
@@ -282,7 +293,6 @@ export default function PuntiDashboard() {
                             </form>
                         </div>
 
-                        {/* LISTA SFIDE IN SETUP */}
                         <div className="space-y-3">
                             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest pl-2">Riepilogo Sfide Create</h3>
                             {eventChallenges.map(challenge => (
@@ -297,19 +307,15 @@ export default function PuntiDashboard() {
                                     <button onClick={() => {if(confirm('Eliminare sfida?')) deleteEventChallenge(challenge.id)}} className="text-gray-500 hover:text-red-500 p-2"><Trash2 size={18}/></button>
                                 </div>
                             ))}
-                            {eventChallenges.length === 0 && <p className="text-gray-500 text-sm italic py-4 text-center border border-dashed border-gray-700 rounded-xl">Nessuna sfida.</p>}
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* ========================================== */}
-            {/* VISTA 2: LIVE (Dashboard da usare durante la serata) */}
-            {/* ========================================== */}
+            {/* VISTA 2: LIVE */}
             {activeView === 'live' && (
                 <div className="animate-in fade-in slide-in-from-right-4">
                     
-                    {/* SE NESSUNA SFIDA E' APERTA, MOSTRA LA LISTA */}
                     {!selectedLiveChallenge && (
                         <div className="space-y-8">
                             {/* SCOREBOARD SQUADRE GIGANTE */}
@@ -331,10 +337,24 @@ export default function PuntiDashboard() {
                                 </div>
                             </div>
 
-                            {/* LISTA DELLE SFIDE CLICCABILI */}
+                            {/* LISTA SFIDE CLICCABILI */}
                             <div>
                                 <h2 className="text-lg font-bold text-gray-300 mb-4 flex items-center gap-2"><Swords size={20}/> Scegli la sfida da giocare</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    
+                                    {/* NUOVO: BOTTONE FISSO PUNTI MANUALI */}
+                                    <button 
+                                        onClick={() => setSelectedLiveChallenge({ id: 'manual', title: 'Aggiunta Manuale', isManual: true })}
+                                        className="p-5 rounded-2xl border-2 border-dashed text-left transition-all relative overflow-hidden group bg-gray-900 border-gray-600 hover:border-white hover:shadow-xl cursor-pointer"
+                                    >
+                                        <div className="flex justify-between items-start mb-2">
+                                            <h3 className="font-bold text-lg text-white flex items-center gap-2"><Wrench size={18}/> Punti Manuali</h3>
+                                            <ChevronRight className="text-gray-500 group-hover:text-white transition-colors" />
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-1">Aggiungi o rimuovi punti liberamente alle squadre (es. penalità o bonus).</p>
+                                    </button>
+
+                                    {/* SFIDE NORMALI */}
                                     {eventChallenges.map(challenge => {
                                         const isActive = challenge.status === 'active';
                                         return (
@@ -342,9 +362,7 @@ export default function PuntiDashboard() {
                                                 key={challenge.id}
                                                 onClick={() => isActive ? setSelectedLiveChallenge(challenge) : null}
                                                 className={`p-5 rounded-2xl border text-left transition-all relative overflow-hidden group ${
-                                                    isActive 
-                                                    ? 'bg-gray-800 border-gray-600 hover:border-yellow-500 hover:shadow-xl cursor-pointer' 
-                                                    : 'bg-gray-900/50 border-gray-800 cursor-default opacity-80'
+                                                    isActive ? 'bg-gray-800 border-gray-600 hover:border-yellow-500 hover:shadow-xl cursor-pointer' : 'bg-gray-900/50 border-gray-800 cursor-default opacity-80'
                                                 }`}
                                             >
                                                 <div className="flex justify-between items-start mb-2">
@@ -352,11 +370,7 @@ export default function PuntiDashboard() {
                                                     {isActive ? (
                                                         <ChevronRight className="text-gray-500 group-hover:text-yellow-500 transition-colors" />
                                                     ) : (
-                                                        // TASTINO MODIFICA PER LE SFIDE COMPLETATE
-                                                        <div 
-                                                            onClick={(e) => { e.stopPropagation(); handleRevertChallenge(challenge.id); }}
-                                                            className="flex items-center gap-1 bg-gray-700 hover:bg-gray-600 text-xs px-2 py-1 rounded text-white transition-all z-10 cursor-pointer"
-                                                        >
+                                                        <div onClick={(e) => { e.stopPropagation(); handleRevertChallenge(challenge.id); }} className="flex items-center gap-1 bg-gray-700 hover:bg-gray-600 text-xs px-2 py-1 rounded text-white transition-all z-10 cursor-pointer">
                                                             <RotateCcw size={12}/> Modifica
                                                         </div>
                                                     )}
@@ -385,28 +399,39 @@ export default function PuntiDashboard() {
                         </div>
                     )}
 
-                    {/* SCHERMATA DEDICATA ALLA SFIDA APERTA */}
+                    {/* SCHERMATA DEDICATA ALLA SFIDA (O AL MANUALE) */}
                     {selectedLiveChallenge && (
                         <div className="bg-gray-800 border border-gray-700 rounded-3xl p-6 shadow-2xl max-w-3xl mx-auto animate-in zoom-in-95 duration-200">
                             
                             <button onClick={() => setSelectedLiveChallenge(null)} className="flex items-center gap-2 text-gray-400 hover:text-white mb-6 font-bold uppercase text-xs tracking-wider">
-                                <ArrowLeft size={16}/> Torna alle sfide
+                                <ArrowLeft size={16}/> Torna indietro
                             </button>
 
                             <div className="mb-8">
                                 <h2 className="text-3xl font-black text-white flex items-center gap-3">
-                                    <Swords className="text-yellow-500 w-8 h-8"/>
+                                    {selectedLiveChallenge.isManual ? <Wrench className="text-gray-400 w-8 h-8"/> : <Swords className="text-yellow-500 w-8 h-8"/>}
                                     {selectedLiveChallenge.title}
                                 </h2>
-                                <p className="text-sm text-gray-400 mt-2 font-medium bg-gray-900 inline-block px-3 py-1 rounded-lg border border-gray-700">
-                                    I punti in palio: <span className="text-yellow-500 font-bold">{selectedLiveChallenge.pointsScheme[0]}</span> / <span className="text-gray-300 font-bold">{selectedLiveChallenge.pointsScheme[1]}</span> / <span className="text-orange-400 font-bold">{selectedLiveChallenge.pointsScheme[2]}</span>
-                                </p>
+                                
+                                {selectedLiveChallenge.isManual ? (
+                                    <p className="text-sm text-gray-400 mt-2 font-medium bg-gray-900 inline-block px-3 py-1 rounded-lg border border-gray-700">
+                                        Modifica liberamente i punteggi (puoi anche scendere sotto zero).
+                                    </p>
+                                ) : (
+                                    <p className="text-sm text-gray-400 mt-2 font-medium bg-gray-900 inline-block px-3 py-1 rounded-lg border border-gray-700">
+                                        I punti in palio: <span className="text-yellow-500 font-bold">{selectedLiveChallenge.pointsScheme[0]}</span> / <span className="text-gray-300 font-bold">{selectedLiveChallenge.pointsScheme[1]}</span> / <span className="text-orange-400 font-bold">{selectedLiveChallenge.pointsScheme[2]}</span>
+                                    </p>
+                                )}
                             </div>
 
                             <div className="space-y-4 mb-8">
                                 {eventTeams.map(team => {
                                     const currentScore = (rawScoresInputs[selectedLiveChallenge.id] || {})[team.id] || 0;
                                     
+                                    // Se è manuale saliamo/scendiamo di 10 alla volta e permettiamo i negativi. Se è sfida normale di 1.
+                                    const step = selectedLiveChallenge.isManual ? 10 : 1;
+                                    const allowNegative = selectedLiveChallenge.isManual;
+
                                     return (
                                         <div key={team.id} className="flex justify-between items-center bg-gray-900 border border-gray-700 p-4 rounded-2xl shadow-inner">
                                             <div className="flex items-center gap-4">
@@ -416,18 +441,18 @@ export default function PuntiDashboard() {
                                             
                                             <div className="flex items-center gap-6">
                                                 <button 
-                                                    onClick={() => incrementScore(selectedLiveChallenge.id, team.id, -1)}
+                                                    onClick={() => incrementScore(selectedLiveChallenge.id, team.id, -step, allowNegative)}
                                                     className="w-12 h-12 bg-gray-800 hover:bg-gray-700 text-white rounded-full flex items-center justify-center shadow transition-all active:scale-90"
                                                 >
                                                     <Minus size={24}/>
                                                 </button>
                                                 
                                                 <div className="w-16 text-center">
-                                                    <span className="text-4xl font-black text-white">{currentScore}</span>
+                                                    <span className={`text-4xl font-black ${currentScore < 0 ? 'text-red-500' : 'text-white'}`}>{currentScore > 0 && selectedLiveChallenge.isManual ? '+' : ''}{currentScore}</span>
                                                 </div>
 
                                                 <button 
-                                                    onClick={() => incrementScore(selectedLiveChallenge.id, team.id, 1)}
+                                                    onClick={() => incrementScore(selectedLiveChallenge.id, team.id, step, allowNegative)}
                                                     className="w-12 h-12 bg-[#B41F35] hover:bg-[#90192a] text-white rounded-full flex items-center justify-center shadow-lg transition-all active:scale-90"
                                                 >
                                                     <Plus size={24} strokeWidth={3}/>
@@ -438,19 +463,27 @@ export default function PuntiDashboard() {
                                 })}
                             </div>
 
-                            <button 
-                                onClick={() => handleResolveChallenge(selectedLiveChallenge)}
-                                className="w-full bg-green-600 text-white p-5 rounded-2xl font-black text-xl hover:bg-green-500 transition-all flex items-center justify-center gap-3 shadow-xl hover:shadow-2xl active:scale-95"
-                            >
-                                <Trophy size={28} />
-                                CALCOLA CLASSIFICA E ASSEGNA PUNTI
-                            </button>
-
+                            {selectedLiveChallenge.isManual ? (
+                                <button 
+                                    onClick={handleApplyManualPoints}
+                                    className="w-full bg-[#B41F35] text-white p-5 rounded-2xl font-black text-xl hover:bg-[#90192a] transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95"
+                                >
+                                    <Settings size={28} />
+                                    APPLICA PUNTI
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={() => handleResolveChallenge(selectedLiveChallenge)}
+                                    className="w-full bg-green-600 text-white p-5 rounded-2xl font-black text-xl hover:bg-green-500 transition-all flex items-center justify-center gap-3 shadow-xl active:scale-95"
+                                >
+                                    <Trophy size={28} />
+                                    CALCOLA CLASSIFICA
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>
             )}
-
         </main>
     </div>
   );
