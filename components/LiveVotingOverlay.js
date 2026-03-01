@@ -60,8 +60,19 @@ export default function LiveVotingOverlay() {
         }
     };
 
+    
     const hasVoted = user && liveData.votes && liveData.votes[user.uid];
-    if (userData?.role === 'super-admin') return null;
+
+    // --- LOGICA DI VISIBILITÀ DEL POPUP ---
+    const isRegiaDomain = typeof window !== 'undefined' && window.location.hostname.includes('punti');
+    const isRegiaPath = pathname?.includes('regia-eventi');
+    
+    // 1. Niente popup se non c'è un live in corso
+    // 2. Niente popup se sei sul sito della Regia (così puoi operare tranquillo)
+    // 3. Niente popup per le matricole (mai, in nessun caso)
+    if (!liveData || !liveData.isActive || isRegiaDomain || isRegiaPath || userData?.role === 'matricola') {
+        return null;
+    }
     return (
         
         <div className="fixed inset-0 z-[100] backdrop-blur-xl bg-black/90 flex flex-col items-center justify-center p-4 sm:p-6 text-white animate-in fade-in duration-300">

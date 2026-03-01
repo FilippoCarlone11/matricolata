@@ -40,6 +40,20 @@ export default function Televoto({ eventPerformances, allMatricole, liveVotingDa
     const currentLiveSum     = Object.values(liveVotingData?.votes || {}).reduce((a, b) => a + Number(b), 0);
     const currentVotersCount = liveVotingData?.votes ? Object.keys(liveVotingData.votes).length : 0;
 
+    // Helper per trovare i dati estetici (colore e nome) della squadra associata a un'esibizione
+    const getTeamInfoForPerformance = (perf) => {
+        if (perf.isTeam && perf.teamId) {
+            const team = allTeams.find(t => t.id === perf.teamId);
+            return team || { name: 'Sconosciuta', colorClass: 'text-gray-400', bgClass: 'bg-gray-600/20' };
+        } else if (perf.matricolaId) {
+            // Cerca la squadra di cui fa parte la matricola
+            const team = allTeams.find(t => (t.members || []).includes(perf.matricolaId));
+            return team || { name: 'Senza Squadra', colorClass: 'text-gray-400', bgClass: 'bg-gray-600/20' };
+        }
+        return { name: 'Manuale', colorClass: 'text-gray-400', bgClass: 'bg-gray-600/20' };
+    };
+
+
     // ─── Handlers ────────────────────────────────────────────────────────────
     const handleAddToLineup = async (e) => {
         e.preventDefault();
@@ -255,18 +269,26 @@ export default function Televoto({ eventPerformances, allMatricole, liveVotingDa
                         <Play className="text-green-500" /> Prossime Esibizioni
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {pendingPerfs.map(perf => (
+                        {pendingPerfs.map(perf => {
+                            const teamInfo = getTeamInfoForPerformance(perf);
+                            
+                            // Estrai il nome nudo e crudo rimuovendo "SQUADRA: " se presente per non appesantire la UI
+                            const displayName = perf.isTeam ? perf.matricolaName.replace("SQUADRA: ", "") : perf.matricolaName;
+
+                            return (
                             <div key={perf.id} className="bg-gray-800 border border-gray-700 rounded-2xl p-4 flex flex-col justify-between shadow-lg group hover:border-green-500/50 transition-colors">
                                 <div className="flex justify-between items-start mb-4">
                                     <div>
-                                        <div className="mb-1">
-                                            {perf.isTeam
-                                                ? <span className="bg-blue-600/20 text-blue-400 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">Squadra</span>
-                                                : <span className="bg-purple-600/20 text-purple-400 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">Matricola</span>
-                                            }
+                                        <div className="mb-1 flex items-center gap-1.5">
+                                            {/* Badge colorato della squadra */}
+                                            <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${teamInfo.bgClass || 'bg-gray-700'} ${teamInfo.colorClass}`}>
+                                                {perf.isTeam ? 'SQUADRA' : teamInfo.name}
+                                            </span>
                                         </div>
-                                        <h3 className="font-black text-lg text-white group-hover:text-green-400 transition-colors">{perf.matricolaName}</h3>
-                                        <p className="text-xs text-gray-400 italic">{perf.theme}</p>
+                                        <h3 className={`font-black text-lg group-hover:text-green-400 transition-colors text-white `}>
+                                            {displayName}
+                                        </h3>
+                                        <p className="text-xs text-gray-400 italic mt-0.5">{perf.theme}</p>
                                     </div>
                                     <button onClick={() => handleDeletePerformance(perf.id)} className="text-gray-600 hover:text-red-500 p-1 transition-colors">
                                         <Trash2 size={16} />
@@ -279,7 +301,7 @@ export default function Televoto({ eventPerformances, allMatricole, liveVotingDa
                                     <Play size={14} /> INIZIA ESIBIZIONE
                                 </button>
                             </div>
-                        ))}
+                        )})}
                         {pendingPerfs.length === 0 && (
                             <div className="col-span-2 py-10 border-2 border-dashed border-gray-800 rounded-3xl flex items-center justify-center text-gray-600 font-bold">
                                 La coda è vuota
@@ -297,9 +319,11 @@ export default function Televoto({ eventPerformances, allMatricole, liveVotingDa
                         <div className="text-center md:text-left">
                             <span className="bg-purple-600 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 inline-block animate-pulse">LIVE ORA</span>
                             {liveVotingData.isTeam && (
-                                <span className="ml-2 bg-blue-600/30 text-blue-400 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">Squadra</span>
+                                <span className="ml-2 bg-blue-600/30 text-blue-400 text-[9px] font-black px-2 py-0.5 rounded-full uppercase">SQUADRA</span>
                             )}
-                            <h3 className="text-4xl font-black text-white">{liveVotingData.matricolaName}</h3>
+                            <h3 className="text-4xl font-black text-white">
+                                {liveVotingData.isTeam ? liveVotingData.matricolaName.replace("SQUADRA: ", "") : liveVotingData.matricolaName}
+                            </h3>
                             <p className="text-gray-400 italic">{liveVotingData.theme}</p>
                         </div>
 
@@ -356,6 +380,7 @@ export default function Televoto({ eventPerformances, allMatricole, liveVotingDa
                     <table className="w-full text-left">
                         <thead className="bg-gray-900/50 border-b border-gray-700">
                             <tr>
+                                <th className="p-4 text-xs font-black text-gray-500 uppercase">Squadra</th>
                                 <th className="p-4 text-xs font-black text-gray-500 uppercase">Esibizione</th>
                                 <th className="p-4 text-xs font-black text-gray-500 uppercase">Tema</th>
                                 <th className="p-4 text-xs font-black text-gray-500 uppercase text-right">Votanti</th>
@@ -366,8 +391,19 @@ export default function Televoto({ eventPerformances, allMatricole, liveVotingDa
                             </tr>
                         </thead>
                         <tbody>
-                            {completedPerfs.map(perf => (
+                            {completedPerfs.map(perf => {
+                                const teamInfo = getTeamInfoForPerformance(perf);
+                                const displayName = perf.isTeam ? perf.matricolaName.replace("SQUADRA: ", "") : perf.matricolaName;
+
+                                return (
                                 <tr key={perf.id} className="border-b border-gray-700/50 hover:bg-white/5 transition-colors">
+                                    
+                                    {/* Squadra (Badge Colorato) */}
+                                    <td className="p-4">
+                                        <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase border border-current/20 ${teamInfo.colorClass}`}>
+                                            {teamInfo.name}
+                                        </span>
+                                    </td>
 
                                     {/* Nome + badge tipo */}
                                     <td className="p-4">
@@ -376,7 +412,9 @@ export default function Televoto({ eventPerformances, allMatricole, liveVotingDa
                                                 ? <span className="bg-blue-600/20 text-blue-400 text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase">SQD</span>
                                                 : <span className="bg-purple-600/20 text-purple-400 text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase">MAT</span>
                                             }
-                                            <span className="font-bold text-white">{perf.matricolaName}</span>
+                                            <span className={`font-bold ${perf.isTeam ? teamInfo.colorClass : 'text-white'}`}>
+                                                {displayName}
+                                            </span>
                                         </div>
                                     </td>
 
@@ -425,10 +463,10 @@ export default function Televoto({ eventPerformances, allMatricole, liveVotingDa
                                     </td>
 
                                 </tr>
-                            ))}
+                            )})}
                             {completedPerfs.length === 0 && (
                                 <tr>
-                                    <td colSpan="6" className="p-10 text-center text-gray-600 font-bold italic">
+                                    <td colSpan="7" className="p-10 text-center text-gray-600 font-bold italic">
                                         Nessuna esibizione ancora terminata
                                     </td>
                                 </tr>
