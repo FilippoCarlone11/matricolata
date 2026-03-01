@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// AGGIUNTO: toggleMatricolaBlur
-import { updateUserRole, deleteUserDocument, getSystemSettings, toggleRegistrations, updateCacheSettings, toggleMatricolaBlur } from '@/lib/firebase';
-// AGGIUNTO: Ghost
-import { Users, UserCheck, Crown, Trash2, Key, Search, Lock, Unlock, ShieldAlert, Zap, Clock, Save, Ghost } from 'lucide-react';
+// AGGIUNTO: toggleMatricolaBlur, updateSystemSettings
+import { updateUserRole, deleteUserDocument, getSystemSettings, toggleRegistrations, updateCacheSettings, toggleMatricolaBlur, updateSystemSettings } from '@/lib/firebase';
+import { Users, UserCheck, Crown, Trash2, Key, Search, Lock, Unlock, ShieldAlert, Zap, Clock, Save, Ghost, Wine, Shield } from 'lucide-react';
 
 export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     const tr = (text) => (t ? t(text) : text);
@@ -16,7 +15,10 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
   const [regOpen, setRegOpen] = useState(true);
   const [cacheEnabled, setCacheEnabled] = useState(true);
   const [cacheDuration, setCacheDuration] = useState(30);
-  const [blurEnabled, setBlurEnabled] = useState(false); // <--- NUOVO STATO
+  const [blurEnabled, setBlurEnabled] = useState(false);
+  const [showDrinkCount, setShowDrinkCount] = useState(true); // <--- NUOVO STATO DRINK
+  const [showSquadCount, setShowSquadCount] = useState(true); // <--- NUOVO STATO SQUADRE
+  const [showCaptainIcon, setShowCaptainIcon] = useState(true); // <--- NUOVO STATO CAPITANI
   const [settingsLoading, setSettingsLoading] = useState(true);
 
   const isSuperAdmin = currentUser?.role === 'super-admin';
@@ -34,7 +36,11 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                 setRegOpen(settings?.registrationsOpen ?? true);
                 setCacheEnabled(settings?.cacheEnabled ?? true);
                 setCacheDuration(settings?.cacheDuration ?? 30);
-                setBlurEnabled(settings?.matricolaBlur ?? false); // <--- CARICA STATO BLUR
+                setBlurEnabled(settings?.matricolaBlur ?? false);
+                // Carica i nuovi settings (default true se non esistono ancora)
+                setShowDrinkCount(settings?.showDrinkCount ?? true);
+                setShowSquadCount(settings?.showSquadCount ?? true);
+                setShowCaptainIcon(settings?.showCaptainIcon ?? true);
             } catch (e) { console.error(e); }
             finally { setSettingsLoading(false); }
         };
@@ -60,17 +66,37 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     finally { setSettingsLoading(false); }
   };
 
-  // NUOVA FUNZIONE: Toggle Blur
   const handleToggleBlur = async () => {
     const newState = !blurEnabled;
-    setBlurEnabled(newState); // Aggiorna UI subito per reattività
+    setBlurEnabled(newState); 
     try {
         await toggleMatricolaBlur(newState);
     } catch (e) {
         alert("Errore aggiornamento blur");
-        setBlurEnabled(!newState); // Revert in caso di errore
+        setBlurEnabled(!newState); 
     }
   };
+
+  // NUOVA FUNZIONE: Salva i settings visivi delle classifiche
+  const handleToggleVisualSetting = async (settingName, currentValue) => {
+      const newState = !currentValue;
+      
+      // Aggiornamento ottimistico UI
+      if (settingName === 'showDrinkCount') setShowDrinkCount(newState);
+      if (settingName === 'showSquadCount') setShowSquadCount(newState);
+      if (settingName === 'showCaptainIcon') setShowCaptainIcon(newState);
+
+      try {
+          await updateSystemSettings({ [settingName]: newState });
+      } catch (error) {
+          alert("Errore salvataggio impostazione.");
+          // Revert in caso di errore
+          if (settingName === 'showDrinkCount') setShowDrinkCount(currentValue);
+          if (settingName === 'showSquadCount') setShowSquadCount(currentValue);
+          if (settingName === 'showCaptainIcon') setShowCaptainIcon(currentValue);
+      }
+  };
+
 
   const handleRoleChange = async (userId, newRole) => {
     if (!isSuperAdmin) return;
@@ -108,90 +134,148 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
         <Users className="text-blue-600" /> Gestione Utenti
       </h2>
 
-      {/* --- PANNELLO CONTROLLO SUPER ADMIN (Ridisegnato) --- */}
+      {/* --- PANNELLO CONTROLLO SUPER ADMIN --- */}
       {isSuperAdmin && (
-        <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-xl mb-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full blur-3xl opacity-20 -mr-10 -mt-10"></div>
+        <div className="space-y-4 mb-8">
             
-            <div className="flex items-center gap-2 mb-6 border-b border-slate-700 pb-3 relative z-10">
-                 <ShieldAlert className="text-yellow-400" size={20} />
-                 <h3 className="font-bold text-lg leading-tight">{tr("System Control")}</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
-                {/* 1. ISCRIZIONI */}
-                <div className="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700">
-                    <div>
-                        <span className="block text-sm font-bold text-gray-200">Registrazioni</span>
-                        <span className="text-[10px] text-gray-400">{tr("Permetti nuovi iscritti")}</span>
-                    </div>
-                    <button 
-                        onClick={handleToggleReg}
-                        disabled={settingsLoading}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wide transition-all ${
-                            regOpen ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-red-500 text-white'
-                        }`}
-                    >
-                        {regOpen ? <><Unlock size={14}/> ON</> : <><Lock size={14}/> OFF</>}
-                    </button>
+            {/* BLOCCO 1: CONTROLLI SISTEMA (Esistente) */}
+            <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full blur-3xl opacity-20 -mr-10 -mt-10"></div>
+                
+                <div className="flex items-center gap-2 mb-6 border-b border-slate-700 pb-3 relative z-10">
+                     <ShieldAlert className="text-yellow-400" size={20} />
+                     <h3 className="font-bold text-lg leading-tight">{tr("System Control")}</h3>
                 </div>
-
-                {/* 2. GESTIONE CACHE */}
-                <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                    <div className="flex items-center justify-between mb-3">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
+                    {/* ISCRIZIONI */}
+                    <div className="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700">
                         <div>
-                            <span className="block text-sm font-bold text-gray-200 flex items-center gap-2">
-                                Cache Dati <Zap size={14} className={cacheEnabled ? "text-yellow-400 fill-yellow-400" : "text-gray-500"}/> 
-                            </span>
-                            <span className="text-[10px] text-gray-400">Risparmio letture DB</span>
+                            <span className="block text-sm font-bold text-gray-200">Registrazioni</span>
+                            <span className="text-[10px] text-gray-400">{tr("Permetti nuovi iscritti")}</span>
                         </div>
                         <button 
-                            onClick={() => saveCacheSettings(!cacheEnabled, cacheDuration)}
+                            onClick={handleToggleReg}
                             disabled={settingsLoading}
-                            className={`w-12 h-6 rounded-full p-1 transition-colors flex items-center ${
-                                cacheEnabled ? 'bg-blue-600 justify-end' : 'bg-gray-600 justify-start'
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wide transition-all ${
+                                regOpen ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-red-500 text-white'
                             }`}
                         >
-                            <div className="w-4 h-4 bg-white rounded-full shadow-md"></div>
+                            {regOpen ? <><Unlock size={14}/> ON</> : <><Lock size={14}/> OFF</>}
                         </button>
                     </div>
-                    
-                    <div className="flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg">
-                        <Clock size={14} className="text-slate-400"/>
-                        <span className="text-xs text-slate-300">Reset ogni:</span>
-                        <input 
-                            type="number" 
-                            value={cacheDuration}
-                            onChange={(e) => setCacheDuration(e.target.value)}
-                            className="w-12 bg-transparent text-center text-sm font-bold text-white border-b border-slate-600 focus:border-blue-500 outline-none"
-                        />
-                        <span className="text-xs text-slate-300">min</span>
-                        <button onClick={() => saveCacheSettings(cacheEnabled, cacheDuration)} className="ml-auto text-blue-400 hover:text-white transition-colors">
-                            <Save size={16} />
+
+                    {/* CACHE DATI */}
+                    <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                        <div className="flex items-center justify-between mb-3">
+                            <div>
+                                <span className="block text-sm font-bold text-gray-200 flex items-center gap-2">
+                                    Cache Dati <Zap size={14} className={cacheEnabled ? "text-yellow-400 fill-yellow-400" : "text-gray-500"}/> 
+                                </span>
+                                <span className="text-[10px] text-gray-400">Risparmio letture DB</span>
+                            </div>
+                            <button 
+                                onClick={() => saveCacheSettings(!cacheEnabled, cacheDuration)}
+                                disabled={settingsLoading}
+                                className={`w-12 h-6 rounded-full p-1 transition-colors flex items-center ${
+                                    cacheEnabled ? 'bg-blue-600 justify-end' : 'bg-gray-600 justify-start'
+                                }`}
+                            >
+                                <div className="w-4 h-4 bg-white rounded-full shadow-md"></div>
+                            </button>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg">
+                            <Clock size={14} className="text-slate-400"/>
+                            <span className="text-xs text-slate-300">Reset ogni:</span>
+                            <input 
+                                type="number" 
+                                value={cacheDuration}
+                                onChange={(e) => setCacheDuration(e.target.value)}
+                                className="w-12 bg-transparent text-center text-sm font-bold text-white border-b border-slate-600 focus:border-blue-500 outline-none"
+                            />
+                            <span className="text-xs text-slate-300">min</span>
+                            <button onClick={() => saveCacheSettings(cacheEnabled, cacheDuration)} className="ml-auto text-blue-400 hover:text-white transition-colors">
+                                <Save size={16} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* MATRICOLA BLUR */}
+                    <div className="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700 md:col-span-2">
+                        <div>
+                            <span className="block text-sm font-bold text-gray-200 flex items-center gap-2">
+                               {tr("Blackout Matricole")} <Ghost size={14} className={blurEnabled ? "text-purple-400" : "text-gray-500"}/>
+                            </span>
+                            <span className="text-[10px] text-gray-400">Oscura il sito alle matricole</span>
+                        </div>
+                        <button 
+                            onClick={handleToggleBlur}
+                            disabled={settingsLoading}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wide transition-all ${
+                                blurEnabled ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'bg-gray-600 text-gray-300'
+                            }`}
+                        >
+                            {blurEnabled ? tr('ATTIVO') : tr('SPENTO')}
                         </button>
                     </div>
                 </div>
-
-                {/* 3. NUOVO BLOCCO: MATRICOLA BLUR */}
-                <div className="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700 md:col-span-2">
-                    <div>
-                        <span className="block text-sm font-bold text-gray-200 flex items-center gap-2">
-                           {tr("Blackout Matricole")} <Ghost size={14} className={blurEnabled ? "text-purple-400" : "text-gray-500"}/>
-                        </span>
-                        <span className="text-[10px] text-gray-400">Oscura il sito alle matricole</span>
-                    </div>
-                    <button 
-                        onClick={handleToggleBlur}
-                        disabled={settingsLoading}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wide transition-all ${
-                            blurEnabled ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'bg-gray-600 text-gray-300'
-                        }`}
-                    >
-                        {blurEnabled ? tr('ATTIVO') : tr('SPENTO')}
-                    </button>
-                </div>
-
             </div>
+
+            {/* BLOCCO 2: IMPOSTAZIONI VISIVE CLASSIFICHE (Nuovo) */}
+            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
+                <div className="flex items-center gap-2 mb-4 border-b border-gray-100 pb-3">
+                     <Users className="text-blue-500" size={20} />
+                     <h3 className="font-bold text-lg text-gray-900 leading-tight">Aspetto Classifiche</h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    
+                    {/* TOGGLE DRINK */}
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <div className="flex items-center gap-2">
+                            <Wine size={16} className={showDrinkCount ? "text-purple-500" : "text-gray-400"}/>
+                            <span className="text-xs font-bold text-gray-700">Contatore Cocktail</span>
+                        </div>
+                        <button 
+                            onClick={() => handleToggleVisualSetting('showDrinkCount', showDrinkCount)}
+                            className={`w-10 h-5 rounded-full p-0.5 transition-colors flex items-center ${showDrinkCount ? 'bg-purple-500 justify-end' : 'bg-gray-300 justify-start'}`}
+                        >
+                            <div className="w-4 h-4 bg-white rounded-full shadow-sm"></div>
+                        </button>
+                    </div>
+
+                    {/* TOGGLE SQUADRE */}
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <div className="flex items-center gap-2">
+                            <Shield size={16} className={showSquadCount ? "text-blue-500" : "text-gray-400"}/>
+                            <span className="text-xs font-bold text-gray-700">Contatore Squadre</span>
+                        </div>
+                        <button 
+                            onClick={() => handleToggleVisualSetting('showSquadCount', showSquadCount)}
+                            className={`w-10 h-5 rounded-full p-0.5 transition-colors flex items-center ${showSquadCount ? 'bg-blue-500 justify-end' : 'bg-gray-300 justify-start'}`}
+                        >
+                            <div className="w-4 h-4 bg-white rounded-full shadow-sm"></div>
+                        </button>
+                    </div>
+
+                    {/* TOGGLE CAPITANI */}
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <div className="flex items-center gap-2">
+                            <Crown size={16} className={showCaptainIcon ? "text-yellow-500" : "text-gray-400"}/>
+                            <span className="text-xs font-bold text-gray-700">Contatore Capitano</span>
+                        </div>
+                        <button 
+                            onClick={() => handleToggleVisualSetting('showCaptainIcon', showCaptainIcon)}
+                            className={`w-10 h-5 rounded-full p-0.5 transition-colors flex items-center ${showCaptainIcon ? 'bg-yellow-500 justify-end' : 'bg-gray-300 justify-start'}`}
+                        >
+                            <div className="w-4 h-4 bg-white rounded-full shadow-sm"></div>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
         </div>
       )}
 

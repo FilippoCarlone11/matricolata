@@ -7,15 +7,17 @@ import {
     revokeApprovedRequest, 
     manualAddPoints, 
     getChallenges, 
-    assignExistingChallenge 
+    assignExistingChallenge,
+    getSystemSettings // <--- IMPORTATO IL CARICAMENTO SETTINGS
 } from '@/lib/firebase';
-import { Trophy, User, Users, Shield, X, Crown, ArrowLeft, Zap, PlusCircle, Calendar, Trash2, EyeOff, Loader2 } from 'lucide-react';
+import { Trophy, User, Users, Shield, X, Crown, ArrowLeft, Zap, PlusCircle, Calendar, Trash2, EyeOff, Loader2, Wine } from 'lucide-react';
 
 export default function Classifiche({ preloadedUsers = [], currentUser, onTriggerYellow }) {
   const [matricole, setMatricole] = useState([]);
   const [fantallenatori, setFantallenatori] = useState([]);
   const [squadCounts, setSquadCounts] = useState({});
-  const [captainCounts, setCaptainCounts] = useState({}); // NUOVO STATO
+  const [captainCounts, setCaptainCounts] = useState({}); 
+  const [drinkCounts, setDrinkCounts] = useState({}); 
   
   const [view, setView] = useState('fanta'); 
   
@@ -30,17 +32,46 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   const [availableChallenges, setAvailableChallenges] = useState([]);
   const [isAdminLoading, setIsAdminLoading] = useState(false);
 
-  // --- EASTER EGG BCIENZ ---
+  // --- STATO IMPOSTAZIONI SISTEMA ---
+  const [sysSettings, setSysSettings] = useState({
+      showDrinkCount: true,
+      showSquadCount: true,
+      showCaptainIcon: true
+  });
+
   const [showBcienzEffect, setShowBcienzEffect] = useState(false);
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super-admin';
 
+  // CARICA LE IMPOSTAZIONI DAL DB ALL'AVVIO
+  useEffect(() => {
+      const fetchSettings = async () => {
+          try {
+              const s = await getSystemSettings();
+              setSysSettings({
+                  showDrinkCount: s?.showDrinkCount !== false,
+                  showSquadCount: s?.showSquadCount !== false,
+                  showCaptainIcon: s?.showCaptainIcon !== false
+              });
+          } catch (e) { console.error("Errore fetch settings", e); }
+      };
+      fetchSettings();
+  }, []);
+
+  const { showDrinkCount, showSquadCount, showCaptainIcon } = sysSettings;
+
   useEffect(() => {
     if (preloadedUsers.length > 0) {
         calculateLeaderboards(preloadedUsers);
-        calculateSquadCounts(preloadedUsers);
+        
+        if (showSquadCount || showCaptainIcon) {
+            calculateSquadCounts(preloadedUsers);
+        }
+        if (showDrinkCount) {
+            calculateDrinkCounts(preloadedUsers);
+        }
     }
-  }, [preloadedUsers]);
+  }, [preloadedUsers, showDrinkCount, showSquadCount, showCaptainIcon]);
 
   // --- CALCOLI INIZIALI ---
   const calculateLeaderboards = (users) => {
@@ -69,7 +100,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
 
   const calculateSquadCounts = (users) => {
       const counts = {};
-      const capCounts = {}; // Contatore capitani
+      const capCounts = {}; 
       
       users.forEach(user => {
           if (user.mySquad && Array.isArray(user.mySquad)) {
@@ -82,7 +113,28 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
           }
       });
       setSquadCounts(counts);
-      setCaptainCounts(capCounts); // Salviamo nello stato
+      setCaptainCounts(capCounts); 
+  };
+
+  const calculateDrinkCounts = async (users) => {
+    const matricoleUsers = users.filter(u => u.role === 'matricola');
+    const newDrinkCounts = {};
+    
+    for (const matricola of matricoleUsers) {
+        try {
+            const history = await getApprovedRequestsByUser(matricola.id);
+            const drinkScore = history.filter(item => 
+                item.challengeName && item.challengeName.toLowerCase().includes('fegato')
+            ).length;
+            
+            if (drinkScore > 0) {
+                newDrinkCounts[matricola.id] = drinkScore;
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    setDrinkCounts(newDrinkCounts);
   };
 
   // --- LOGICA CLICK LISTA ---
@@ -123,6 +175,14 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
     setAdminSelectedUser(freshData); 
     setMatricole(prev => prev.map(u => u.id === freshData.id ? freshData : u).sort((a, b) => b.punti - a.punti));
     await loadUserHistory(adminSelectedUser.id);
+
+    if (showDrinkCount) {
+        const history = await getApprovedRequestsByUser(adminSelectedUser.id);
+        const drinkScore = history.filter(item => 
+            item.challengeName && item.challengeName.toLowerCase().includes('fegato')
+        ).length;
+        setDrinkCounts(prev => ({...prev, [adminSelectedUser.id]: drinkScore > 0 ? drinkScore : undefined}));
+    }
   };
 
   const loadUserHistory = async (userId) => {
@@ -156,7 +216,12 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   };
 
   const openAssignModal = async () => {
-    const challs = await getChallenges();
+    let challs = await getChallenges();
+    challs = challs.sort((a, b) => {
+        const titleA = a.titolo ? a.titolo.toLowerCase() : '';
+        const titleB = b.titolo ? b.titolo.toLowerCase() : '';
+        return titleA.localeCompare(titleB);
+    });
     setAvailableChallenges(challs);
     setShowAssignModal(true);
   };
@@ -191,13 +256,20 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                     <div className="flex-1 z-10">
                         <h2 className="font-bold text-xl text-[#B41F35] leading-tight">{adminSelectedUser.displayName}</h2>
                         
-                        <div className="flex gap-2 mt-1">
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded inline-flex items-center gap-1 ${squadCounts[adminSelectedUser.id] > 0 ? 'bg-[#B41F35]/10 text-[#B41F35]' : 'bg-white text-gray-500 border'}`}>
-                                 <Users size={12} /> In {squadCounts[adminSelectedUser.id] || 0} Squadre
-                            </span>
-                            {captainCounts[adminSelectedUser.id] > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-1">
+                            {showSquadCount && squadCounts[adminSelectedUser.id] > 0 && (
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded inline-flex items-center gap-1 bg-[#B41F35]/10 text-[#B41F35]`}>
+                                     <Users size={12} /> In {squadCounts[adminSelectedUser.id] || 0} Squadre
+                                </span>
+                            )}
+                            {showCaptainIcon && captainCounts[adminSelectedUser.id] > 0 && (
                                 <span className="text-xs font-bold px-2 py-0.5 rounded inline-flex items-center gap-1 bg-yellow-100 text-yellow-700 border border-yellow-200">
                                     <Crown size={12} /> Cap. {captainCounts[adminSelectedUser.id]}
+                                </span>
+                            )}
+                            {showDrinkCount && drinkCounts[adminSelectedUser.id] > 0 && (
+                                <span className="text-xs font-bold px-2 py-0.5 rounded inline-flex items-center gap-1 bg-purple-100 text-purple-700 border border-purple-200">
+                                    <Wine size={12} /> x{drinkCounts[adminSelectedUser.id]}
                                 </span>
                             )}
                         </div>
@@ -323,6 +395,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
         {listItems.map((item, index) => {
             const count = squadCounts[item.id] || 0; 
             const capCount = captainCounts[item.id] || 0;
+            const drinks = drinkCounts[item.id] || 0;
 
             let medalColor = 'bg-white border-gray-200';
             let rankIcon = <span className="font-black text-xl text-gray-400 italic w-8 text-center">#{index + 1}</span>;
@@ -346,20 +419,27 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                 <img src={item.photoURL || `https://api.dicebear.com/9.x/notionists/svg?seed=${item.id}&backgroundColor=fecaca`} className="w-12 h-12 rounded-full object-cover mx-3 border border-gray-100 bg-red-50" />
                 <div className="flex-1 min-w-0">
                     <h3 className={`font-bold text-gray-900 truncate text-lg leading-tight ${view === 'matricole' && isAdmin ? 'group-hover:text-[#B41F35]' : ''}`}>{title}</h3>
-                    <div className="text-xs text-gray-500 truncate flex items-center gap-1 mt-1">
+                    <div className="text-xs text-gray-500 truncate flex flex-wrap items-center gap-1 mt-1">
                         {isFanta ? (
                              <>
                                 {item.teamName && <User size={10} />} {subTitle}
                                 {isClickable && <span className="text-[9px] bg-[#B41F35]/10 text-[#B41F35] font-bold px-1.5 rounded ml-2">Vedi Squadra</span>}
                              </>
                         ) : (
-                             <div className="flex gap-1">
-                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 ${count > 0 ? 'bg-[#B41F35]/10 text-[#B41F35]' : 'bg-gray-100 text-gray-400'}`}>
-                                    <Users size={10} /> {count} Squadre
-                                 </span>
-                                 {capCount > 0 && (
+                             <div className="flex gap-1 flex-wrap">
+                                 {showSquadCount && count > 0 && (
+                                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 bg-[#B41F35]/10 text-[#B41F35]`}>
+                                        <Users size={10} /> {count} Squadre
+                                     </span>
+                                 )}
+                                 {showCaptainIcon && capCount > 0 && (
                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 bg-yellow-100 text-yellow-700 border border-yellow-200">
                                          <Crown size={10} /> {capCount}
+                                     </span>
+                                 )}
+                                 {showDrinkCount && drinks > 0 && (
+                                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 bg-purple-100 text-purple-700 border border-purple-200">
+                                         <Wine size={10} /> x{drinks}
                                      </span>
                                  )}
                              </div>
@@ -391,6 +471,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                 <div className="space-y-3">
                     {teamDetails.map(player => {
                             const isCaptain = selectedTeam.captainId === player.id;
+                            const drinks = drinkCounts[player.id] || 0; 
                             return (
                             <div key={player.id} className={`flex items-center gap-3 p-3 rounded-xl border ${isCaptain ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100 bg-gray-50'}`}>
                                 <div className="relative">
@@ -399,9 +480,14 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                                 </div>
                                 <div className="flex-1">
                                     <p className="font-bold text-sm text-gray-900">{player.displayName}</p>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap mt-0.5">
                                         <span className="text-xs text-gray-500">Punti: <b>{player.punti || 0}</b></span>
-                                        {isCaptain && <span className="text-[9px] bg-yellow-200 text-yellow-800 px-1 rounded font-bold">x2 CAPITANO</span>}
+                                        {showCaptainIcon && isCaptain && <span className="text-[9px] bg-yellow-200 text-yellow-800 px-1 rounded font-bold">x2 CAPITANO</span>}
+                                        {showDrinkCount && drinks > 0 && (
+                                            <span className="text-[9px] bg-purple-100 text-purple-700 border border-purple-200 px-1 rounded font-bold shrink-0 flex items-center gap-0.5">
+                                                <Wine size={8}/> x{drinks}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
