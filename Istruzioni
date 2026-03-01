@@ -1,0 +1,69 @@
+Plaintext
+Sei un esperto sviluppatore Next.js (App Router), React e Firebase. Stiamo lavorando a una web app chiamata "Matricolata.it", un'applicazione per gestire un evento dal vivo. L'app utilizza Tailwind CSS per lo styling e `lucide-react` per le icone.
+
+**OBIETTIVO ATTUALE:**
+Dobbiamo implementare un sistema di "Televoto in tempo reale" in cui il presentatore, dalla dashboard di regia, può lanciare un pop-up sugli smartphone di tutti i presenti per farli votare da 1 a 10 l'esibizione di una matricola.
+
+**STATO ATTUALE (GIÀ FATTO):**
+Nel file `lib/firebase.js` abbiamo già implementato le logiche di scrittura su Firestore. Usiamo un singolo documento semaforo situato in `live_voting/current`. 
+La struttura del documento Firestore è:
+```json
+{
+  isActive: boolean, // Se true, mostra il banner a tutti
+  votingOpen: boolean, // Se true, sblocca i tasti da 1 a 10
+  matricolaId: string,
+  matricolaName: string,
+  theme: string,
+  votes: { "idUtente1": 8, "idUtente2": 10 } // Mappa dei voti
+}
+Le funzioni già presenti e importabili da @/lib/firebase sono:
+
+startLivePerformance(matricolaId, matricolaName, theme)
+
+openLiveVoting()
+
+submitLiveVote(userId, voteValue)
+
+closeLiveVoting()
+
+COSA DEVI FARE ORA (STEP DA IMPLEMENTARE):
+
+STEP 1: Aggiornare la Regia (app/regia-eventi/page.js)
+Attualmente la regia ha due viste (gestite da uno stato activeView): 'setup' e 'live'.
+
+Aggiungi un terzo pulsante nel selettore in alto per la vista 'televoto'.
+
+Nella vista 'televoto', crea un'interfaccia con queste funzionalità:
+
+Un form per avviare l'esibizione: un <select> per scegliere la matricola (dall'array allMatricole) e un <input> per scrivere il "Tema dell'esibizione".
+
+Un tasto "INIZIA ESIBIZIONE" (chiama startLivePerformance).
+
+Un tasto "APRI TELEVOTO" (chiama openLiveVoting).
+
+Un tasto "CHIUDI E NASCONDI" (chiama closeLiveVoting).
+
+Sotto i pulsanti, crea un "Cruscotto in tempo reale": usa onSnapshot per ascoltare il documento live_voting/current. Mostra in diretta il numero totale di voti ricevuti (lunghezza delle chiavi di votes) e calcola la MEDIA MATEMATICA dei voti in tempo reale. Mostra tutto con una UI accattivante, scura e in stile console televisiva.
+
+STEP 2: Creare il Componente Pubblico (components/LiveVotingOverlay.js)
+Crea un nuovo componente React client-side che andrà poi inserito nell'app principale.
+
+Il componente deve ascoltare tramite onSnapshot il documento live_voting/current.
+
+Se isActive è false, il componente deve restituire null (completamente invisibile).
+
+Se isActive è true, deve renderizzare un overlay a tutto schermo (fixed inset-0 z-[100] backdrop-blur-xl bg-black/80) in modo da bloccare l'uso del resto dell'app.
+
+L'overlay deve mostrare in grande: "Sta parlando: [matricolaName]" e "Tema: [theme]".
+
+Logica dei tasti:
+
+Se l'utente loggato ha role === 'matricola', mostra un messaggio "Votazioni in corso, tu non puoi votare".
+
+Se votingOpen è false, mostra "Preparati a votare, votazione chiusa al momento...".
+
+Se votingOpen è true E l'utente ha i permessi E non ha ancora votato (controlla se user.id è nelle chiavi di votes), mostra 10 pulsanti grandi (da 1 a 10). Al click, chiama submitLiveVote.
+
+Se l'utente ha già votato, mostra un grande spunta verde e "Voto registrato! Attendi i risultati".
+
+Forniscimi per favore il codice completo e aggiornato per app/regia-eventi/page.js e il nuovo codice da zero per components/LiveVotingOverlay.js. Usa uno stile moderno, responsive (mobile-first) e coerente con un'app di intrattenimento.

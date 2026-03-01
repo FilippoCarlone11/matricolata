@@ -9,7 +9,7 @@ import {
     revertEventChallenge, addManualPointsToEventTeams,
     addEventPerformance, deleteEventPerformance, resetEventPerformance, startEventPerformance, openLiveVoting,
     completeEventPerformance, assignAllPerformancePoints,
-    propagateChallengeToFanta, revertFantaPropagation // <-- NUOVA FUNZIONE IMPORTATA
+    propagateChallengeToFanta, revertFantaPropagation 
 } from '@/lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
@@ -29,25 +29,31 @@ export default function PuntiDashboard() {
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    // NAVIGAZIONE INTERNA REGIA
     const [activeView, setActiveView] = useState('live');
     const [selectedLiveChallenge, setSelectedLiveChallenge] = useState(null);
 
+    // STATI REGIA SQUADRE
     const [eventTeams, setEventTeams] = useState([]);
     const [allMatricole, setAllMatricole] = useState([]);
     const [newTeamName, setNewTeamName] = useState('');
     const [newTeamColor, setNewTeamColor] = useState(COLORS[0]);
 
+    // STATI MODIFICA NOME SQUADRA
     const [editingTeamId, setEditingTeamId] = useState(null);
     const [editingTeamName, setEditingTeamName] = useState('');
 
+    // STATI REGIA SFIDE
     const [eventChallenges, setEventChallenges] = useState([]);
     const [newChallengeTitle, setNewChallengeTitle] = useState('');
     const [p1, setP1] = useState(150);
     const [p2, setP2] = useState(100);
     const [p3, setP3] = useState(50);
 
+    // STATO INPUT RISULTATI
     const [rawScoresInputs, setRawScoresInputs] = useState({});
 
+    // STATI TELEVOTO E SCALETTA
     const [liveVotingData, setLiveVotingData] = useState(null);
     const [selectedMatricolaForVoting, setSelectedMatricolaForVoting] = useState('');
     const [manualMatricolaName, setManualMatricolaName] = useState('');
@@ -91,12 +97,14 @@ export default function PuntiDashboard() {
             }
         });
 
+        // Listener Live Voting
         const liveVotingRef = doc(db, 'live_voting', 'current');
         const unsubscribeLiveVoting = onSnapshot(liveVotingRef, (docSnap) => {
             if (docSnap.exists()) setLiveVotingData(docSnap.data());
             else setLiveVotingData(null);
         });
 
+        // Listener Scaletta Esibizioni
         const qPerformances = query(collection(db, 'event_performances'), orderBy('createdAt', 'asc'));
         const unsubscribePerformances = onSnapshot(qPerformances, (snap) => {
             const perfs = [];
@@ -119,6 +127,7 @@ export default function PuntiDashboard() {
         };
     }, [selectedLiveChallenge]);
 
+    // --- AZIONI SQUADRE ---
     const handleCreateTeam = async (e) => {
         e.preventDefault();
         if (!newTeamName.trim()) return;
@@ -148,6 +157,7 @@ export default function PuntiDashboard() {
         }
     };
 
+    // --- AZIONI SFIDE ---
     const handleCreateChallenge = async (e) => {
         e.preventDefault();
         if (!newChallengeTitle.trim()) return;
@@ -187,7 +197,7 @@ export default function PuntiDashboard() {
         try { await revertEventChallenge(challengeId); } catch (e) { alert("Errore: " + e.message); }
     };
 
-    // --- NUOVA FUNZIONE: PROPAGA AL FANTA ---
+    // --- NUOVE FUNZIONI: PROPAGA AL FANTA ---
     const handlePropagateToFanta = async (challengeId) => {
         if (!confirm("ATTENZIONE: Verranno aggiunti +5 punti alle matricole della prima squadra e tolti -5 a quelle dell'ultima. Confermi?")) return;
         
@@ -201,6 +211,7 @@ export default function PuntiDashboard() {
             setIsPropagating(false);
         }
     };
+    
     const handleRevertPropagation = async (challengeId) => {
         if (!confirm("Vuoi annullare la propagazione? I punti verranno rimossi e i post cancellati dal feed.")) return;
         setIsPropagating(true);
@@ -230,6 +241,7 @@ export default function PuntiDashboard() {
         } catch (e) { alert("Errore: " + e.message); }
     };
 
+    // --- AZIONI TELEVOTO EVOLUTO ---
     const handleAddToLineup = async (e) => {
         e.preventDefault();
         let name = "";
