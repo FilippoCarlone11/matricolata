@@ -44,9 +44,8 @@ export default function LiveVotingOverlay() {
         };
     }, []);
 
-    // Se l'overlay non è attivo, non renderizzare nulla
-    // Inoltre, NON lo renderizziamo se siamo nella pagina di regia
-    if (!liveData || !liveData.isActive || pathname === '/regia-eventi') return null;
+    // Inoltre, NON lo renderizziamo se siamo nelle pagine di regia
+    if (!liveData || !liveData.isActive || pathname?.startsWith('/regia-eventi')) return null;
 
     const handleVote = async (value) => {
         if (!user) return;

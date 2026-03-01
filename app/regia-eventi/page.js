@@ -15,6 +15,7 @@ import { doc, getDoc, collection, query, orderBy, onSnapshot } from 'firebase/fi
 // AGGIUNTE ICONE Edit2 e Check
 import { Settings, ShieldAlert, Loader2, LogOut, Plus, Trash2, Users, UserMinus, Swords, CheckCircle2, Trophy, Wrench, MonitorPlay, ArrowLeft, Minus, ChevronRight, RotateCcw, Edit2, Check, RadioTower, Play, EyeOff, Radio } from 'lucide-react';
 import Login from '@/components/Login';
+import ActionModal from '@/components/ActionModal';
 
 const COLORS = [
     { name: 'Rosso', class: 'bg-red-500', border: 'border-red-500', text: 'text-red-500' },
@@ -28,6 +29,30 @@ export default function PuntiDashboard() {
     const [user, setUser] = useState(null);
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
+
+    // STATI MODALE
+    const [modalConfig, setModalConfig] = useState({
+        isOpen: false,
+        type: 'info',
+        title: '',
+        message: '',
+        onConfirm: () => { },
+    });
+
+    const showModal = (type, title, message, onConfirm = null) => {
+        setModalConfig({
+            isOpen: true,
+            type,
+            title,
+            message,
+            onConfirm: () => {
+                if (onConfirm) onConfirm();
+                setModalConfig(prev => ({ ...prev, isOpen: false }));
+            }
+        });
+    };
+
+    const closeModal = () => setModalConfig(prev => ({ ...prev, isOpen: false }));
 
     // NAVIGAZIONE INTERNA REGIA
     const [activeView, setActiveView] = useState('live');
@@ -129,11 +154,13 @@ export default function PuntiDashboard() {
         e.preventDefault();
         if (!newTeamName.trim()) return;
         try { await createEventTeam(newTeamName, newTeamColor.class); setNewTeamName(''); }
-        catch (err) { alert(err.message); }
+        catch (err) { showModal('alert', 'Errore', err.message); }
     };
 
-    const handleDeleteTeam = async (teamId) => {
-        if (confirm("Sei sicuro di voler eliminare questa squadra della serata?")) await deleteEventTeam(teamId);
+    const handleDeleteTeam = (teamId) => {
+        showModal('danger', 'Elimina Squadra', "Sei sicuro di voler eliminare questa squadra della serata?", async () => {
+            try { await deleteEventTeam(teamId); } catch (e) { showModal('alert', 'Errore', e.message); }
+        });
     };
 
     const handleStartEditTeam = (team) => {
@@ -150,7 +177,7 @@ export default function PuntiDashboard() {
             await updateEventTeamName(teamId, editingTeamName);
             setEditingTeamId(null);
         } catch (error) {
-            alert("Errore durante il salvataggio: " + error.message);
+            showModal('alert', 'Errore di Salvataggio', error.message);
         }
     };
 
@@ -161,7 +188,7 @@ export default function PuntiDashboard() {
         try {
             await createEventChallenge(newChallengeTitle, Number(p1), Number(p2), Number(p3));
             setNewChallengeTitle('');
-        } catch (err) { alert(err.message); }
+        } catch (err) { showModal('alert', 'Errore', err.message); }
     };
 
     const incrementScore = (challengeId, teamId, delta, allowNegative = false) => {
@@ -176,37 +203,39 @@ export default function PuntiDashboard() {
         });
     };
 
-    const handleResolveChallenge = async (challenge) => {
+    const handleResolveChallenge = (challenge) => {
         const rawScores = rawScoresInputs[challenge.id] || {};
         const finalScores = {};
         eventTeams.forEach(t => { finalScores[t.id] = rawScores[t.id] || 0; });
 
-        if (!confirm("Vuoi confermare e assegnare i punti?")) return;
-
-        try {
-            await resolveEventChallenge(challenge.id, finalScores, challenge.pointsScheme);
-            setSelectedLiveChallenge(null);
-        } catch (e) { alert("Errore tecnico: " + e.message); }
+        showModal('confirm', 'Risolvi Sfida', "Vuoi confermare e assegnare i punti?", async () => {
+            try {
+                await resolveEventChallenge(challenge.id, finalScores, challenge.pointsScheme);
+                setSelectedLiveChallenge(null);
+            } catch (e) { showModal('alert', 'Errore Tecnico', e.message); }
+        });
     };
 
-    const handleRevertChallenge = async (challengeId) => {
-        if (!confirm("Vuoi riaprire questa sfida? I punti verranno sottratti alle squadre e ricalcolati da zero.")) return;
-        try { await revertEventChallenge(challengeId); } catch (e) { alert("Errore: " + e.message); }
+    const handleRevertChallenge = (challengeId) => {
+        showModal('confirm', 'Riapri Sfida', "Vuoi riaprire questa sfida? I punti verranno sottratti alle squadre e ricalcolati da zero.", async () => {
+            try { await revertEventChallenge(challengeId); } catch (e) { showModal('alert', 'Errore', e.message); }
+        });
     };
 
-    const handleApplyManualPoints = async () => {
+    const handleApplyManualPoints = () => {
         const scores = rawScoresInputs['manual'] || {};
         const hasPoints = Object.values(scores).some(val => val !== 0);
         if (!hasPoints) {
-            alert("Non hai inserito nessun punteggio.");
+            showModal('alert', 'Attenzione', "Non hai inserito nessun punteggio.");
             return;
         }
-        if (!confirm("Confermi di voler applicare questi punti manuali?")) return;
-        try {
-            await addManualPointsToEventTeams(scores);
-            setRawScoresInputs(prev => ({ ...prev, manual: {} }));
-            setSelectedLiveChallenge(null);
-        } catch (e) { alert("Errore: " + e.message); }
+        showModal('confirm', 'Applica Punti', "Confermi di voler applicare questi punti manuali?", async () => {
+            try {
+                await addManualPointsToEventTeams(scores);
+                setRawScoresInputs(prev => ({ ...prev, manual: {} }));
+                setSelectedLiveChallenge(null);
+            } catch (e) { showModal('alert', 'Errore', e.message); }
+        });
     };
 
     // --- AZIONI TELEVOTO EVOLUTO ---
@@ -216,18 +245,18 @@ export default function PuntiDashboard() {
         let id = "";
 
         if (useManualName) {
-            if (!manualMatricolaName.trim()) { alert("Inserisci il nome manuale."); return; }
+            if (!manualMatricolaName.trim()) { showModal('alert', 'Manca Dati', "Inserisci il nome manuale."); return; }
             name = manualMatricolaName;
             id = "manual_" + Date.now();
         } else {
-            if (!selectedMatricolaForVoting) { alert("Seleziona una matricola."); return; }
+            if (!selectedMatricolaForVoting) { showModal('alert', 'Manca Selezione', "Seleziona una matricola."); return; }
             const matricola = allMatricole.find(m => m.id === selectedMatricolaForVoting);
             name = matricola.displayName;
             id = selectedMatricolaForVoting;
         }
 
         if (!votingTheme.trim()) {
-            alert("Inserisci il tema dell'esibizione.");
+            showModal('alert', 'Manca Dati', "Inserisci il tema dell'esibizione.");
             return;
         }
 
@@ -237,44 +266,50 @@ export default function PuntiDashboard() {
             setManualMatricolaName('');
             setVotingTheme('');
             // setUseManualName(false); // Opzionale: resettare a dropdown
-        } catch (e) { alert(e.message); }
+        } catch (e) { showModal('alert', 'Errore', e.message); }
     };
 
-    const handleDeletePerformance = async (perfId) => {
-        if (!confirm("Rimuovere questa esibizione dalla scaletta?")) return;
-        try { await deleteEventPerformance(perfId); } catch (e) { alert(e.message); }
+    const handleDeletePerformance = (perfId) => {
+        showModal('danger', 'Rimuovi in Coda', 'Rimuovere questa esibizione dalla scaletta?', async () => {
+            try { await deleteEventPerformance(perfId); } catch (e) { showModal('alert', 'Errore', e.message); }
+        });
     };
 
-    const handleResetPerformance = async (perfId) => {
-        if (!confirm("Sei sicuro di voler resettare questa esibizione? Il punteggio attuale verrà eliminato e l'esibizione tornerà in coda come 'Da esibirsi'.")) return;
-        try { await resetEventPerformance(perfId); } catch (e) { alert(e.message); }
+    const handleResetPerformance = (perfId) => {
+        showModal('danger', 'Resetta Esibizione', "Sei sicuro di voler resettare questa esibizione? Il punteggio attuale verrà eliminato e l'esibizione tornerà in coda come 'Da esibirsi'.", async () => {
+            try { await resetEventPerformance(perfId); } catch (e) { showModal('alert', 'Errore', e.message); }
+        });
     };
 
-    const handleStartPerformance = async (perfId) => {
-        if (!confirm("Vuoi iniziare questa esibizione e mostrare il popup?")) return;
-        try { await startEventPerformance(perfId); }
-        catch (e) { alert(e.message); }
+    const handleStartPerformance = (perfId) => {
+        showModal('confirm', 'Inizia Esibizione', "Vuoi iniziare questa esibizione e mostrarla al pubblico?", async () => {
+            try { await startEventPerformance(perfId); }
+            catch (e) { showModal('alert', 'Errore', e.message); }
+        });
     };
 
-    const handleOpenLiveVoting = async () => {
-        if (!confirm("Aprire le votazioni sul pubblico?")) return;
-        try { await openLiveVoting(); } catch (e) { alert(e.message); }
+    const handleOpenLiveVoting = () => {
+        showModal('confirm', 'Apri Televoto', "Aprire le votazioni sul pubblico?", async () => {
+            try { await openLiveVoting(); } catch (e) { showModal('alert', 'Errore', e.message); }
+        });
     };
 
-    const handleCloseLivePerformance = async () => {
+    const handleCloseLivePerformance = () => {
         if (!liveVotingData?.performanceId) return;
-        if (!confirm("Vuoi chiudere il televoto e salvare il punteggio totale (SOMMA)?")) return;
-        try {
-            await completeEventPerformance(liveVotingData.performanceId);
-        } catch (e) { alert(e.message); }
+        showModal('confirm', 'Chiudi Televoto', "Vuoi chiudere il televoto e salvare il punteggio totale (SOMMA)?", async () => {
+            try {
+                await completeEventPerformance(liveVotingData.performanceId);
+            } catch (e) { showModal('alert', 'Errore', e.message); }
+        });
     };
 
-    const handleFinalPointsAssignment = async () => {
-        if (!confirm("ATTENZIONE: Stai per assegnare tutti i punti accumulati durante i televoti alle rispettive squadre. Operazione eseguibile una sola volta per serata. Confermi?")) return;
-        try {
-            const count = await assignAllPerformancePoints();
-            alert(`Successo! Punti assegnati a ${count} squadre.`);
-        } catch (e) { alert(e.message); }
+    const handleFinalPointsAssignment = () => {
+        showModal('confirm', 'Assegna Tutti i Punti', "ATTENZIONE: Stai per assegnare tutti i punti accumulati durante i televoti alle rispettive squadre. Operazione eseguibile una sola volta per serata. Confermi?", async () => {
+            try {
+                const count = await assignAllPerformancePoints();
+                showModal('info', 'Operazione Compiuta', `Successo! Punti assegnati a ${count} squadre.`);
+            } catch (e) { showModal('alert', 'Errore', e.message); }
+        });
     };
 
     const handleLogout = async () => {
@@ -484,7 +519,11 @@ export default function PuntiDashboard() {
                                             </h4>
                                             <p className="text-xs text-gray-400 mt-1">Premi: {challenge.pointsScheme.join(' / ')} pt</p>
                                         </div>
-                                        <button onClick={() => { if (confirm('Eliminare sfida?')) deleteEventChallenge(challenge.id) }} className="text-gray-500 hover:text-red-500 p-2"><Trash2 size={18} /></button>
+                                        <button onClick={() => {
+                                            showModal('danger', 'Elimina Sfida', 'Sei sicuro di voler eliminare questa sfida?', async () => {
+                                                try { await deleteEventChallenge(challenge.id); } catch (e) { showModal('alert', 'Errore', e.message); }
+                                            });
+                                        }} className="text-gray-500 hover:text-red-500 p-2"><Trash2 size={18} /></button>
                                     </div>
                                 ))}
                             </div>
@@ -853,6 +892,15 @@ export default function PuntiDashboard() {
                     </div>
                 )}
             </main>
+
+            <ActionModal
+                isOpen={modalConfig.isOpen}
+                type={modalConfig.type}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                onConfirm={modalConfig.onConfirm}
+                onCancel={closeModal}
+            />
         </div>
     );
 }
