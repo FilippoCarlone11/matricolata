@@ -9,6 +9,7 @@ import { Loader2, CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 
 export default function LiveVotingOverlay() {
+    
     const pathname = usePathname();
     const [liveData, setLiveData] = useState(null);
     const [user, setUser] = useState(null);
@@ -60,8 +61,9 @@ export default function LiveVotingOverlay() {
     };
 
     const hasVoted = user && liveData.votes && liveData.votes[user.uid];
-
+    if (userData?.role === 'super-admin') return null;
     return (
+        
         <div className="fixed inset-0 z-[100] backdrop-blur-xl bg-black/90 flex flex-col items-center justify-center p-4 sm:p-6 text-white animate-in fade-in duration-300">
 
             {/* HEADER ESIBIZIONE */}
