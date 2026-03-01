@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createChallenge, getChallenges, deleteChallenge } from '@/lib/firebase';
-import { Trash2, Plus, Zap, Eye, EyeOff, Repeat, AlignLeft, AlertCircle } from 'lucide-react';
+import { createChallenge, getChallenges, deleteChallenge, updateChallenge } from '@/lib/firebase';
+import { Trash2, Plus, Zap, Eye, EyeOff, Repeat, AlignLeft, AlertCircle, Edit2, X, Save } from 'lucide-react';
 
-// --- COMPONENTE CARD CON FLIP (Invariato) ---
-const ChallengeCard = ({ c, onDelete, t }) => {
+// --- COMPONENTE CARD CON FLIP ---
+const ChallengeCard = ({ c, onDelete, onEdit, t }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const tr = (text) => (t ? t(text) : text);
   return (
@@ -29,7 +29,7 @@ const ChallengeCard = ({ c, onDelete, t }) => {
             <div className="flex items-center gap-3">
                 <span className="text-2xl w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full select-none">{c.icon}</span>
                 <div>
-                    <p className="font-bold text-sm text-gray-900 leading-tight">{c.titolo}</p>
+                    <p className="font-bold text-sm text-gray-900 leading-tight pr-2 truncate max-w-[180px]">{c.titolo}</p>
                     <div className="flex gap-2 mt-0.5">
                         <span className={`text-[10px] font-bold px-1.5 rounded ${c.punti > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                             {c.punti > 0 ? '+' : ''}{c.punti} pt
@@ -44,12 +44,20 @@ const ChallengeCard = ({ c, onDelete, t }) => {
                 </div>
             </div>
             
-            <button 
-                onClick={(e) => { e.stopPropagation(); onDelete(c.id); }} 
-                className="text-gray-300 hover:text-red-500 p-2 transition-colors z-10"
-            >
-                <Trash2 size={18} />
-            </button>
+            <div className="flex gap-1 z-10">
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onEdit(c); }} 
+                    className="text-gray-400 hover:text-blue-500 p-2 transition-colors bg-gray-50 hover:bg-blue-50 rounded-lg"
+                >
+                    <Edit2 size={16} />
+                </button>
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onDelete(c.id); }} 
+                    className="text-gray-400 hover:text-red-500 p-2 transition-colors bg-gray-50 hover:bg-red-50 rounded-lg"
+                >
+                    <Trash2 size={16} />
+                </button>
+            </div>
         </div>
 
         {/* RETRO */}
@@ -80,6 +88,7 @@ export default function AdminChallenges({t}) {
     hidden: false 
   });
   
+  const [editingId, setEditingId] = useState(null);
   const [errors, setErrors] = useState({ titolo: false, punti: false, icon: false });
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('bonus_visible'); 
@@ -98,7 +107,7 @@ export default function AdminChallenges({t}) {
     setLoading(false);
   };
 
-  const handleCreate = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     const newErrors = {
@@ -118,12 +127,21 @@ export default function AdminChallenges({t}) {
     const finalPunti = parseInt(form.punti);
     const isMalus = finalPunti < 0;
 
-    await createChallenge({ 
-      ...form, 
-      punti: finalPunti, 
-      hidden: isHidden,
-      category: 'Custom' 
-    });
+    if (editingId) {
+        await updateChallenge(editingId, { 
+            ...form, 
+            punti: finalPunti, 
+            hidden: isHidden 
+        });
+        setEditingId(null);
+    } else {
+        await createChallenge({ 
+            ...form, 
+            punti: finalPunti, 
+            hidden: isHidden,
+            category: 'Custom' 
+        });
+    }
     
     setForm({ titolo: '', punti: '', icon: '', type: 'oneshot', description: '', hidden: false });
     
@@ -136,31 +154,57 @@ export default function AdminChallenges({t}) {
     loadChallenges();
   };
 
+  const handleEditClick = (challenge) => {
+      setForm({
+          titolo: challenge.titolo || '',
+          punti: challenge.punti !== undefined ? challenge.punti.toString() : '',
+          icon: challenge.icon || '',
+          type: challenge.type || 'oneshot',
+          description: challenge.description || '',
+          hidden: challenge.hidden || false
+      });
+      setEditingId(challenge.id);
+      window.scrollTo({ top: 0, behavior: 'smooth' }); 
+  };
+
+  const handleCancelEdit = () => {
+      setForm({ titolo: '', punti: '', icon: '', type: 'oneshot', description: '', hidden: false });
+      setEditingId(null);
+      setErrors({ titolo: false, punti: false, icon: false });
+  };
+
   const handleDelete = async (id) => {
     if (confirm('Eliminare definitivamente?')) {
       await deleteChallenge(id);
+      if (editingId === id) handleCancelEdit(); 
       loadChallenges();
     }
   };
 
+  // AGGIORNATO: Ora filtra E ordina in ordine alfabetico
   const getFilteredList = () => {
-    return challenges.filter(c => {
-      const isBonus = c.punti > 0;
-      const isHidden = c.hidden === true;
+    return challenges
+      .filter(c => {
+        const isBonus = c.punti > 0;
+        const isHidden = c.hidden === true;
 
-      switch(activeFilter) {
-        case 'bonus_visible': return isBonus && !isHidden;
-        case 'malus_visible': return !isBonus && !isHidden;
-        case 'bonus_hidden': return isBonus && isHidden;
-        case 'malus_hidden': return !isBonus && isHidden;
-        default: return true;
-      }
-    });
+        switch(activeFilter) {
+          case 'bonus_visible': return isBonus && !isHidden;
+          case 'malus_visible': return !isBonus && !isHidden;
+          case 'bonus_hidden': return isBonus && isHidden;
+          case 'malus_hidden': return !isBonus && isHidden;
+          default: return true;
+        }
+      })
+      .sort((a, b) => {
+        // Ordina in modo "case insensitive" (ignora maiuscole/minuscole)
+        const titleA = a.titolo ? a.titolo.toLowerCase() : '';
+        const titleB = b.titolo ? b.titolo.toLowerCase() : '';
+        return titleA.localeCompare(titleB);
+      });
   };
 
   const filteredList = getFilteredList();
-
-  // --- SEPARAZIONE LISTE ---
   const dailyItems = filteredList.filter(c => c.type === 'daily');
   const oneshotItems = filteredList.filter(c => c.type !== 'daily');
 
@@ -183,8 +227,20 @@ export default function AdminChallenges({t}) {
         <Zap className="text-[#B41F35]" /> Gestione Bonus & Malus
       </h2>
 
-      {/* FORM CREAZIONE (Identico a prima) */}
-      <form onSubmit={handleCreate} className="bg-gray-100 p-4 rounded-xl mb-6 space-y-3 border border-gray-200 shadow-inner">
+      {/* FORM CREAZIONE / MODIFICA */}
+      <form onSubmit={handleSubmit} className={`p-4 rounded-xl mb-6 space-y-3 border shadow-inner transition-colors ${editingId ? 'bg-blue-50 border-blue-200' : 'bg-gray-100 border-gray-200'}`}>
+        
+        {editingId && (
+            <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1">
+                    <Edit2 size={12} /> Stai modificando un bonus
+                </span>
+                <button type="button" onClick={handleCancelEdit} className="text-gray-400 hover:text-red-500">
+                    <X size={18} />
+                </button>
+            </div>
+        )}
+
         <div className="flex gap-2">
            <input 
              type="text" 
@@ -271,8 +327,10 @@ export default function AdminChallenges({t}) {
                 </button>
             ))}
         </div>
-        <button type="submit" className="w-full bg-[#B41F35] text-white font-bold py-3 rounded-xl hover:bg-[#90192a] transition-all shadow-lg flex justify-center items-center gap-2">
-            <Plus size={18}/> {tr("AGGIUNGI BONUS")}
+        
+        {/* BOTTONE DINAMICO SALVA/AGGIUNGI */}
+        <button type="submit" className={`w-full text-white font-bold py-3 rounded-xl transition-all shadow-lg flex justify-center items-center gap-2 ${editingId ? 'bg-blue-600 hover:bg-blue-700' : 'bg-[#B41F35] hover:bg-[#90192a]'}`}>
+            {editingId ? <><Save size={18}/> {tr("SALVA MODIFICHE")}</> : <><Plus size={18}/> {tr("AGGIUNGI BONUS")}</>}
         </button>
       </form>
 
@@ -293,11 +351,11 @@ export default function AdminChallenges({t}) {
                 <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1 mt-2 mb-1 flex items-center gap-1">
                     <Repeat size={10}/> {tr("Giornalieri")}
                 </h3>
-                {dailyItems.map(c => <ChallengeCard key={c.id} c={c} onDelete={handleDelete} t = {t}/>)}
+                {dailyItems.map(c => <ChallengeCard key={c.id} c={c} onDelete={handleDelete} onEdit={handleEditClick} t={t}/>)}
             </div>
         )}
 
-        {/* LINEA DI SEPARAZIONE (Solo se ci sono entrambi) */}
+        {/* LINEA DI SEPARAZIONE */}
         {dailyItems.length > 0 && oneshotItems.length > 0 && (
              <div className="relative py-4 flex items-center justify-center">
                  <div className="absolute inset-0 flex items-center">
@@ -312,7 +370,7 @@ export default function AdminChallenges({t}) {
                  <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pl-1 mt-2 mb-1 flex items-center gap-1">
                     <Zap size={10}/> {tr("Speciali")}
                 </h3>
-                {oneshotItems.map(c => <ChallengeCard key={c.id} c={c} onDelete={handleDelete} t  ={t}/>)}
+                {oneshotItems.map(c => <ChallengeCard key={c.id} c={c} onDelete={handleDelete} onEdit={handleEditClick} t={t}/>)}
             </div>
         )}
 
