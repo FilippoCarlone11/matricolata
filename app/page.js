@@ -224,11 +224,14 @@ export default function Home() {
             // 4. Altrimenti, scarica tutto il malloppo (Sfide e Utenti)
             const isCacheEnabled = settings?.cacheEnabled ?? true; 
             const cacheTime = settings?.cacheDuration ?? 30;
+            const usersCacheTime = settings?.cacheDuration ?? 30; // 30 minuti per le classifiche utenti
+            const challengesCacheTime = 1440; // 24 ORE (in minuti) per i Bonus/Malus! 🚀
             
             const [challengesData, usersData] = await Promise.all([
-                fetchWithCache('cache_challenges', getChallenges, cacheTime, isCacheEnabled),
-                fetchWithCache('cache_users', getAllUsers, cacheTime, isCacheEnabled)
+                fetchWithCache('cache_challenges', getChallenges, challengesCacheTime, isCacheEnabled),
+                fetchWithCache('cache_users', getAllUsers, usersCacheTime, isCacheEnabled)
             ]);
+        
             setGlobalChallenges(challengesData);
             setGlobalUsers(usersData);
             
@@ -388,7 +391,7 @@ export default function Home() {
                   <span className="text-xs font-bold text-[#B41F35] block">{userData.teamName}</span>
               )}
               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block mt-0.5">
-                  {t(userData.role === 'matricola' ? 'Matricola' : (userData.role === 'super-admin' ? 'Super Admin' : 'Admin'))}
+                  {t(userData.role === 'matricola' ? 'Matricola' : (userData.role === 'super-admin' ? 'Super Admin' : (userData.role === 'admin' ? 'Admin' : 'Anziano')))}
               </span>
             </div>
           </div>
