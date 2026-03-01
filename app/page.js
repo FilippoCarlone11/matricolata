@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { auth, db, getUserData, signOutUser, getChallenges, getAllUsers, getSystemSettings } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore'; 
+import { doc, onSnapshot, getDoc } from 'firebase/firestore'; 
 
 import Login from '@/components/Login';
 import ChallengeList from '@/components/ChallengeList';
@@ -204,10 +204,24 @@ export default function Home() {
           setLoading(false);
         });
 
+        // ========================================================
+        // 🚨 BLOCCO DATABASE PER MANUTENZIONE (Risparmio letture)
+        // ========================================================
         try {
+            // 1. Scarica solo i settaggi (1 lettura)
             const settings = await getSystemSettings();
             setSystemSettings(settings); 
             
+            // 2. Legge il ruolo dell'utente
+            const userDoc = await getDoc(userRef);
+            const role = userDoc.exists() ? userDoc.data().role : 'matricola';
+
+            // 3. Se l'app è in manutenzione e l'utente NON è admin, non scaricare nient'altro!
+            if (settings?.maintenanceMode && role !== 'admin' && role !== 'super-admin') {
+                return; // 🛑 Esce dall'operazione
+            }
+
+            // 4. Altrimenti, scarica tutto il malloppo (Sfide e Utenti)
             const isCacheEnabled = settings?.cacheEnabled ?? true; 
             const cacheTime = settings?.cacheDuration ?? 30;
             
@@ -217,7 +231,10 @@ export default function Home() {
             ]);
             setGlobalChallenges(challengesData);
             setGlobalUsers(usersData);
-        } catch(e) { console.error("Errore caricamento dati:", e); }
+            
+        } catch(e) { 
+            console.error("Errore caricamento dati:", e); 
+        }
 
       } else {
         setUser(null);
@@ -254,6 +271,29 @@ export default function Home() {
   const isSuperAdmin = userData.role === 'super-admin';
   const isAdminOrSuper = userData.role === 'admin' || isSuperAdmin;
   const isBlurActive = userData.role === 'matricola' && systemSettings.matricolaBlur;
+
+  // --- SCHERMATA DI BLOCCO MANUTENZIONE ---
+  if (systemSettings?.maintenanceMode && !isAdminOrSuper) {
+      return (
+          <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-full bg-[#B41F35] opacity-5 pointer-events-none"></div>
+              
+              <div className="bg-gray-800 p-8 rounded-3xl shadow-2xl border border-gray-700 max-w-sm z-10 relative">
+                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-red-600 p-3 rounded-full border-4 border-gray-900 shadow-lg">
+                      <LockKeyhole size={28} className="text-white" />
+                  </div>
+                  <h1 className="text-2xl font-black text-white mt-4 mb-2">App in Manutenzione</h1>
+                  <p className="text-gray-400 mb-8 font-medium leading-relaxed">
+                      Ci stiamo preparando per stasera! Il sito è in manutenzione. <br/><br/>
+                      <span className="text-[#B41F35] font-bold">Ci vediamo stasera!</span>
+                  </p>
+                  <button onClick={handleLogout} className="w-full bg-gray-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-gray-600 transition-colors flex items-center justify-center gap-2">
+                      <LogOut size={18} /> {t("Esci")}
+                  </button>
+              </div>
+          </div>
+      );
+  }
 
   // --- LOGICA BLOCCO CAPITANO ---
   const isCaptainMissing = userData.role !== 'matricola' && (!userData.captainId) && (userData.mySquad && userData.mySquad.length > 0);

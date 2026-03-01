@@ -80,17 +80,18 @@ export default function PuntiLayout() {
         <div className="h-screen bg-gray-900 text-white flex flex-col md:flex-row font-sans overflow-hidden">
             
             {/* SIDEBAR DESKTOP (A SCOMPARSA) */}
+            {/* SIDEBAR DESKTOP (A SCOMPARSA) */}
             <aside 
                 className={`bg-gray-950 border-r border-gray-800 hidden md:flex flex-col h-screen shrink-0 transition-all duration-300 ease-in-out z-20 ${isSidebarExpanded ? 'w-64' : 'w-20'}`}
                 onMouseEnter={() => setIsSidebarExpanded(true)}
                 onMouseLeave={() => setIsSidebarExpanded(false)}
             >
-                <div className="h-20 flex items-center px-5 border-b border-gray-800">
+                <div className={`h-20 flex items-center border-b border-gray-800 transition-all duration-300 ${isSidebarExpanded ? 'px-5 justify-start' : 'justify-center'}`}>
                     <div className="bg-[#B41F35] p-2 rounded-lg shrink-0">
                         <Settings size={24} />
                     </div>
-                    <h1 className={`text-lg font-bold tracking-tight ml-4 whitespace-nowrap transition-all duration-300 ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 w-0'}`}>
-                        Regia Evento
+                    <h1 className={`text-lg font-bold tracking-tight whitespace-nowrap transition-all duration-300 overflow-hidden ${isSidebarExpanded ? 'ml-4 opacity-100' : 'ml-0 opacity-0 w-0'}`}>
+                        Regia
                     </h1>
                 </div>
                 
@@ -102,12 +103,12 @@ export default function PuntiLayout() {
                                 key={item.id}
                                 onClick={() => changeView(item.id)}
                                 title={!isSidebarExpanded ? item.label : ''}
-                                className={`w-full flex items-center py-3 px-3 rounded-xl font-bold transition-all duration-200 overflow-hidden
+                                className={`w-full flex items-center py-3 rounded-xl font-bold transition-all duration-200 overflow-hidden
                                     ${isActive ? 'bg-[#B41F35] text-white shadow-lg' : 'text-gray-500 hover:text-white hover:bg-gray-800'}
-                                    ${isSidebarExpanded ? 'justify-start' : 'justify-center'}`}
+                                    ${isSidebarExpanded ? 'px-4 justify-start' : 'justify-center'}`}
                             >
                                 <item.icon size={24} className="shrink-0" />
-                                <span className={`ml-4 whitespace-nowrap transition-all duration-300 ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 w-0'}`}>
+                                <span className={`whitespace-nowrap transition-all duration-300 overflow-hidden ${isSidebarExpanded ? 'ml-4 opacity-100' : 'ml-0 opacity-0 w-0'}`}>
                                     {item.label}
                                 </span>
                             </button>
@@ -119,17 +120,16 @@ export default function PuntiLayout() {
                     <button 
                         onClick={handleLogout} 
                         title={!isSidebarExpanded ? "Esci" : ""}
-                        className={`w-full flex items-center py-3 px-3 rounded-xl font-bold transition-all duration-200 overflow-hidden bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white
-                            ${isSidebarExpanded ? 'justify-start' : 'justify-center'}`}
+                        className={`w-full flex items-center py-3 rounded-xl font-bold transition-all duration-200 overflow-hidden bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white
+                            ${isSidebarExpanded ? 'px-4 justify-start' : 'justify-center'}`}
                     >
                         <LogOut size={22} className="shrink-0 text-red-500/80"/>
-                        <span className={`ml-4 whitespace-nowrap transition-all duration-300 ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 w-0'}`}>
+                        <span className={`whitespace-nowrap transition-all duration-300 overflow-hidden ${isSidebarExpanded ? 'ml-4 opacity-100' : 'ml-0 opacity-0 w-0'}`}>
                             Disconnetti
                         </span>
                     </button>
                 </div>
             </aside>
-
             {/* HEADER MOBILE */}
             <header className="md:hidden bg-gray-950 border-b border-gray-800 p-4 flex items-center justify-between z-50 shrink-0">
                 <div className="flex items-center gap-2">

@@ -20,6 +20,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
   const [showSquadCount, setShowSquadCount] = useState(true); // <--- NUOVO STATO SQUADRE
   const [showCaptainIcon, setShowCaptainIcon] = useState(true); // <--- NUOVO STATO CAPITANI
   const [settingsLoading, setSettingsLoading] = useState(true);
+  const [maintenanceMode, setMaintenanceMode] = useState(false); // <--- NUOVO STATO manutenzione
 
   const isSuperAdmin = currentUser?.role === 'super-admin';
 
@@ -37,6 +38,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                 setCacheEnabled(settings?.cacheEnabled ?? true);
                 setCacheDuration(settings?.cacheDuration ?? 30);
                 setBlurEnabled(settings?.matricolaBlur ?? false);
+                setMaintenanceMode(settings?.maintenanceMode ?? false);
                 // Carica i nuovi settings (default true se non esistono ancora)
                 setShowDrinkCount(settings?.showDrinkCount ?? true);
                 setShowSquadCount(settings?.showSquadCount ?? true);
@@ -74,6 +76,18 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     } catch (e) {
         alert("Errore aggiornamento blur");
         setBlurEnabled(!newState); 
+    }
+  };
+
+  const handleToggleMaintenance = async () => {
+    if (!confirm("ATTENZIONE: Stai per bloccare l'accesso all'app a tutti i non-admin. Confermi?")) return;
+    const newState = !maintenanceMode;
+    setMaintenanceMode(newState);
+    try {
+        await updateSystemSettings({ maintenanceMode: newState });
+    } catch (e) {
+        alert("Errore aggiornamento manutenzione");
+        setMaintenanceMode(!newState);
     }
   };
 
@@ -219,6 +233,23 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                             {blurEnabled ? tr('ATTIVO') : tr('SPENTO')}
                         </button>
                     </div>
+                    <div className="flex items-center justify-between bg-red-900/20 p-4 rounded-xl border border-red-900/50 md:col-span-2">
+                    <div>
+                        <span className="block text-sm font-bold text-red-400 flex items-center gap-2">
+                           <ShieldAlert size={14}/> Blocca l'app
+                        </span>
+                        <span className="text-[10px] text-gray-400">Chiude l'app a tutti i non-admin per preservare il DB</span>
+                    </div>
+                    <button 
+                        onClick={handleToggleMaintenance}
+                        disabled={settingsLoading}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-black text-xs uppercase tracking-wide transition-all ${
+                            maintenanceMode ? 'bg-red-600 text-white shadow-lg shadow-red-600/30 animate-pulse' : 'bg-gray-700 text-gray-300'
+                        }`}
+                    >
+                        {maintenanceMode ? 'BLOCCATO' : 'BLOCCA'}
+                    </button>
+                </div>
                 </div>
             </div>
 
