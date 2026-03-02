@@ -17,7 +17,12 @@ export default function BonusMalusList({ currentUser, preloadedChallenges = [] }
   useEffect(() => {
     // USIAMO I DATI DAL PADRE (0 Letture)
     if (preloadedChallenges.length > 0) {
-      setChallenges(preloadedChallenges);
+      // Creiamo una copia dell'array per non mutare le prop originali 
+      // e lo ordiniamo alfabeticamente per 'titolo'
+      const sortedChallenges = [...preloadedChallenges].sort((a, b) => 
+        a.titolo.localeCompare(b.titolo)
+      );
+      setChallenges(sortedChallenges);
     }
   }, [preloadedChallenges]);
 
