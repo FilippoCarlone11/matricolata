@@ -1,107 +1,64 @@
-**Fanta-Collegio** è una piattaforma web interattiva basata su **Next.js** e **Firebase** che gamifica l'esperienza della matricolata universitaria.
+# 🎓 FantaMatricolata & Televoto Live (v2.0.0)
 
-Il sistema combina elementi di un gioco a punti per le matricole con una lega "Fanta" (stile Fantacalcio) per gli studenti più grandi (Fantallenatori), il tutto gestito tramite un pannello di amministrazione in tempo reale.
+**Matricolata.it** non è solo un'app, è un ecosistema completo che trasforma l'inserimento delle nuove "Matricole" universitarie in un vero e proprio gioco a premi a squadre, culminando in un evento dal vivo gestito interamente in tempo reale.
 
-## ✨ Funzionalità Principali
-
-### 🐣 Per le Matricole
-* **Dashboard Personale:** Visualizzazione del punteggio totale in tempo reale.
-* **Lista Sfide:** Elenco delle missioni da compiere (One-shot o Giornaliere).
-* **Richiesta Punti:** Invio di richieste di approvazione agli admin al completamento di una sfida.
-* **Storico:** Cronologia dettagliata delle sfide completate, raggruppate per giorno.
-
-### ⚽ Per i Fantallenatori (Utenti)
-* **Fantamercato:** Lista delle matricole svincolate da ingaggiare nella propria rosa.
-* **Gestione Rosa:** Possibilità di avere fino a **3 matricole** in squadra.
-* **Capitano:** Nomina di un capitano i cui punti valgono **doppio (x2)**.
-* **Svincolo:** Possibilità di rimuovere matricole dalla squadra (se il mercato è aperto).
-* **Classifiche:** Leaderboard globale Matricole e Leaderboard Fantallenatori.
-
-### 🛡️ Per gli Admin
-* **Gestione Sfide:** Creazione ed eliminazione delle sfide.
-* **Approvazione Richieste:** Pannello *Real-time* per accettare o rifiutare le richieste punti delle matricole.
-* **Gestione Utenti:** Modifica ruoli (Matricola/Utente/Admin) e assegnazione punti manuali (Bonus/Malus).
-* **Controllo Mercato:** Pulsante per Aprire/Chiudere il mercato globalmente.
-* **Gestione Matricole:** Ricerca matricola, visualizzazione storico dettagliato e **revoca** punti/sfide.
+L'applicazione unisce le meccaniche del Fantacalcio, un social network privato (Feed) e un sistema di Regia Live per la serata finale.
 
 ---
 
-## 🛠️ Tecnologie Utilizzate
+## 🕹️ IL GIOCO: Come funziona la FantaMatricolata?
 
-* **Frontend:** [Next.js 15](https://nextjs.org/) (App Router), React.
-* **Styling:** [Tailwind CSS](https://tailwindcss.com/) per un design responsive e moderno.
-* **Backend / Database:** [Firebase](https://firebase.google.com/) (Authentication & Firestore).
-* **Icone:** [Lucide React](https://lucide.dev/).
+Il gioco si divide in due grandi fazioni: le **Matricole** (chi deve guadagnare punti) e gli **Anziani/Utenti** (chi gestisce le squadre e tifa).
+
+### 1. Il Fanta-Mercato e le Squadre
+Proprio come al Fantacalcio, i giocatori "Anziani" formano delle squadre "acquistando" o reclutando le Matricole. 
+* **Il Capitano:** Ogni squadra deve nominare una Matricola come Capitano. L'app bloccherà la navigazione finché non viene scelto, perché i punti ottenuti dal Capitano valgono doppio per la classifica della squadra!
+* **Le Classifiche:** Esiste una classifica globale delle Matricole (chi ha più punti individuali) e una classifica delle Squadre (la somma dei punti dei membri scelti).
+
+### 2. Bonus, Malus e Richieste
+Come si fanno i punti? Tramite un "Regolamento" ufficiale integrato nell'app.
+* Esistono Bonus/Malus **Speciali** (una tantum), **Giornalieri** (ripetibili) e **Segreti** (che solo la Regia conosce).
+* Quando una Matricola compie un'azione (es. "Porta un caffè a un Anziano"), apre l'app e invia una **Richiesta Punti** allegando, se necessario, una foto prova.
+* La richiesta finisce nel pannello degli **Admin**, che possono *Approvarla* o *Rifiutarla*.
+
+### 3. Il Feed Globale (La "Piazza" Virtuale)
+È il cuore pulsante dell'app nei giorni che precedono l'evento. 
+Ogni volta che un Admin approva un Bonus o un Malus, questo viene pubblicato istantaneamente nel **News Feed** di tutti gli utenti. È una vera e propria bacheca social dove tutti possono vedere chi sta salendo in classifica, per quale motivo assurdo ha preso punti e se è stato colpito da un malus segreto!
 
 ---
-## 🚀 Installazione e Setup
-  1. Prerequisiti
-Assicurati di avere installato:
 
-Node.js (versione 18 o superiore).
+## 📺 L'EVENTO FINALE: Televoto & Regia Live
 
-Un account Google (per creare il progetto Firebase).
+La competizione si chiude con una serata dal vivo in cucina. Per l'occasione, l'app si trasforma in uno strumento di Regia VJ e Televoto interattivo.
 
-2. Clona la repository
-Bash
-git clone https://github.com/tuo-username/fanta-collegio.git
-cd fanta-collegio
-3. Installa le dipendenze
-Bash
-npm install
-4. Configura Firebase
-Vai su Firebase Console e crea un nuovo progetto.
+### 1. La Modalità "Standby" (Zero distrazioni)
+All'inizio dello show, il Super Admin attiva la "Modalità Manutenzione". Tutti i telefoni in sala si bloccano su una schermata di attesa. Questo azzera letteralmente il consumo del database (risparmiando risorse vitali) e costringe il pubblico a guardare il palco.
 
-Attiva Authentication e abilita il provider Google.
+### 2. Il Televoto Sincronizzato
+Dalla Regia su PC (divisa nel tab *Crea Scaletta* e *Gestione Live*), l'Admin fa partire le esibizioni di talenti (canto, ballo, ecc.). 
+Appena l'Admin clicca su "Apri Televoto", il blocco sui telefoni del pubblico viene temporaneamente bypassato e si apre in overlay un **Popup di Voto (da 1 a 10)** in tempo reale. 
+La Regia vede i contatori salire dal vivo.
 
-Attiva Firestore Database e imposta le regole di sicurezza (per testare puoi iniziare in Test Mode, ma ricorda di proteggerle in produzione).
+### 3. La Matematica dei Punteggi (Regole 7 e 8)
+Alla fine del televoto, l'algoritmo calcola e distribuisce i punti sul FantaMatricolata con logiche precise:
+* **Esibizione di una singola Matricola:** La somma esatta dei voti del pubblico va ai punti personali della Matricola (e si riflette sulla sua squadra).
+* **Esibizione Corale della Squadra:** Il punteggio netto viene sommato al tabellone della squadra, e ogni singolo membro riceve quel punteggio nel proprio storico personale.
+* **Propagazione Finale:** Quando la scaletta è finita, il sistema calcola la media dei voti delle singole esibizioni per non penalizzare le squadre con molti o pochi membri.
 
-Crea un file .env.local nella root del progetto e inserisci le chiavi del tuo progetto Firebase:
+---
 
+## 🎭 Easter Eggs e Chicche Tecniche
 
-NEXT_PUBLIC_FIREBASE_API_KEY=tua_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=tuo_project_id.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=tuo_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=tuo_project_id.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=tuo_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=tua_app_id
+* **Lingua Napoletana:** Dal profilo, è possibile cambiare la lingua dell'app. L'intera interfaccia si trasformerà magicamente in slang partenopeo (es. il Feed diventa "Nciuci", l'Admin diventa "O' Mast", le Matricole "Muccusielli").
+* **Nebbia Matricole:** Un interruttore speciale permette alla Regia di "oscurare" temporaneamente lo schermo solo alle matricole (per fare sorprese o scherzi), mentre gli Anziani continuano a navigare normalmente.
+* **Smart Caching:** L'app salva intere classifiche e cataloghi nella memoria locale del telefono, garantendo caricamenti istantanei e abbattendo del 90% le chiamate (e i costi) a Firestore durante i picchi di traffico.
 
-5. Avvia il server di sviluppo
-Bash
-npm run dev
-Apri il browser su http://localhost:3000.
+---
 
-## 🗄️ Struttura Database (Firestore)
-Il sistema creerà automaticamente i documenti necessari, ma ecco come sono organizzati i dati:
-
-users: Contiene tutti gli utenti.
-
-Campi: role ('matricola', 'utente', 'admin'), punti, mySquad (array ID), captainId, squadraId (se matricola è presa).
-
-challenges: Le sfide disponibili.
-
-Campi: titolo, punti, categoria, type, icon.
-
-requests: Le richieste di punti in attesa o approvate.
-
-Campi: status ('pending', 'approved', 'rejected', 'revoked'), matricolaId, challengeId.
-
-settings: Configurazioni globali.
-
-Doc config: marketOpen (boolean).
-
-## 👑 Primo Accesso Admin
-Quando ti registri per la prima volta, il sistema ti assegnerà il ruolo di "matricola". Per diventare Admin e configurare il gioco:
-
-Registrati nell'app con Google.
-
-Vai sulla Console di Firebase > Firestore Database > collezione users.
-
-Trova il tuo documento utente.
-
-Modifica il campo role da "matricola" a "admin".
-
-Ricarica la pagina dell'app. Ora avrai accesso al pannello Admin.
+## 💻 Tech Stack
+* **Frontend:** Next.js 16 (App Router), React 18, Tailwind CSS, Lucide Icons.
+* **Backend & Auth:** Firebase Firestore (Realtime DB), Firebase Authentication (Google Auth).
+* **Architettura:** Struttura Firebase Modularizzata (Facade Pattern), State Management con React Hooks.
 
 ## 🤝 Contribuire
 Le Pull Request sono benvenute! Per modifiche importanti, apri prima una issue per discutere di cosa vorresti cambiare.
