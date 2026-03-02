@@ -61,7 +61,11 @@ export default function PuntiLayout() {
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white"><Loader2 className="animate-spin" size={48} /></div>;
     if (!user) return <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4"><Login /></div>;
-    if (!userData || userData.role !== 'super-admin') return <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white"><ShieldAlert size={80} className="text-red-500 mb-6"/><h1 className="text-3xl font-black">Accesso Negato</h1></div>;
+    if (!userData || userData.role !== 'super-admin') return <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white"><ShieldAlert size={80} className="text-red-500 mb-6"/><h1 className="text-3xl font-black">Accesso Negato</h1>
+    <div><button onClick={handleLogout} className="mt-auto w-full flex items-center justify-center gap-2 bg-gray-800 text-white py-4 rounded-2xl font-bold text-lg">
+                        <LogOut size={20}/> Esci   
+                    </button></div>
+    </div>;
 
     const navItems = [
         { id: 'home', label: 'Classifica', icon: LayoutDashboard },
