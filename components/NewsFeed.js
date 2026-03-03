@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getGlobalFeed } from '@/lib/firebase';
-import { Clock, User, Hourglass, CheckCircle, ShieldAlert, EyeOff, XCircle, Camera, X } from 'lucide-react';
+import { Clock, User, Hourglass, CheckCircle, ShieldAlert, EyeOff, XCircle, Camera, X, Clapperboard } from 'lucide-react';
 
 // CORREZIONE QUI: aggiunto { t } invece di t
 export default function NewsFeed({ t }) {
@@ -84,7 +84,7 @@ export default function NewsFeed({ t }) {
               actionText = tr("Richiesta Rifiutata") + ":"; 
               cardOpacity = "opacity-75 grayscale-[0.5]"; 
           } else if (isPending) {
-              statusLabel = tr("In Attesa di Approvazione"); 
+              statusLabel = tr("Controllo VAR"); 
               statusColor = "bg-yellow-100 text-yellow-700 border-yellow-200";
               actionText = tr("Richiesta inviata") + ":"; 
           } else if (isManual) {
@@ -137,7 +137,7 @@ export default function NewsFeed({ t }) {
                   </div>
 
                   <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border ${statusColor}`}>
-                      {isPending && <Hourglass size={10} />}
+                      {isPending && <img src="/var_icon.png" className="w-5 h-5 inline" />}
                       {isRejected && <XCircle size={10} />}
                       {!isPending && !isRejected && isManual && <ShieldAlert size={10} />}
                       {!isPending && !isRejected && !isManual && <CheckCircle size={10} />}

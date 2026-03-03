@@ -33,6 +33,7 @@ const TabContent = ({ id, activeTab, children }) => {
 // ==========================================
 const NAP_DICT = {
     // Generali
+    "Controllo VAR": "controllan cu VAR",
     "Punteggio Attuale": "O' Punteggio Tuojo",
     "Tornate a studiare!": "Jate a faticà!",
     "Sito in Aggiornamento": "Stamm facenn' e lavor'",

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { auth, db, getAllUsers, assignMatricolaToEventTeam, removeMatricolaFromEventTeam } from '@/lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, collection, query, orderBy, onSnapshot } from 'firebase/firestore';
-import { LayoutDashboard, Wrench, MonitorPlay, Radio, Settings, ShieldAlert, Loader2, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Wrench, MonitorPlay, Radio, Settings, ShieldAlert, Loader2, LogOut, Menu, X , ScanSearch} from 'lucide-react';
 
 // IMPORT DEI COMPONENTI SEPARATI
 import Login from '@/components/Login';
