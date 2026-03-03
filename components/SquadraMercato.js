@@ -220,7 +220,7 @@ export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers =
                         src={preloadedUsers.find(u => u.id === next.id)?.photoURL || `https://api.dicebear.com/9.x/notionists/svg?seed=${next.id}&backgroundColor=fecaca`}
                         className="w-8 h-8 rounded-full object-cover border border-white shadow-sm bg-red-50"
                     />
-                    <span className="text-sm text-gray-500 truncate">{prev.team ? prev.team : prev.name}</span>
+                    <span className="text-sm text-gray-500 truncate">{next.team ? next.team : next.name}</span>
                     </div>
                     <span className="font-bold text-sm text-gray-400">{next.score} pt</span>
                 </div>
