@@ -120,7 +120,10 @@ export default function ChallengeList({ currentUser, preloadedChallenges = [], t
   };
 
   const activeChallenges = challenges.filter(c => c.punti > 0 && !c.hidden && isRequestable(c.id, c.type));
-  const filteredList = activeChallenges.filter(c => c.titolo.toLowerCase().includes(searchTerm.toLowerCase()));
+  //const filteredList = activeChallenges.filter(c => c.titolo.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredList = activeChallenges
+    .filter(c => (c.titolo || '').toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => (a.titolo || '').localeCompare(b.titolo || ''));
   
   const pendingRequests = myRequests.filter(r => r.status === 'pending').map(req => {
         const originalChallenge = challenges.find(c => c.id === req.challengeId);

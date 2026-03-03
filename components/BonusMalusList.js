@@ -107,7 +107,7 @@ export default function BonusMalusList({ currentUser, preloadedChallenges = [] }
         <h2 className="text-2xl font-bold text-gray-900">Regolamento</h2>
         <p className="text-gray-400 text-xs mt-1 border-b border-gray-200 pb-4">
             Tocca una card per i dettagli. <br/>
-            I bonus con la <strong className="text-yellow-500">Corona</strong> valgono doppio per il tuo Capitano!
+            I bonus con la <strong className="text-yellow-500">Corona</strong> valgono doppio per il Capitano!
         </p>
       </div>
 

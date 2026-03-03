@@ -507,8 +507,10 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                                     <div className="flex items-center gap-2 flex-wrap mt-0.5">
                                         <span className="text-xs text-gray-500">
                                             Punti: <b>{player.punti || 0}</b>
-                                            {isCaptain && (player.puntiSerata > 0) && (
-                                                <span className="text-yellow-600 ml-1 font-bold tracking-tight">(+{player.puntiSerata} extra)</span>
+                                            {isCaptain && player.puntiSerata !== undefined && player.puntiSerata !== 0 && (
+                                                <span className={`ml-1 font-bold tracking-tight ${player.puntiSerata > 0 ? 'text-yellow-600' : 'text-red-500'}`}>
+                                                    (di cui {player.puntiSerata > 0 ? '+' : ''}{player.puntiSerata * 2} matricolata)
+                                                </span>
                                             )}
                                             {/* NUOVO: Mostra anche qui se non è capitano, ma ha punti live, se il flag è attivo */}
                                             {showEveningPoints && !isCaptain && player.puntiSerata !== undefined && player.puntiSerata !== 0 && (
