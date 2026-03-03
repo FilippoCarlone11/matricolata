@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// AGGIUNTO: toggleMatricolaBlur, updateSystemSettings
 import { updateUserRole, deleteUserDocument, getSystemSettings, toggleRegistrations, updateCacheSettings, toggleMatricolaBlur, updateSystemSettings } from '@/lib/firebase';
-import { Users, UserCheck, Crown, Trash2, Key, Search, Lock, Unlock, ShieldAlert, Zap, Clock, Save, Ghost, Wine, Shield } from 'lucide-react';
+import { Users, UserCheck, Crown, Trash2, Key, Search, Lock, Unlock, ShieldAlert, Zap, Clock, Save, Ghost, Wine, Shield, Eye } from 'lucide-react';
 
 export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     const tr = (text) => (t ? t(text) : text);
@@ -16,11 +15,15 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
   const [cacheEnabled, setCacheEnabled] = useState(true);
   const [cacheDuration, setCacheDuration] = useState(30);
   const [blurEnabled, setBlurEnabled] = useState(false);
-  const [showDrinkCount, setShowDrinkCount] = useState(true); // <--- NUOVO STATO DRINK
-  const [showSquadCount, setShowSquadCount] = useState(true); // <--- NUOVO STATO SQUADRE
-  const [showCaptainIcon, setShowCaptainIcon] = useState(true); // <--- NUOVO STATO CAPITANI
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  
+  // STATI VISUALIZZAZIONE CLASSIFICHE
+  const [showDrinkCount, setShowDrinkCount] = useState(true); 
+  const [showSquadCount, setShowSquadCount] = useState(true); 
+  const [showCaptainIcon, setShowCaptainIcon] = useState(true); 
+  const [showEveningPoints, setShowEveningPoints] = useState(false); // <--- NUOVO STATO PUNTI SERATA (Default spento per sorpresa)
+  
   const [settingsLoading, setSettingsLoading] = useState(true);
-  const [maintenanceMode, setMaintenanceMode] = useState(false); // <--- NUOVO STATO manutenzione
 
   const isSuperAdmin = currentUser?.role === 'super-admin';
 
@@ -39,10 +42,11 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                 setCacheDuration(settings?.cacheDuration ?? 30);
                 setBlurEnabled(settings?.matricolaBlur ?? false);
                 setMaintenanceMode(settings?.maintenanceMode ?? false);
-                // Carica i nuovi settings (default true se non esistono ancora)
+                
                 setShowDrinkCount(settings?.showDrinkCount ?? true);
                 setShowSquadCount(settings?.showSquadCount ?? true);
                 setShowCaptainIcon(settings?.showCaptainIcon ?? true);
+                setShowEveningPoints(settings?.showEveningPoints ?? false); // <--- CARICA IL NUOVO FLAG
             } catch (e) { console.error(e); }
             finally { setSettingsLoading(false); }
         };
@@ -91,7 +95,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     }
   };
 
-  // NUOVA FUNZIONE: Salva i settings visivi delle classifiche
+  // FUNZIONE UNIFICATA: Salva i settings visivi delle classifiche
   const handleToggleVisualSetting = async (settingName, currentValue) => {
       const newState = !currentValue;
       
@@ -99,6 +103,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
       if (settingName === 'showDrinkCount') setShowDrinkCount(newState);
       if (settingName === 'showSquadCount') setShowSquadCount(newState);
       if (settingName === 'showCaptainIcon') setShowCaptainIcon(newState);
+      if (settingName === 'showEveningPoints') setShowEveningPoints(newState); // <--- OTTIMISTICO NUOVO FLAG
 
       try {
           await updateSystemSettings({ [settingName]: newState });
@@ -108,6 +113,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
           if (settingName === 'showDrinkCount') setShowDrinkCount(currentValue);
           if (settingName === 'showSquadCount') setShowSquadCount(currentValue);
           if (settingName === 'showCaptainIcon') setShowCaptainIcon(currentValue);
+          if (settingName === 'showEveningPoints') setShowEveningPoints(currentValue); // <--- REVERT NUOVO FLAG
       }
   };
 
@@ -152,7 +158,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
       {isSuperAdmin && (
         <div className="space-y-4 mb-8">
             
-            {/* BLOCCO 1: CONTROLLI SISTEMA (Esistente) */}
+            {/* BLOCCO 1: CONTROLLI SISTEMA */}
             <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full blur-3xl opacity-20 -mr-10 -mt-10"></div>
                 
@@ -233,6 +239,8 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                             {blurEnabled ? tr('ATTIVO') : tr('SPENTO')}
                         </button>
                     </div>
+                    
+                    {/* MANUTENZIONE */}
                     <div className="flex items-center justify-between bg-red-900/20 p-4 rounded-xl border border-red-900/50 md:col-span-2">
                     <div>
                         <span className="block text-sm font-bold text-red-400 flex items-center gap-2">
@@ -253,14 +261,14 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                 </div>
             </div>
 
-            {/* BLOCCO 2: IMPOSTAZIONI VISIVE CLASSIFICHE (Nuovo) */}
+            {/* BLOCCO 2: IMPOSTAZIONI VISIVE CLASSIFICHE */}
             <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
                 <div className="flex items-center gap-2 mb-4 border-b border-gray-100 pb-3">
                      <Users className="text-blue-500" size={20} />
                      <h3 className="font-bold text-lg text-gray-900 leading-tight">Aspetto Classifiche</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     
                     {/* TOGGLE DRINK */}
                     <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100">
@@ -303,6 +311,20 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                             <div className="w-4 h-4 bg-white rounded-full shadow-sm"></div>
                         </button>
                     </div>
+                    
+                    {/* NUOVO: TOGGLE PUNTI SERATA */}
+                    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <div className="flex items-center gap-2">
+                            <Eye size={16} className={showEveningPoints ? "text-emerald-500" : "text-gray-400"}/>
+                            <span className="text-xs font-bold text-gray-700">Mostra Punti Serata</span>
+                        </div>
+                        <button 
+                            onClick={() => handleToggleVisualSetting('showEveningPoints', showEveningPoints)}
+                            className={`w-10 h-5 rounded-full p-0.5 transition-colors flex items-center ${showEveningPoints ? 'bg-emerald-500 justify-end' : 'bg-gray-300 justify-start'}`}
+                        >
+                            <div className="w-4 h-4 bg-white rounded-full shadow-sm"></div>
+                        </button>
+                    </div>
 
                 </div>
             </div>
@@ -310,7 +332,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
         </div>
       )}
 
-      {/* DASHBOARD CONTEGGI */}
+      {/* DASHBOARD CONTEGGI E LISTA UTENTI... (resto del codice identico) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
             { label: tr('Matricole'), count: counts.matricola, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -328,7 +350,6 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
           ))}
       </div>
 
-      {/* BARRA DI RICERCA */}
       <div className="relative mb-6">
         <Search className="absolute left-4 top-3.5 text-gray-400" size={18} />
         <input 
@@ -340,12 +361,10 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
         />
       </div>
 
-      {/* LISTA UTENTI */}
       <div className="space-y-4">
         {filteredUsers.map(user => (
           <div key={user.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
              
-             {/* HEADER CARD */}
              <div className="p-4 flex items-start gap-3">
                 <div className="relative">
                     <img src={user.photoURL || '/default-avatar.png'} className="w-12 h-12 rounded-full bg-gray-50 object-cover border border-gray-100" />
@@ -381,7 +400,6 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                 </div>
              </div>
 
-             {/* SELETTORE RUOLO */}
              {isSuperAdmin && (
                  <div className="bg-gray-50 p-3 border-t border-gray-100">
                     <div className="flex items-center justify-between gap-1 bg-gray-200/50 p-1 rounded-xl">

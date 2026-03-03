@@ -36,7 +36,8 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   const [sysSettings, setSysSettings] = useState({
       showDrinkCount: true,
       showSquadCount: true,
-      showCaptainIcon: true
+      showCaptainIcon: true,
+      showEveningPoints: false // <--- NUOVO: Default spento
   });
 
   const [showBcienzEffect, setShowBcienzEffect] = useState(false);
@@ -51,14 +52,15 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
               setSysSettings({
                   showDrinkCount: s?.showDrinkCount !== false,
                   showSquadCount: s?.showSquadCount !== false,
-                  showCaptainIcon: s?.showCaptainIcon !== false
+                  showCaptainIcon: s?.showCaptainIcon !== false,
+                  showEveningPoints: s?.showEveningPoints === true // <--- NUOVO: Estrazione del flag
               });
           } catch (e) { console.error("Errore fetch settings", e); }
       };
       fetchSettings();
   }, []);
 
-  const { showDrinkCount, showSquadCount, showCaptainIcon } = sysSettings;
+  const { showDrinkCount, showSquadCount, showCaptainIcon, showEveningPoints } = sysSettings;
 
   useEffect(() => {
     if (preloadedUsers.length > 0) {
@@ -87,7 +89,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
               if (matr) {
                 const isCaptain = allenatore.captainId === mid;
                 const puntiBase = matr.punti || 0;
-                // IL FIX DEFINITIVO: Aggiunge puntiSerata solo se è capitano
                 const puntiExtra = isCaptain ? (matr.puntiSerata || 0) : 0; 
                 fantaPuntiTotali += (puntiBase + puntiExtra);
               }
@@ -174,9 +175,14 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
 
   const refreshAdminUser = async () => {
     if (!adminSelectedUser) return;
+    
+    // Versione Fixata e robusta
     const freshData = await getUserData(adminSelectedUser.id);
     setAdminSelectedUser(freshData); 
-    setMatricole(prev => prev.map(u => u.id === freshData.id ? freshData : u).sort((a, b) => b.punti - a.punti));
+    
+    const updatedUsers = preloadedUsers.map(u => u.id === freshData.id ? freshData : u);
+    calculateLeaderboards(updatedUsers);
+    
     await loadUserHistory(adminSelectedUser.id);
 
     if (showDrinkCount) {
@@ -277,9 +283,16 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                             )}
                         </div>
                     </div>
-                    <div className="bg-white px-4 py-3 rounded-xl shadow-sm border border-[#B41F35]/20 text-center min-w-[80px] z-10">
+                    <div className="bg-white px-4 py-3 rounded-xl shadow-sm border border-[#B41F35]/20 text-center min-w-[80px] z-10 flex flex-col items-center justify-center">
                         <span className="block text-[10px] uppercase text-gray-400 font-bold">Punti</span>
-                        <span className="block text-2xl font-black text-[#B41F35]">{adminSelectedUser.punti || 0}</span>
+                        <span className="block text-2xl font-black text-[#B41F35] leading-none">{adminSelectedUser.punti || 0}</span>
+                        
+                        {/* NUOVO: Punti Serata Admin Header */}
+                        {showEveningPoints && adminSelectedUser.puntiSerata !== undefined && adminSelectedUser.puntiSerata !== 0 && (
+                            <span className={`block text-[10px] font-bold mt-1 ${adminSelectedUser.puntiSerata > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                {adminSelectedUser.puntiSerata > 0 ? '+' : ''}{adminSelectedUser.puntiSerata} matricolata
+                            </span>
+                        )}
                     </div>
                 </div>
 
@@ -449,9 +462,17 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                         )}
                     </div>
                 </div>
-                <div className="text-right pl-2">
-                    <span className="block text-2xl font-black text-gray-800 leading-none">{isFanta ? item.fantaPunti : item.punti}</span>
-                    <span className="text-[9px] uppercase font-bold text-gray-400">Pt</span>
+                <div className="text-right pl-2 flex flex-col justify-center items-end">
+                    <div>
+                        <span className="inline-block text-2xl font-black text-gray-800 leading-none">{isFanta ? item.fantaPunti : item.punti}</span>
+                        <span className="inline-block text-[9px] uppercase font-bold text-gray-400 ml-1">Pt</span>
+                    </div>
+                    {/* NUOVO: Mostra i punti serata sotto il punteggio totale */}
+                    {!isFanta && showEveningPoints && item.puntiSerata !== undefined && item.puntiSerata !== 0 && (
+                        <span className={`block text-[10px] font-bold mt-1 ${item.puntiSerata > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {item.puntiSerata > 0 ? '+' : ''}{item.puntiSerata} matricolata
+                        </span>
+                    )}
                 </div>
             </div>
             );
@@ -488,6 +509,12 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                                             Punti: <b>{player.punti || 0}</b>
                                             {isCaptain && (player.puntiSerata > 0) && (
                                                 <span className="text-yellow-600 ml-1 font-bold tracking-tight">(+{player.puntiSerata} extra)</span>
+                                            )}
+                                            {/* NUOVO: Mostra anche qui se non è capitano, ma ha punti live, se il flag è attivo */}
+                                            {showEveningPoints && !isCaptain && player.puntiSerata !== undefined && player.puntiSerata !== 0 && (
+                                                <span className={`ml-1 font-bold tracking-tight ${player.puntiSerata > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                    di cui {player.puntiSerata > 0 ? '+' : ''}{player.puntiSerata} matricolata
+                                                </span>
                                             )}
                                         </span>
                                         {showCaptainIcon && isCaptain && <span className="text-[9px] bg-yellow-200 text-yellow-800 px-1 rounded font-bold">CAPITANO</span>}
