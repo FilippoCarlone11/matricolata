@@ -137,7 +137,7 @@ export default function NewsFeed({ t }) {
                   </div>
 
                   <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border ${statusColor}`}>
-                      {isPending && <img src="/var_icon.png" className="w-5 h-5 inline" />}
+                      {isPending && <img src="/var_icon.png" className="w-5 h-5 inline " />}
                       {isRejected && <XCircle size={10} />}
                       {!isPending && !isRejected && isManual && <ShieldAlert size={10} />}
                       {!isPending && !isRejected && !isManual && <CheckCircle size={10} />}
