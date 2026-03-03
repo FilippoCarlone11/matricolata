@@ -89,7 +89,7 @@ export default function NewsFeed({ t }) {
               actionText = tr("Richiesta inviata") + ":"; 
           } else if (isManual) {
               statusLabel = tr("Admin");
-              statusColor = "bg-purple-100 text-purple-700 border-purple-200";
+              statusColor = "bg-black-100 text-black-700 border-black-200";
               
               if (isHidden) {
                   // Nota: Assicurati che le chiavi nel dizionario in page.js coincidano esattamente
@@ -136,12 +136,12 @@ export default function NewsFeed({ t }) {
                       </div>
                   </div>
 
-                  <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border ${statusColor}`}>
-                      {isPending && <img src="/var_icon.png" className="w-5 h-5 inline " />}
-                      {isRejected && <XCircle size={10} />}
-                      {!isPending && !isRejected && isManual && <ShieldAlert size={10} />}
-                      {!isPending && !isRejected && !isManual && <CheckCircle size={10} />}
-                      {statusLabel}
+                  <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border ${statusColor} ${isPending ? 'animate-pulse' : ''}`}>
+                    {isPending && <img src="/var_icon.png" className="w-5 h-5 inline" />}
+                    {isRejected && <XCircle size={10} />}
+                    {!isPending && !isRejected && isManual && <ShieldAlert size={10} />}
+                    {!isPending && !isRejected && !isManual && <CheckCircle size={10} />}
+                    {statusLabel}
                   </span>
                 </div>
 
