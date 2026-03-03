@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createChallenge, getChallenges, deleteChallenge, updateChallenge } from '@/lib/firebase';
-import { Trash2, Plus, Zap, Eye, EyeOff, Repeat, AlignLeft, AlertCircle, Edit2, X, Save } from 'lucide-react';
+import { Trash2, Plus, Zap, Eye, EyeOff, Repeat, AlignLeft, AlertCircle, Edit2, X, Save, Crown, Search } from 'lucide-react';
 
 // --- COMPONENTE CARD CON FLIP ---
 const ChallengeCard = ({ c, onDelete, onEdit, t }) => {
@@ -23,17 +23,24 @@ const ChallengeCard = ({ c, onDelete, onEdit, t }) => {
       >
         {/* FRONTE */}
         <div 
-          className="absolute inset-0 bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center"
+          className={`absolute inset-0 bg-white p-3 rounded-xl border shadow-sm flex justify-between items-center ${c.isEveningEvent ? 'border-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.2)]' : 'border-gray-100'}`}
           style={{ backfaceVisibility: 'hidden' }}
         >
             <div className="flex items-center gap-3">
                 <span className="text-2xl w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full select-none">{c.icon}</span>
                 <div>
                     <p className="font-bold text-sm text-gray-900 leading-tight pr-2 truncate max-w-[180px]">{c.titolo}</p>
-                    <div className="flex gap-2 mt-0.5">
+                    <div className="flex gap-2 mt-0.5 flex-wrap">
                         <span className={`text-[10px] font-bold px-1.5 rounded ${c.punti > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                             {c.punti > 0 ? '+' : ''}{c.punti} pt
                         </span>
+                        
+                        {c.isEveningEvent && (
+                          <span className="text-[10px] bg-yellow-100 text-yellow-800 px-1.5 rounded font-bold flex items-center gap-0.5 border border-yellow-200">
+                              <Crown size={9}/> x2 CAP
+                          </span>
+                        )}
+
                         {c.type === 'daily' && (
                         <span className="text-[10px] bg-[#B41F35]/10 text-[#B41F35] px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
                             <Repeat size={10}/> {tr("Giornaliero")}
@@ -62,7 +69,7 @@ const ChallengeCard = ({ c, onDelete, onEdit, t }) => {
 
         {/* RETRO */}
         <div 
-          className="absolute inset-0 bg-gray-100 p-3 rounded-xl border border-gray-200 shadow-inner flex items-center justify-center text-center"
+          className={`absolute inset-0 bg-gray-100 p-3 rounded-xl border shadow-inner flex items-center justify-center text-center ${c.isEveningEvent ? 'border-yellow-400' : 'border-gray-200'}`}
           style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
         >
            <p className="text-xs text-gray-600 font-medium leading-relaxed px-4 overflow-hidden">
@@ -85,13 +92,17 @@ export default function AdminChallenges({t}) {
     icon: '', 
     type: 'oneshot', 
     description: '', 
-    hidden: false 
+    hidden: false,
+    isEveningEvent: false
   });
   
   const [editingId, setEditingId] = useState(null);
   const [errors, setErrors] = useState({ titolo: false, punti: false, icon: false });
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('bonus_visible'); 
+  
+  // STATO PER LA RICERCA
+  const [searchQuery, setSearchQuery] = useState('');
 
   const PRESET_EMOJIS = [
     '🏆', '⚽', '🍺', '🍹', '🍕', '🧹', '💀', '💩', 
@@ -124,7 +135,7 @@ export default function AdminChallenges({t}) {
     setErrors({ titolo: false, punti: false, icon: false });
     
     const isHidden = form.hidden;
-    const finalPunti = parseInt(form.punti);
+    const finalPunti = parseInt(form.punti, 10);
     const isMalus = finalPunti < 0;
 
     if (editingId) {
@@ -143,7 +154,7 @@ export default function AdminChallenges({t}) {
         });
     }
     
-    setForm({ titolo: '', punti: '', icon: '', type: 'oneshot', description: '', hidden: false });
+    setForm({ titolo: '', punti: '', icon: '', type: 'oneshot', description: '', hidden: false, isEveningEvent: false });
     
     if (isHidden) {
         setActiveFilter(isMalus ? 'malus_hidden' : 'bonus_hidden');
@@ -161,14 +172,15 @@ export default function AdminChallenges({t}) {
           icon: challenge.icon || '',
           type: challenge.type || 'oneshot',
           description: challenge.description || '',
-          hidden: challenge.hidden || false
+          hidden: challenge.hidden || false,
+          isEveningEvent: challenge.isEveningEvent || false 
       });
       setEditingId(challenge.id);
       window.scrollTo({ top: 0, behavior: 'smooth' }); 
   };
 
   const handleCancelEdit = () => {
-      setForm({ titolo: '', punti: '', icon: '', type: 'oneshot', description: '', hidden: false });
+      setForm({ titolo: '', punti: '', icon: '', type: 'oneshot', description: '', hidden: false, isEveningEvent: false });
       setEditingId(null);
       setErrors({ titolo: false, punti: false, icon: false });
   };
@@ -181,23 +193,28 @@ export default function AdminChallenges({t}) {
     }
   };
 
-  // AGGIORNATO: Ora filtra E ordina in ordine alfabetico
   const getFilteredList = () => {
     return challenges
       .filter(c => {
         const isBonus = c.punti > 0;
         const isHidden = c.hidden === true;
-
+        
+        // 1. Filtro per Categoria
+        let matchesFilter = false;
         switch(activeFilter) {
-          case 'bonus_visible': return isBonus && !isHidden;
-          case 'malus_visible': return !isBonus && !isHidden;
-          case 'bonus_hidden': return isBonus && isHidden;
-          case 'malus_hidden': return !isBonus && isHidden;
-          default: return true;
+          case 'bonus_visible': matchesFilter = isBonus && !isHidden; break;
+          case 'malus_visible': matchesFilter = !isBonus && !isHidden; break;
+          case 'bonus_hidden': matchesFilter = isBonus && isHidden; break;
+          case 'malus_hidden': matchesFilter = !isBonus && isHidden; break;
+          default: matchesFilter = true;
         }
+        
+        // 2. Filtro per Ricerca Testuale (Case Insensitive)
+        const matchesSearch = c.titolo && c.titolo.toLowerCase().includes(searchQuery.toLowerCase());
+
+        return matchesFilter && matchesSearch;
       })
       .sort((a, b) => {
-        // Ordina in modo "case insensitive" (ignora maiuscole/minuscole)
         const titleA = a.titolo ? a.titolo.toLowerCase() : '';
         const titleB = b.titolo ? b.titolo.toLowerCase() : '';
         return titleA.localeCompare(titleB);
@@ -320,6 +337,17 @@ export default function AdminChallenges({t}) {
                 {form.hidden ? <EyeOff size={20}/> : <Eye size={20}/>}
             </label>
         </div>
+
+        {/* 👑 NUOVO TOGGLE: VALIDO PER RADDOPPIO CAPITANO 👑 */}
+        <label className={`mt-2 cursor-pointer w-full py-3 px-4 flex items-center justify-between rounded-xl border-2 transition-all ${form.isEveningEvent ? 'bg-yellow-50 border-yellow-400 text-yellow-800 shadow-sm' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wide">
+                <Crown size={16} className={form.isEveningEvent ? 'text-yellow-500' : 'text-gray-400'}/> 
+                Bonus Serata (x2 Capitano)
+            </div>
+            <input type="checkbox" checked={form.isEveningEvent} onChange={e => setForm({...form, isEveningEvent: e.target.checked})} className="hidden"/>
+            <div className={`w-5 h-5 rounded-full border-4 transition-colors ${form.isEveningEvent ? 'border-yellow-500 bg-yellow-500' : 'border-gray-300 bg-white'}`}></div>
+        </label>
+
         <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide pt-1">
             {PRESET_EMOJIS.map(emoji => (
                 <button key={emoji} type="button" onClick={() => setForm({...form, icon: emoji})} className={`min-w-[36px] h-9 rounded-lg text-lg flex items-center justify-center transition-all ${form.icon === emoji ? 'bg-blue-600 text-white scale-110 shadow-md' : 'bg-white border hover:bg-gray-50'}`}>
@@ -335,11 +363,33 @@ export default function AdminChallenges({t}) {
       </form>
 
       {/* FILTRI */}
-      <div className="flex gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
+      <div className="flex gap-2 mb-3 overflow-x-auto pb-2 scrollbar-hide">
         <FilterButton id="bonus_visible" label="Bonus" icon={Plus} colorClass="bg-green-50 border-green-500 text-green-700" />
         <FilterButton id="malus_visible" label="Malus" icon={Trash2} colorClass="bg-red-50 border-red-500 text-red-700" />
         <FilterButton id="bonus_hidden" label="Bonus Segreti" icon={EyeOff} colorClass="bg-gray-100 border-gray-500 text-gray-700" />
         <FilterButton id="malus_hidden" label="Malus Segreti" icon={EyeOff} colorClass="bg-gray-800 border-gray-900 text-white" />
+      </div>
+
+      {/* BARRA DI RICERCA */}
+      <div className="relative mb-6">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <Search size={18} className="text-gray-400" />
+        </div>
+        <input
+          type="text"
+          placeholder="Cerca bonus o malus..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400 transition-all shadow-sm"
+        />
+        {searchQuery && (
+          <button 
+            onClick={() => setSearchQuery('')}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
 
       {/* LISTA SUDDIVISA */}
@@ -377,7 +427,7 @@ export default function AdminChallenges({t}) {
         {/* NESSUN ELEMENTO */}
         {filteredList.length === 0 && (
             <div className="text-center py-8 text-gray-400 text-xs italic bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                Nessun elemento in questa categoria.
+                {searchQuery ? "Nessun risultato per la tua ricerca." : "Nessun elemento in questa categoria."}
             </div>
         )}
 

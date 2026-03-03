@@ -8,7 +8,7 @@ import {
     manualAddPoints, 
     getChallenges, 
     assignExistingChallenge,
-    getSystemSettings // <--- IMPORTATO IL CARICAMENTO SETTINGS
+    getSystemSettings 
 } from '@/lib/firebase';
 import { Trophy, User, Users, Shield, X, Crown, ArrowLeft, Zap, PlusCircle, Calendar, Trash2, EyeOff, Loader2, Wine } from 'lucide-react';
 
@@ -86,7 +86,10 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
               const matr = users.find(u => u.id === mid);
               if (matr) {
                 const isCaptain = allenatore.captainId === mid;
-                fantaPuntiTotali += (matr.punti || 0) * (isCaptain ? 2 : 1);
+                const puntiBase = matr.punti || 0;
+                // IL FIX DEFINITIVO: Aggiunge puntiSerata solo se è capitano
+                const puntiExtra = isCaptain ? (matr.puntiSerata || 0) : 0; 
+                fantaPuntiTotali += (puntiBase + puntiExtra);
               }
             });
           }
@@ -481,8 +484,13 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                                 <div className="flex-1">
                                     <p className="font-bold text-sm text-gray-900">{player.displayName}</p>
                                     <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                                        <span className="text-xs text-gray-500">Punti: <b>{player.punti || 0}</b></span>
-                                        {showCaptainIcon && isCaptain && <span className="text-[9px] bg-yellow-200 text-yellow-800 px-1 rounded font-bold">x2 CAPITANO</span>}
+                                        <span className="text-xs text-gray-500">
+                                            Punti: <b>{player.punti || 0}</b>
+                                            {isCaptain && (player.puntiSerata > 0) && (
+                                                <span className="text-yellow-600 ml-1 font-bold tracking-tight">(+{player.puntiSerata} extra)</span>
+                                            )}
+                                        </span>
+                                        {showCaptainIcon && isCaptain && <span className="text-[9px] bg-yellow-200 text-yellow-800 px-1 rounded font-bold">CAPITANO</span>}
                                         {showDrinkCount && drinks > 0 && (
                                             <span className="text-[9px] bg-purple-100 text-purple-700 border border-purple-200 px-1 rounded font-bold shrink-0 flex items-center gap-0.5">
                                                 <Wine size={8}/> x{drinks}
