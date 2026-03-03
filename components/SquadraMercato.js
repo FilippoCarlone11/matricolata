@@ -82,7 +82,7 @@ export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers =
   const getRanking = () =>
   preloadedUsers
     .filter(u => u.role !== 'matricola')   // <-- UGUALE a Classifiche.jsx, nessun altro filtro
-    .map(u => ({ id: u.id, name: u.teamName, score: calcFantaPunti(u, preloadedUsers) }))
+    .map(u => ({ id: u.id, name: u.displayName ,team: u.teamName, score: calcFantaPunti(u, preloadedUsers) }))
     .sort((a, b) => b.score - a.score);
 
   const myScore = calcFantaPunti(currentUser, preloadedUsers);
@@ -129,43 +129,47 @@ export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers =
             <Users className="text-[#B41F35]" /> {tr("La Tua Squadra")}
           </h2>
           {mySquadDetails.length > 0 ? (
-            <div className="space-y-3">
-              {mySquadDetails.map((player) => {
-                const isCaptain = currentUser.captainId === player.id;
-                const pts = player.punti || 0;
-                const serata = player.puntiSerata || 0;
-                return (
-                  <div key={player.id} className={`flex items-center justify-between p-4 rounded-xl border ${isCaptain ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100 bg-gray-50'}`}>
-                    <div className="flex items-center gap-3">
-                      <img src={player.photoURL || '/default-avatar.png'} className="w-12 h-12 rounded-full border-2 border-white shadow" />
-                      <div>
-                        <p className="font-bold text-sm flex items-center gap-1">
-                          {player.displayName}
-                          {isCaptain && <Crown size={14} className="text-yellow-500" />}
-                        </p>
-                        {isCaptain ? (
-                          <p className="text-xs text-yellow-600 font-semibold">
-                            {pts} pt{serata !== 0 && <span> +{serata} serata</span>}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-gray-500">{pts} pt</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <span className={`text-lg font-black ${isCaptain ? 'text-yellow-600' : 'text-[#B41F35]'}`}>
-                        {isCaptain ? pts + serata : pts}
-                      </span>
-                      <p className="text-[10px] text-gray-400">punti</p>
-                    </div>
-                  </div>
-                );
-              })}
-              
+  <div className="space-y-3">
+    {[...mySquadDetails].sort((a, b) => {
+      const aCap = currentUser.captainId === a.id ? -1 : 1;
+      const bCap = currentUser.captainId === b.id ? -1 : 1;
+      return aCap - bCap;
+    }).map((player) => {
+      const isCaptain = currentUser.captainId === player.id;
+      const pts = player.punti || 0;
+      const serata = player.puntiSerata || 0;
+      return (
+        <div key={player.id} className={`flex items-center justify-between p-4 rounded-xl border ${isCaptain ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100 bg-gray-50'}`}>
+          <div className="flex items-center gap-3">
+            <img src={player.photoURL || '/default-avatar.png'} className="w-12 h-12 rounded-full border-2 border-white shadow" />
+            <div>
+              <p className="font-bold text-sm flex items-center gap-1">
+                {player.displayName}
+                {isCaptain && <Crown size={14} className="text-yellow-500" />}
+              </p>
+              {isCaptain ? (
+                <p className="text-xs text-yellow-600 font-semibold">
+                  {pts} pt{serata !== 0 && <span> +{serata} serata</span>}
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500">{pts} pt</p>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-6 text-gray-400 text-sm">Squadra vuota.</div>
-          )}
+          </div>
+          <div className="text-right">
+            <span className={`text-lg font-black ${isCaptain ? 'text-yellow-600' : 'text-[#B41F35]'}`}>
+              {isCaptain ? pts + serata : pts}
+            </span>
+            <p className="text-[10px] text-gray-400">punti</p>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+) : (
+  <div className="text-center py-6 text-gray-400 text-sm">Squadra vuota.</div>
+)}
+ 
         </div>
 
         {/* Posizione in classifica – solo la propria card + vicini */}
@@ -185,7 +189,7 @@ export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers =
                         src={preloadedUsers.find(u => u.id === prev.id)?.photoURL || `https://api.dicebear.com/9.x/notionists/svg?seed=${prev.id}&backgroundColor=fecaca`}
                         className="w-8 h-8 rounded-full object-cover border border-white shadow-sm bg-red-50"
                     />
-                    <span className="text-sm text-gray-500 truncate">{prev.name}</span>
+                    <span className="text-sm text-gray-500 truncate">{prev.team ? prev.team : prev.name}</span>
                     </div>
                     <span className="font-bold text-sm text-gray-400">{prev.score} pt</span>
                 </div>
@@ -216,7 +220,7 @@ export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers =
                         src={preloadedUsers.find(u => u.id === next.id)?.photoURL || `https://api.dicebear.com/9.x/notionists/svg?seed=${next.id}&backgroundColor=fecaca`}
                         className="w-8 h-8 rounded-full object-cover border border-white shadow-sm bg-red-50"
                     />
-                    <span className="text-sm text-gray-500 truncate">{next.name}</span>
+                    <span className="text-sm text-gray-500 truncate">{prev.team ? prev.team : prev.name}</span>
                     </div>
                     <span className="font-bold text-sm text-gray-400">{next.score} pt</span>
                 </div>
@@ -248,7 +252,11 @@ export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers =
 
         {mySquadDetails.length > 0 ? (
           <div className="space-y-3">
-            {mySquadDetails.map((player) => {
+            {mySquadDetails.sort((a, b) => {
+  const aCap = currentUser.captainId === a.id ? -1 : 1;
+  const bCap = currentUser.captainId === b.id ? -1 : 1;
+  return aCap - bCap;
+}).map((player) => {
               const isCaptain = currentUser.captainId === player.id;
               return (
                 <div key={player.id} className={`flex items-center justify-between p-3 rounded-xl border ${isCaptain ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100'}`}>

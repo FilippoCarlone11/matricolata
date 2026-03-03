@@ -493,7 +493,11 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                 </div>
                 
                 <div className="space-y-3">
-                    {teamDetails.map(player => {
+                    {[...teamDetails].sort((a, b) => {
+                        const aCap = selectedTeam.captainId === a.id ? -1 : 1;
+                        const bCap = selectedTeam.captainId === b.id ? -1 : 1;
+                        return aCap - bCap;
+                        }).map(player => {
                             const isCaptain = selectedTeam.captainId === player.id;
                             const drinks = drinkCounts[player.id] || 0; 
                             return (
