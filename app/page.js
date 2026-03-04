@@ -446,7 +446,7 @@ export default function Home() {
             </TabContent>
 
             <TabContent id="percorso" activeTab={activeTab}>
-                <StoricoPunti currentUser={userData} />
+                <StoricoPunti currentUser={userData} systemSettings={systemSettings}/>
             </TabContent>
           </>
         ) : (

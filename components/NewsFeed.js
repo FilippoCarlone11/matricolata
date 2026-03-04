@@ -155,8 +155,15 @@ export default function NewsFeed({ t, systemSettings }) {
           }
 
           return (
+            
             <div key={item.id} className={cardOpacity}>
-              
+                <div className="flex justify-start mt-2">
+                {isFeedCacheEnabled && (
+                  <span className="text-[10px] text-gray-400 flex items-center gap-1 uppercase font-bold bg-gray-100 px-2 py-1 rounded-full">
+                    <Clock size={10} /> Aggiornato ogni {feedCacheMinutes} min
+                  </span>
+                )}
+              </div>
               {showDivider && (
                 <div className="flex items-center justify-center my-6">
                     <div className="h-px bg-gray-200 w-12"></div>

@@ -175,142 +175,152 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
         <div className="space-y-4 mb-8">
             
             {/* BLOCCO 1: CONTROLLI SISTEMA */}
-            <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full blur-3xl opacity-20 -mr-10 -mt-10"></div>
-                
-                <div className="flex items-center gap-2 mb-6 border-b border-slate-700 pb-3 relative z-10">
-                     <ShieldAlert className="text-yellow-400" size={20} />
-                     <h3 className="font-bold text-lg leading-tight">{tr("System Control")}</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
-                    {/* ISCRIZIONI */}
-                    <div className="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700">
-                        <div>
-                            <span className="block text-sm font-bold text-gray-200">Registrazioni</span>
-                            <span className="text-[10px] text-gray-400">{tr("Permetti nuovi iscritti")}</span>
-                        </div>
-                        <button 
-                            onClick={handleToggleReg}
-                            disabled={settingsLoading}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wide transition-all ${
-                                regOpen ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-red-500 text-white'
-                            }`}
-                        >
-                            {regOpen ? <><Unlock size={14}/> ON</> : <><Lock size={14}/> OFF</>}
-                        </button>
-                    </div>
-
-                    {/* CACHE DATI */}
-                    <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                        <div className="flex items-center justify-between mb-3">
-                            <div>
-                                <span className="block text-sm font-bold text-gray-200 flex items-center gap-2">
-                                    Cache Dati <Zap size={14} className={cacheEnabled ? "text-yellow-400 fill-yellow-400" : "text-gray-500"}/> 
-                                </span>
-                                <span className="text-[10px] text-gray-400">Risparmio letture DB</span>
-                            </div>
-                            <button 
-                                onClick={() => saveCacheSettings(!cacheEnabled, cacheDuration)}
-                                disabled={settingsLoading}
-                                className={`w-12 h-6 rounded-full p-1 transition-colors flex items-center ${
-                                    cacheEnabled ? 'bg-blue-600 justify-end' : 'bg-gray-600 justify-start'
-                                }`}
-                            >
-                                <div className="w-4 h-4 bg-white rounded-full shadow-md"></div>
-                            </button>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg">
-                            <Clock size={14} className="text-slate-400"/>
-                            <span className="text-xs text-slate-300">Reset ogni:</span>
-                            <input 
-                                type="number" 
-                                value={cacheDuration}
-                                onChange={(e) => setCacheDuration(e.target.value)}
-                                className="w-12 bg-transparent text-center text-sm font-bold text-white border-b border-slate-600 focus:border-blue-500 outline-none"
-                            />
-                            <span className="text-xs text-slate-300">min</span>
-                            <button onClick={() => saveCacheSettings(cacheEnabled, cacheDuration)} className="ml-auto text-blue-400 hover:text-white transition-colors">
-                                <Save size={16} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* CACHE FEED */}
-                    <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                        <div className="flex items-center justify-between mb-3">
-                            <div>
-                                <span className="block text-sm font-bold text-gray-200 flex items-center gap-2">
-                                    Cache Feed <Clock size={14} className={feedCacheEnabled ? "text-green-400" : "text-gray-500"}/> 
-                                </span>
-                                <span className="text-[10px] text-gray-400">Ritardo aggiornamento news</span>
-                            </div>
-                            <button 
-                                onClick={() => saveFeedCacheSettings(!feedCacheEnabled, feedCacheDuration)}
-                                disabled={settingsLoading}
-                                className={`w-12 h-6 rounded-full p-1 transition-colors flex items-center ${
-                                    feedCacheEnabled ? 'bg-green-600 justify-end' : 'bg-gray-600 justify-start'
-                                }`}
-                            >
-                                <div className="w-4 h-4 bg-white rounded-full shadow-md"></div>
-                            </button>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg">
-                            <Clock size={14} className="text-slate-400"/>
-                            <span className="text-xs text-slate-300">Reset ogni:</span>
-                            <input 
-                                type="number" 
-                                value={feedCacheDuration}
-                                onChange={(e) => setFeedCacheDuration(e.target.value)}
-                                className="w-12 bg-transparent text-center text-sm font-bold text-white border-b border-slate-600 focus:border-green-500 outline-none"
-                            />
-                            <span className="text-xs text-slate-300">min</span>
-                            <button onClick={() => saveFeedCacheSettings(feedCacheEnabled, feedCacheDuration)} className="ml-auto text-green-400 hover:text-white transition-colors">
-                                <Save size={16} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* MATRICOLA BLUR */}
-                    <div className="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700 md:col-span-2">
-                        <div>
-                            <span className="block text-sm font-bold text-gray-200 flex items-center gap-2">
-                               {tr("Blackout Matricole")} <Ghost size={14} className={blurEnabled ? "text-purple-400" : "text-gray-500"}/>
-                            </span>
-                            <span className="text-[10px] text-gray-400">Oscura il sito alle matricole</span>
-                        </div>
-                        <button 
-                            onClick={handleToggleBlur}
-                            disabled={settingsLoading}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wide transition-all ${
-                                blurEnabled ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'bg-gray-600 text-gray-300'
-                            }`}
-                        >
-                            {blurEnabled ? tr('ATTIVO') : tr('SPENTO')}
-                        </button>
+                <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full blur-3xl opacity-20 -mr-10 -mt-10"></div>
+                    
+                    <div className="flex items-center gap-2 mb-6 border-b border-slate-700 pb-3 relative z-10">
+                        <ShieldAlert className="text-yellow-400" size={20} />
+                        <h3 className="font-bold text-lg leading-tight">{tr("System Control")}</h3>
                     </div>
                     
-                    {/* MANUTENZIONE */}
-                    <div className="flex items-center justify-between bg-red-900/20 p-4 rounded-xl border border-red-900/50 md:col-span-2">
-                    <div>
-                        <span className="block text-sm font-bold text-red-400 flex items-center gap-2">
-                           <ShieldAlert size={14}/> Blocca l'app
-                        </span>
-                        <span className="text-[10px] text-gray-400">Chiude l'app a tutti i non-admin per preservare il DB</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
+
+                        {/* ISCRIZIONI */}
+                        <div className="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700">
+                            <div>
+                                <span className="block text-sm font-bold text-gray-200">Registrazioni</span>
+                                <span className="text-[10px] text-gray-400">Permetti nuovi iscritti</span>
+                            </div>
+                            <button 
+                                onClick={handleToggleReg}
+                                disabled={settingsLoading}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wide transition-all ${
+                                    regOpen ? 'bg-green-500 text-white shadow-lg shadow-green-500/20' : 'bg-red-500 text-white'
+                                }`}
+                            >
+                                {regOpen ? <><Unlock size={14}/> ON</> : <><Lock size={14}/> OFF</>}
+                            </button>
+                        </div>
+
+                        {/* BLACKOUT MATRICOLE */}
+                        <div className="flex items-center justify-between bg-slate-800 p-4 rounded-xl border border-slate-700">
+                            <div>
+                                <span className="block text-sm font-bold text-gray-200 flex items-center gap-2">
+                                    {tr("Blackout Matricole")} <Ghost size={14} className={blurEnabled ? "text-purple-400" : "text-gray-500"}/>
+                                </span>
+                                <span className="text-[10px] text-gray-400">Oscura il sito alle matricole</span>
+                            </div>
+                            <button 
+                                onClick={handleToggleBlur}
+                                disabled={settingsLoading}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wide transition-all ${
+                                    blurEnabled ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'bg-gray-600 text-gray-300'
+                                }`}
+                            >
+                                {blurEnabled ? tr('ATTIVO') : tr('SPENTO')}
+                            </button>
+                        </div>
+
+                        {/* SEZIONE CACHE - titolo separatore */}
+                        <div className="md:col-span-2 flex items-center gap-2 mt-2">
+                            <div className="flex-1 h-px bg-slate-700"></div>
+                            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest flex items-center gap-1">
+                                <Zap size={10}/> Gestione Cache
+                            </span>
+                            <div className="flex-1 h-px bg-slate-700"></div>
+                        </div>
+
+                        {/* CACHE DATI */}
+                        <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                            <div className="flex items-center justify-between mb-1">
+                                <div>
+                                    <span className="text-sm font-bold text-gray-200 flex items-center gap-2">
+                                        Cache Dati <Zap size={14} className={cacheEnabled ? "text-yellow-400 fill-yellow-400" : "text-gray-500"}/>
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">Risparmio letture DB globale</span>
+                                </div>
+                                <button 
+                                    onClick={() => saveCacheSettings(!cacheEnabled, cacheDuration)}
+                                    disabled={settingsLoading}
+                                    className={`w-12 h-6 rounded-full p-1 transition-colors flex items-center ${
+                                        cacheEnabled ? 'bg-blue-600 justify-end' : 'bg-gray-600 justify-start'
+                                    }`}
+                                >
+                                    <div className="w-4 h-4 bg-white rounded-full shadow-md"></div>
+                                </button>
+                            </div>
+                            <div className="flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg mt-3">
+                                <Clock size={14} className="text-slate-400"/>
+                                <span className="text-xs text-slate-300">Reset ogni:</span>
+                                <input 
+                                    type="number" 
+                                    value={cacheDuration}
+                                    onChange={(e) => setCacheDuration(e.target.value)}
+                                    className="w-12 bg-transparent text-center text-sm font-bold text-white border-b border-slate-600 focus:border-blue-500 outline-none"
+                                />
+                                <span className="text-xs text-slate-300">min</span>
+                                <button onClick={() => saveCacheSettings(cacheEnabled, cacheDuration)} className="ml-auto text-blue-400 hover:text-white transition-colors">
+                                    <Save size={16} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* CACHE FEED + STORICO */}
+                        <div className="bg-slate-800 p-4 rounded-xl border border-green-900/40">
+                            <div className="flex items-center justify-between mb-1">
+                                <div>
+                                    <span className="text-sm font-bold text-gray-200 flex items-center gap-2">
+                                        Cache Feed & Storico <Clock size={14} className={feedCacheEnabled ? "text-green-400" : "text-gray-500"}/>
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">News · Storico punti matricole</span>
+                                </div>
+                                <button 
+                                    onClick={() => saveFeedCacheSettings(!feedCacheEnabled, feedCacheDuration)}
+                                    disabled={settingsLoading}
+                                    className={`w-12 h-6 rounded-full p-1 transition-colors flex items-center ${
+                                        feedCacheEnabled ? 'bg-green-600 justify-end' : 'bg-gray-600 justify-start'
+                                    }`}
+                                >
+                                    <div className="w-4 h-4 bg-white rounded-full shadow-md"></div>
+                                </button>
+                            </div>
+                            <div className="flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg mt-3">
+                                <Clock size={14} className="text-slate-400"/>
+                                <span className="text-xs text-slate-300">Reset ogni:</span>
+                                <input 
+                                    type="number" 
+                                    value={feedCacheDuration}
+                                    onChange={(e) => setFeedCacheDuration(e.target.value)}
+                                    className="w-12 bg-transparent text-center text-sm font-bold text-white border-b border-slate-600 focus:border-green-500 outline-none"
+                                />
+                                <span className="text-xs text-slate-300">min</span>
+                                <button onClick={() => saveFeedCacheSettings(feedCacheEnabled, feedCacheDuration)} className="ml-auto text-green-400 hover:text-white transition-colors">
+                                    <Save size={16} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* BLOCCA APP */}
+                        <div className="flex items-center justify-between bg-red-900/20 p-4 rounded-xl border border-red-900/50 md:col-span-2">
+                            <div>
+                                <span className="text-sm font-bold text-red-400 flex items-center gap-2">
+                                    <ShieldAlert size={14}/> Blocca l'app
+                                </span>
+                                <span className="text-[10px] text-gray-400">Chiude l'app a tutti i non-admin per preservare il DB</span>
+                            </div>
+                            <button 
+                                onClick={handleToggleMaintenance}
+                                disabled={settingsLoading}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-black text-xs uppercase tracking-wide transition-all ${
+                                    maintenanceMode ? 'bg-red-600 text-white shadow-lg shadow-red-600/30 animate-pulse' : 'bg-gray-700 text-gray-300'
+                                }`}
+                            >
+                                {maintenanceMode ? 'BLOCCATO' : 'BLOCCA'}
+                            </button>
+                        </div>
+
                     </div>
-                    <button 
-                        onClick={handleToggleMaintenance}
-                        disabled={settingsLoading}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-black text-xs uppercase tracking-wide transition-all ${
-                            maintenanceMode ? 'bg-red-600 text-white shadow-lg shadow-red-600/30 animate-pulse' : 'bg-gray-700 text-gray-300'
-                        }`}
-                    >
-                        {maintenanceMode ? 'BLOCCATO' : 'BLOCCA'}
-                    </button>
-                </div>
-                </div>
+
             </div>
 
             {/* BLOCCO 2: IMPOSTAZIONI VISIVE CLASSIFICHE */}
