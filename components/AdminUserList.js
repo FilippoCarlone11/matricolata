@@ -16,6 +16,8 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
   const [cacheDuration, setCacheDuration] = useState(30);
   const [blurEnabled, setBlurEnabled] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [feedCacheEnabled, setFeedCacheEnabled] = useState(true);
+  const [feedCacheDuration, setFeedCacheDuration] = useState(2);
   
   // STATI VISUALIZZAZIONE CLASSIFICHE
   const [showDrinkCount, setShowDrinkCount] = useState(true); 
@@ -42,6 +44,8 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                 setCacheDuration(settings?.cacheDuration ?? 30);
                 setBlurEnabled(settings?.matricolaBlur ?? false);
                 setMaintenanceMode(settings?.maintenanceMode ?? false);
+                setFeedCacheEnabled(settings?.feedCacheEnabled ?? true);
+                setFeedCacheDuration(settings?.feedCacheDuration ?? 2);
                 
                 setShowDrinkCount(settings?.showDrinkCount ?? true);
                 setShowSquadCount(settings?.showSquadCount ?? true);
@@ -68,6 +72,18 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     } catch (e) { 
         alert("Errore salvataggio settings");
         setCacheEnabled(!newEnabled);
+    }
+    finally { setSettingsLoading(false); }
+  };
+
+  const saveFeedCacheSettings = async (newEnabled, newDuration) => {
+    setSettingsLoading(true);
+    setFeedCacheEnabled(newEnabled);
+    try {
+        await updateSystemSettings({ feedCacheEnabled: newEnabled, feedCacheDuration: Number(newDuration) });
+    } catch (e) { 
+        alert("Errore salvataggio settings feed");
+        setFeedCacheEnabled(!newEnabled);
     }
     finally { setSettingsLoading(false); }
   };
@@ -216,6 +232,42 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                             />
                             <span className="text-xs text-slate-300">min</span>
                             <button onClick={() => saveCacheSettings(cacheEnabled, cacheDuration)} className="ml-auto text-blue-400 hover:text-white transition-colors">
+                                <Save size={16} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* CACHE FEED */}
+                    <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                        <div className="flex items-center justify-between mb-3">
+                            <div>
+                                <span className="block text-sm font-bold text-gray-200 flex items-center gap-2">
+                                    Cache Feed <Clock size={14} className={feedCacheEnabled ? "text-green-400" : "text-gray-500"}/> 
+                                </span>
+                                <span className="text-[10px] text-gray-400">Ritardo aggiornamento news</span>
+                            </div>
+                            <button 
+                                onClick={() => saveFeedCacheSettings(!feedCacheEnabled, feedCacheDuration)}
+                                disabled={settingsLoading}
+                                className={`w-12 h-6 rounded-full p-1 transition-colors flex items-center ${
+                                    feedCacheEnabled ? 'bg-green-600 justify-end' : 'bg-gray-600 justify-start'
+                                }`}
+                            >
+                                <div className="w-4 h-4 bg-white rounded-full shadow-md"></div>
+                            </button>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 bg-slate-900/50 p-2 rounded-lg">
+                            <Clock size={14} className="text-slate-400"/>
+                            <span className="text-xs text-slate-300">Reset ogni:</span>
+                            <input 
+                                type="number" 
+                                value={feedCacheDuration}
+                                onChange={(e) => setFeedCacheDuration(e.target.value)}
+                                className="w-12 bg-transparent text-center text-sm font-bold text-white border-b border-slate-600 focus:border-green-500 outline-none"
+                            />
+                            <span className="text-xs text-slate-300">min</span>
+                            <button onClick={() => saveFeedCacheSettings(feedCacheEnabled, feedCacheDuration)} className="ml-auto text-green-400 hover:text-white transition-colors">
                                 <Save size={16} />
                             </button>
                         </div>

@@ -420,7 +420,7 @@ export default function Home() {
         )}
 
         <TabContent id="feed" activeTab={activeTab}>
-           <NewsFeed t={t}/>
+           <NewsFeed t={t} systemSettings={systemSettings}/>
         </TabContent>
 
         {userData.role === 'matricola' ? (
