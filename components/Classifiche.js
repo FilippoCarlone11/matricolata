@@ -8,16 +8,16 @@ import {
     manualAddPoints, 
     getChallenges, 
     assignExistingChallenge,
-    getSystemSettings 
+    getSystemSettings,
+    updateRequestDate 
 } from '@/lib/firebase';
-import { Trophy, User, Users, Shield, X, Crown, ArrowLeft, Zap, PlusCircle, Calendar, Trash2, EyeOff, Loader2, Wine } from 'lucide-react';
+import { Trophy, User, Users, Shield, X, Crown, ArrowLeft, Zap, PlusCircle, Calendar, Trash2, EyeOff, Loader2, Wine, CalendarDays, Search } from 'lucide-react';
 
 export default function Classifiche({ preloadedUsers = [], currentUser, onTriggerYellow }) {
   const [matricole, setMatricole] = useState([]);
   const [fantallenatori, setFantallenatori] = useState([]);
   const [squadCounts, setSquadCounts] = useState({});
   const [captainCounts, setCaptainCounts] = useState({}); 
-  const [drinkCounts, setDrinkCounts] = useState({}); 
   
   const [view, setView] = useState('fanta'); 
   
@@ -31,20 +31,24 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [availableChallenges, setAvailableChallenges] = useState([]);
   const [isAdminLoading, setIsAdminLoading] = useState(false);
+  const [historyLimit, setHistoryLimit] = useState(5);
+  
+  // --- STATI RICERCA ---
+  const [challengeSearch, setChallengeSearch] = useState('');
+  const [historySearch, setHistorySearch] = useState('');
 
   // --- STATO IMPOSTAZIONI SISTEMA ---
   const [sysSettings, setSysSettings] = useState({
       showDrinkCount: true,
       showSquadCount: true,
       showCaptainIcon: true,
-      showEveningPoints: false // <--- NUOVO: Default spento
+      showEveningPoints: false 
   });
 
   const [showBcienzEffect, setShowBcienzEffect] = useState(false);
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super-admin';
 
-  // CARICA LE IMPOSTAZIONI DAL DB ALL'AVVIO
   useEffect(() => {
       const fetchSettings = async () => {
           try {
@@ -53,7 +57,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                   showDrinkCount: s?.showDrinkCount !== false,
                   showSquadCount: s?.showSquadCount !== false,
                   showCaptainIcon: s?.showCaptainIcon !== false,
-                  showEveningPoints: s?.showEveningPoints === true // <--- NUOVO: Estrazione del flag
+                  showEveningPoints: s?.showEveningPoints === true 
               });
           } catch (e) { console.error("Errore fetch settings", e); }
       };
@@ -69,13 +73,9 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
         if (showSquadCount || showCaptainIcon) {
             calculateSquadCounts(preloadedUsers);
         }
-        if (showDrinkCount) {
-            calculateDrinkCounts(preloadedUsers);
-        }
     }
-  }, [preloadedUsers, showDrinkCount, showSquadCount, showCaptainIcon]);
+  }, [preloadedUsers, showSquadCount, showCaptainIcon]);
 
-  // --- CALCOLI INIZIALI ---
   const calculateLeaderboards = (users) => {
       const m = users.filter(u => u.role === 'matricola').sort((a, b) => (b.punti || 0) - (a.punti || 0));
       
@@ -120,28 +120,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
       setCaptainCounts(capCounts); 
   };
 
-  const calculateDrinkCounts = async (users) => {
-    const matricoleUsers = users.filter(u => u.role === 'matricola');
-    const newDrinkCounts = {};
-    
-    for (const matricola of matricoleUsers) {
-        try {
-            const history = await getApprovedRequestsByUser(matricola.id);
-            const drinkScore = history.filter(item => 
-                item.challengeName && item.challengeName.toLowerCase().includes('fegato')
-            ).length;
-            
-            if (drinkScore > 0) {
-                newDrinkCounts[matricola.id] = drinkScore;
-            }
-        } catch (e) {
-            console.error(e);
-        }
-    }
-    setDrinkCounts(newDrinkCounts);
-  };
-
-  // --- LOGICA CLICK LISTA ---
   const handleItemClick = (item) => {
       const name = item.displayName ? item.displayName.toLowerCase() : '';
 
@@ -165,10 +143,11 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
       setTimeout(() => setShowBcienzEffect(false), 5000);
   };
 
-  // --- LOGICA ADMIN ---
   const handleAdminSelectUser = async (user) => {
     setIsAdminLoading(true);
     setAdminSelectedUser(user);
+    setHistoryLimit(5);
+    setHistorySearch(''); // Reset ricerca storico
     await loadUserHistory(user.id);
     setIsAdminLoading(false);
   };
@@ -176,7 +155,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   const refreshAdminUser = async () => {
     if (!adminSelectedUser) return;
     
-    // Versione Fixata e robusta
     const freshData = await getUserData(adminSelectedUser.id);
     setAdminSelectedUser(freshData); 
     
@@ -184,26 +162,11 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
     calculateLeaderboards(updatedUsers);
     
     await loadUserHistory(adminSelectedUser.id);
-
-    if (showDrinkCount) {
-        const history = await getApprovedRequestsByUser(adminSelectedUser.id);
-        const drinkScore = history.filter(item => 
-            item.challengeName && item.challengeName.toLowerCase().includes('fegato')
-        ).length;
-        setDrinkCounts(prev => ({...prev, [adminSelectedUser.id]: drinkScore > 0 ? drinkScore : undefined}));
-    }
   };
 
   const loadUserHistory = async (userId) => {
     const data = await getApprovedRequestsByUser(userId);
-    const grouped = data.reduce((acc, item) => {
-      const dateObj = item.approvedAt?.toDate ? item.approvedAt.toDate() : new Date();
-      const dateStr = dateObj.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
-      if (!acc[dateStr]) acc[dateStr] = [];
-      acc[dateStr].push(item);
-      return acc;
-    }, {});
-    setAdminHistory(grouped);
+    setAdminHistory(data);
   };
 
   const handleRevoke = async (req) => {
@@ -225,6 +188,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   };
 
   const openAssignModal = async () => {
+    setChallengeSearch(''); // Reset ricerca bonus
     let challs = await getChallenges();
     challs = challs.sort((a, b) => {
         const titleA = a.titolo ? a.titolo.toLowerCase() : '';
@@ -244,12 +208,53 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
     } catch(e) { alert(e); }
   };
 
+  const handleChangeDate = async (req) => {
+    const newDateStr = prompt("Inserisci la nuova data (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
+    if (!newDateStr) return;
 
-  // --- RENDER COMPONENT ---
+    try {
+        const newDate = new Date(newDateStr);
+        if (isNaN(newDate.getTime())) {
+            alert("Data non valida.");
+            return;
+        }
+
+        await updateRequestDate(req.id, newDate);
+        await refreshAdminUser();
+        alert("Data aggiornata con successo.");
+    } catch (error) {
+        console.error("Errore aggiornamento data:", error);
+        alert("Errore durante l'aggiornamento della data.");
+    }
+  };
+
   const listItems = view === 'matricole' ? matricole : fantallenatori;
 
-  // OVERLAY ADMIN
   if (adminSelectedUser && isAdmin) {
+      // 1. Filtra lo storico in base alla ricerca
+      const filteredHistory = Object.values(adminHistory).filter(item => 
+          item.challengeName?.toLowerCase().includes(historySearch.toLowerCase())
+      );
+      
+      // 2. Applica il limite (Mostra altro) SOLO ai risultati filtrati
+      const displayedHistory = historySearch.trim() !== '' 
+    ? filteredHistory 
+    : filteredHistory.slice(0, historyLimit);
+      
+      // 3. Raggruppa per data
+      const groupedHistory = displayedHistory.reduce((acc, item) => {
+          const dateObj = item.approvedAt?.toDate ? item.approvedAt.toDate() : new Date();
+          const dateStr = dateObj.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+          if (!acc[dateStr]) acc[dateStr] = [];
+          acc[dateStr].push(item);
+          return acc;
+      }, {});
+
+      // Filtra le sfide disponibili nel modale in base alla ricerca
+      const filteredChallenges = availableChallenges.filter(c => 
+          c.titolo?.toLowerCase().includes(challengeSearch.toLowerCase())
+      );
+
       return (
         <div className="fixed inset-0 bg-gray-50 z-[50] overflow-y-auto animate-in slide-in-from-right duration-300">
              <div className="max-w-lg mx-auto p-4 pb-20">
@@ -276,9 +281,9 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                                     <Crown size={12} /> Cap. {captainCounts[adminSelectedUser.id]}
                                 </span>
                             )}
-                            {showDrinkCount && drinkCounts[adminSelectedUser.id] > 0 && (
+                            {showDrinkCount && adminSelectedUser.drinkCount > 0 && (
                                 <span className="text-xs font-bold px-2 py-0.5 rounded inline-flex items-center gap-1 bg-purple-100 text-purple-700 border border-purple-200">
-                                    <Wine size={12} /> x{drinkCounts[adminSelectedUser.id]}
+                                    <Wine size={12} /> x{adminSelectedUser.drinkCount}
                                 </span>
                             )}
                         </div>
@@ -287,7 +292,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                         <span className="block text-[10px] uppercase text-gray-400 font-bold">Punti</span>
                         <span className="block text-2xl font-black text-[#B41F35] leading-none">{adminSelectedUser.punti || 0}</span>
                         
-                        {/* NUOVO: Punti Serata Admin Header */}
                         {showEveningPoints && adminSelectedUser.puntiSerata !== undefined && adminSelectedUser.puntiSerata !== 0 && (
                             <span className={`block text-[10px] font-bold mt-1 ${adminSelectedUser.puntiSerata > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                                 {adminSelectedUser.puntiSerata > 0 ? '+' : ''}{adminSelectedUser.puntiSerata} matricolata
@@ -305,22 +309,35 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                     </button>
                 </div>
 
-                <h3 className="font-bold text-gray-900 text-lg mb-4">Storico Punti</h3>
+                {/* SEARCH STORICO PUNTI */}
+                <h3 className="font-bold text-gray-900 text-lg mb-3">Storico Punti</h3>
+                <div className="relative mb-4">
+                    <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input 
+                        type="text" 
+                        placeholder="Cerca bonus nello storico..." 
+                        value={historySearch}
+                        onChange={(e) => setHistorySearch(e.target.value)}
+                        className="w-full bg-white border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-[#B41F35] focus:border-transparent outline-none transition-all shadow-sm"
+                    />
+                </div>
+
                 <div className="space-y-6">
                     {isAdminLoading ? (
                         <div className="text-center py-10"><Loader2 className="animate-spin mx-auto text-[#B41F35]" /></div>
-                    ) : Object.keys(adminHistory).length === 0 ? (
+                    ) : Object.keys(groupedHistory).length === 0 ? (
                         <div className="text-center py-12 text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
-                            <p>Nessun punto registrato.</p>
+                            <p>{historySearch ? "Nessun risultato trovato." : "Nessun punto registrato."}</p>
                         </div>
                     ) : (
-                        Object.keys(adminHistory).map(date => (
+                        <>
+                        {Object.keys(groupedHistory).map(date => (
                             <div key={date}>
                                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2 ml-1">
                                     <Calendar size={12}/> {date}
                                 </h3>
                                 <div className="space-y-2">
-                                    {adminHistory[date].map(item => {
+                                    {groupedHistory[date].map(item => {
                                         const isMalus = item.puntiRichiesti < 0;
                                         return (
                                             <div key={item.id} className={`bg-white p-3 rounded-xl border flex justify-between items-center shadow-sm ${isMalus ? 'border-red-100 bg-red-50/30' : 'border-gray-100'}`}>
@@ -334,6 +351,9 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                                                     <span className={`font-black text-lg ${isMalus ? 'text-red-600' : 'text-green-600'}`}>
                                                         {item.puntiRichiesti > 0 ? '+' : ''}{item.puntiRichiesti}
                                                     </span>
+                                                    <button onClick={() => handleChangeDate(item)} className="p-2 bg-gray-50 text-gray-400 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                                                        <CalendarDays size={16} />
+                                                    </button>
                                                     <button onClick={() => handleRevoke(item)} className="p-2 bg-gray-50 text-gray-400 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors">
                                                         <Trash2 size={16} />
                                                     </button>
@@ -343,32 +363,61 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                                     })}
                                 </div>
                             </div>
-                        ))
+                        ))}
+                        {!historySearch && filteredHistory.length > historyLimit && (
+                            <div className="text-center mt-4">
+                                <button 
+                                    onClick={() => setHistoryLimit(prev => prev + 5)}
+                                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-xl transition-colors"
+                                >
+                                    Mostra altro
+                                </button>
+                            </div>
+                        )}
+                        </>
                     )}
                 </div>
 
+                {/* MODALE ASSEGNA BONUS (CON RICERCA) */}
                 {showAssignModal && (
                     <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setShowAssignModal(false)}>
-                        <div className="bg-white w-full max-w-sm max-h-[80vh] rounded-2xl p-5 overflow-y-auto shadow-2xl animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-lg text-gray-900">Scegli Bonus/Malus</h3>
-                                <button onClick={() => setShowAssignModal(false)} className="text-gray-400 hover:text-gray-600">Chiudi</button>
+                        <div className="bg-white w-full max-w-sm max-h-[85vh] flex flex-col rounded-2xl shadow-2xl animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                            <div className="p-5 border-b border-gray-100">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-bold text-lg text-gray-900">Scegli Bonus/Malus</h3>
+                                    <button onClick={() => setShowAssignModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
+                                </div>
+                                <div className="relative">
+                                    <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Cerca sfide..." 
+                                        value={challengeSearch}
+                                        onChange={(e) => setChallengeSearch(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-[#B41F35] focus:border-transparent outline-none transition-all"
+                                    />
+                                </div>
                             </div>
-                            <div className="space-y-2">
-                                {availableChallenges.map(c => {
-                                    const isMalus = c.punti < 0;
-                                    return (
-                                    <button key={c.id} onClick={() => handleAssignExisting(c)} className={`w-full flex items-center justify-between p-3 border rounded-xl hover:scale-[1.02] active:scale-95 transition-all text-left ${isMalus ? 'hover:bg-red-50 hover:border-red-200' : 'hover:bg-green-50 hover:border-green-200'}`}>
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-2xl filter drop-shadow-sm">{c.icon}</span>
-                                            <div>
-                                                <span className={`font-bold text-sm block ${isMalus ? 'text-gray-800' : 'text-gray-900'}`}>{c.titolo}</span>
-                                                {c.hidden && <span className="text-[9px] bg-gray-800 text-white px-1.5 py-0.5 rounded flex items-center gap-1 w-fit mt-1"><EyeOff size={8}/> Nascosto</span>}
+                            
+                            <div className="p-5 overflow-y-auto space-y-2">
+                                {filteredChallenges.length === 0 ? (
+                                    <p className="text-center text-gray-500 py-4 text-sm">Nessuna sfida trovata.</p>
+                                ) : (
+                                    filteredChallenges.map(c => {
+                                        const isMalus = c.punti < 0;
+                                        return (
+                                        <button key={c.id} onClick={() => handleAssignExisting(c)} className={`w-full flex items-center justify-between p-3 border rounded-xl hover:scale-[1.02] active:scale-95 transition-all text-left ${isMalus ? 'hover:bg-red-50 hover:border-red-200' : 'hover:bg-green-50 hover:border-green-200'}`}>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl filter drop-shadow-sm">{c.icon}</span>
+                                                <div>
+                                                    <span className={`font-bold text-sm block ${isMalus ? 'text-gray-800' : 'text-gray-900'}`}>{c.titolo}</span>
+                                                    {c.hidden && <span className="text-[9px] bg-gray-800 text-white px-1.5 py-0.5 rounded flex items-center gap-1 w-fit mt-1"><EyeOff size={8}/> Nascosto</span>}
+                                                </div>
                                             </div>
-                                        </div>
-                                        <span className={`font-black text-sm ${isMalus ? 'text-red-600' : 'text-green-600'}`}>{c.punti > 0 ? '+' : ''}{c.punti}</span>
-                                    </button>
-                                )})}
+                                            <span className={`font-black text-sm ${isMalus ? 'text-red-600' : 'text-green-600'}`}>{c.punti > 0 ? '+' : ''}{c.punti}</span>
+                                        </button>
+                                    )})
+                                )}
                             </div>
                         </div>
                     </div>
@@ -378,7 +427,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
       );
   }
 
-  // VISTA PRINCIPALE
   return (
     <div>
       {showBcienzEffect && (
@@ -411,7 +459,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
         {listItems.map((item, index) => {
             const count = squadCounts[item.id] || 0; 
             const capCount = captainCounts[item.id] || 0;
-            const drinks = drinkCounts[item.id] || 0;
+            const drinks = item.drinkCount || 0; 
 
             let medalColor = 'bg-white border-gray-200';
             let rankIcon = <span className="font-black text-xl text-gray-400 italic w-8 text-center">#{index + 1}</span>;
@@ -499,7 +547,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                         return aCap - bCap;
                         }).map(player => {
                             const isCaptain = selectedTeam.captainId === player.id;
-                            const drinks = drinkCounts[player.id] || 0; 
+                            const drinks = player.drinkCount || 0; 
                             return (
                             <div key={player.id} className={`flex items-center gap-3 p-3 rounded-xl border ${isCaptain ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100 bg-gray-50'}`}>
                                 <div className="relative">
@@ -516,7 +564,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                                                     (di cui {player.puntiSerata > 0 ? '+' : ''}{player.puntiSerata * 2} matricolata)
                                                 </span>
                                             )}
-                                            {/* NUOVO: Mostra anche qui se non è capitano, ma ha punti live, se il flag è attivo */}
                                             {showEveningPoints && !isCaptain && player.puntiSerata !== undefined && player.puntiSerata !== 0 && (
                                                 <span className={`ml-1 font-bold tracking-tight ${player.puntiSerata > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                                                     di cui {player.puntiSerata > 0 ? '+' : ''}{player.puntiSerata} matricolata
