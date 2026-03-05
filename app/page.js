@@ -278,26 +278,55 @@ export default function Home() {
 
   // --- SCHERMATA DI BLOCCO MANUTENZIONE ---
   if (systemSettings?.maintenanceMode && !isAdminOrSuper) {
-      return (
-          <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-full bg-[#B41F35] opacity-5 pointer-events-none"></div>
-              
-              <div className="bg-gray-800 p-8 rounded-3xl shadow-2xl border border-gray-700 max-w-sm z-10 relative">
-                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-red-600 p-3 rounded-full border-4 border-gray-900 shadow-lg">
-                      <LockKeyhole size={28} className="text-white" />
-                  </div>
-                  <h1 className="text-2xl font-black text-white mt-4 mb-2">App in Manutenzione</h1>
-                  <p className="text-gray-400 mb-8 font-medium leading-relaxed">
-                      Ci stiamo preparando per stasera! Il sito è in manutenzione. <br/><br/>
-                      <span className="text-[#B41F35] font-bold">Ci vediamo stasera!</span>
-                  </p>
-                  <button onClick={handleLogout} className="w-full bg-gray-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-gray-600 transition-colors flex items-center justify-center gap-2">
-                      <LogOut size={18} /> {t("Esci")}
-                  </button>
-              </div>
-          </div>
-      );
-  }
+    return (
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden font-sans">
+            
+            {/* Box centrale chiaro con ombra morbida */}
+            <div className="bg-white p-8 rounded-2xl shadow-xl border-2 border-gray-100 max-w-sm w-full z-10 relative">
+                
+                {/* Bordo Giallo VAR che pulsa leggermente */}
+                <div className="absolute inset-0 rounded-2xl border-4 border-yellow-400/60 animate-pulse pointer-events-none"></div>
+
+                {/* Contenitore Icona VAR */}
+                <div className="relative w-24 h-24 mx-auto mb-6 bg-gray-50 rounded-xl border-2 border-yellow-400 flex items-center justify-center shadow-sm">
+                    {/* Pallino che lampeggia: usiamo il tuo colore brand per il "led" */}
+                    <div className="absolute top-2 right-2 flex items-center gap-1">
+                        <div className="w-2.5 h-2.5 rounded-full bg-[#B41F35] animate-pulse shadow-[0_0_8px_#B41F35]"></div>
+                    </div>
+                    
+                    <img 
+                        src="/var-replay.png" 
+                        alt="VAR Check" 
+                        className="w-16 h-16 object-contain z-10" 
+                    />
+                </div>
+
+                {/* Titolo e Badge Giallo animato (stile grafica TV) */}
+                <h1 className="text-3xl font-black text-gray-900 tracking-widest mb-2 uppercase">
+                    VAR Check
+                </h1>
+                
+                <div className="inline-block bg-yellow-400 text-black text-xs font-black px-3 py-1 rounded-sm animate-pulse mb-6 tracking-widest uppercase">
+                    Review in corso
+                </div>
+
+                {/* Messaggio personalizzato */}
+                <p className="text-gray-600 mb-8 font-medium leading-relaxed text-lg">
+                    Stiamo ricontrollando tutti i vostri punteggi!<br/>
+                    <span className="text-[#B41F35] font-black block mt-4 text-xl">Voi preparatevi per stasera! </span>
+                </p>
+
+                {/* Bottone di uscita con il colore principale dell'app */}
+                <button 
+                    onClick={handleLogout} 
+                    className="w-full bg-[#B41F35] text-white px-6 py-4 rounded-xl font-bold shadow-md hover:bg-[#91182a] transition-colors flex items-center justify-center gap-2"
+                >
+                    <LogOut size={20} /> {t("Esci")}
+                </button>
+            </div>
+        </div>
+    );
+}
 
   // --- LOGICA BLOCCO CAPITANO ---
   const isCaptainMissing = userData.role !== 'matricola' && (!userData.captainId) && (userData.mySquad && userData.mySquad.length > 0);
