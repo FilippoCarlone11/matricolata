@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { updateUserRole, deleteUserDocument, getSystemSettings, toggleRegistrations, updateCacheSettings, toggleMatricolaBlur, updateSystemSettings } from '@/lib/firebase';
 import { Users, UserCheck, Crown, Trash2, Key, Search, Lock, Unlock, ShieldAlert, Zap, Clock, Save, Ghost, Wine, Shield, Eye } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { getApprovedRequestsByUser } from '@/lib/firebase'; // <-- Aggiungi questa se manca!
 
 export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     const tr = (text) => (t ? t(text) : text);
@@ -19,6 +22,9 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
   const [feedCacheEnabled, setFeedCacheEnabled] = useState(true);
   const [feedCacheDuration, setFeedCacheDuration] = useState(2);
   
+  //pdf
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
   // STATI VISUALIZZAZIONE CLASSIFICHE
   const [showDrinkCount, setShowDrinkCount] = useState(true); 
   const [showSquadCount, setShowSquadCount] = useState(true); 
@@ -164,6 +170,122 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     (u.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
+  const generaReportDettagliatoTutteMatricole = async () => {
+    // Avviso di sicurezza per evitare click accidentali
+    if (!confirm("Attenzione: Questa operazione scaricherà lo storico di TUTTE le matricole. Potrebbe richiedere qualche secondo. Procedere?")) return;
+
+    setIsGeneratingPDF(true);
+    
+    try {
+        const doc = new jsPDF();
+        const brandColor = [180, 31, 53];
+
+        // HEADER PRINCIPALE (Stampa solo sulla prima pagina)
+        doc.setFillColor(...brandColor);
+        doc.rect(0, 0, 210, 30, 'F'); 
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(20);
+        doc.setFont("helvetica", "bold");
+        doc.text("STORICO DETTAGLIATO MATRICOLE", 14, 20);
+
+        // Prendi solo le matricole e mettile in ordine di punteggio
+        const matricole = users.filter(u => u.role === 'matricola').sort((a, b) => (b.punti || 0) - (a.punti || 0));
+
+        let currentY = 40; // Punto di partenza dall'alto
+
+        // Cicliamo ogni matricola per scaricare i dati e disegnare la sua tabella
+        for (let i = 0; i < matricole.length; i++) {
+            const m = matricole[i];
+            
+            // ⚠️ CHIAMATA A FIREBASE: Scarica lo storico di QUESTA matricola
+            const storico = await getApprovedRequestsByUser(m.id);
+
+            // Se stiamo arrivando a fine pagina, crea una pagina nuova
+            if (currentY > 250) {
+                doc.addPage();
+                currentY = 20;
+            }
+
+            // 1. INTESTAZIONE MATRICOLA
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(...brandColor);
+            doc.text(`${i + 1}. ${m.displayName || 'Sconosciuto'}`, 14, currentY);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Totale Punti: ${m.punti || 0} | Squadra: ${m.teamName || 'Nessuna'}`, 14, currentY + 6);
+            
+            currentY += 12; // Spazio prima della tabella
+
+            // 2. TABELLA STORICO
+            if (storico.length === 0) {
+                doc.setFontSize(10);
+                doc.setTextColor(150, 150, 150);
+                doc.setFont("helvetica", "italic");
+                doc.text("Nessuna attività registrata per questa matricola.", 14, currentY);
+                currentY += 15; // Spazio extra prima del prossimo utente
+                continue; // Passa alla matricola successiva
+            }
+
+            // Prepara i dati della tabella
+            const tableBody = storico.map(item => {
+                const dateObj = item.approvedAt?.toDate ? item.approvedAt.toDate() : new Date();
+                const dataStr = dateObj.toLocaleDateString('it-IT') + ' ' + dateObj.toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'});
+                const isMalus = item.puntiRichiesti < 0;
+                const puntiStr = isMalus ? `${item.puntiRichiesti}` : `+${item.puntiRichiesti}`;
+                
+                return [dataStr, item.challengeName || "Sfida", item.manual ? "Admin" : "App", puntiStr];
+            });
+
+            // Disegna la tabella
+            autoTable(doc, {
+                startY: currentY,
+                head: [['Data', 'Azione / Bonus / Malus', 'Assegnato da', 'Punti']],
+                body: tableBody,
+                theme: 'striped',
+                headStyles: { fillColor: [50, 50, 50], textColor: 255, fontStyle: 'bold' }, // Header grigio scuro per staccare dal rosso
+                styles: { fontSize: 9, cellPadding: 2 },
+                columnStyles: {
+                    0: { cellWidth: 35 },
+                    1: { cellWidth: 'auto' },
+                    2: { cellWidth: 25, halign: 'center' },
+                    3: { cellWidth: 20, halign: 'center', fontStyle: 'bold' }
+                },
+                didParseCell: function (data) {
+                    if (data.section === 'body' && data.column.index === 3) {
+                        const val = parseInt(data.cell.raw);
+                        if (val < 0) data.cell.styles.textColor = [220, 38, 38]; // Rosso
+                        else data.cell.styles.textColor = [22, 163, 74]; // Verde
+                    }
+                },
+            });
+
+            // Aggiorna la Y per la matricola successiva: la tabella finisce a `doc.lastAutoTable.finalY`
+            currentY = doc.lastAutoTable.finalY + 15; 
+        }
+
+        // FOOTER CON NUMERO PAGINE
+        const pageCount = doc.internal.getNumberOfPages();
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.setFont("helvetica", "normal");
+        for(let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.text(`Report Globale Storici - Generato il: ${new Date().toLocaleString('it-IT')} - Pagina ${i} di ${pageCount}`, 14, 285);
+        }
+
+        // Salva
+        doc.save(`Report_Dettagliato_Matricole.pdf`);
+
+    } catch (error) {
+        console.error("Errore generazione PDF Dettagliato:", error);
+        alert("Errore durante la creazione del PDF. Controlla la console.");
+    } finally {
+        setIsGeneratingPDF(false); // Spegne l'icona di caricamento
+    }
+  };
+
   return (
     <div className="pb-20">
       <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -173,7 +295,20 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
       {/* --- PANNELLO CONTROLLO SUPER ADMIN --- */}
       {isSuperAdmin && (
         <div className="space-y-4 mb-8">
-            
+            <button 
+              onClick={generaReportDettagliatoTutteMatricole}
+              disabled={isGeneratingPDF}
+              className={`text-white px-4 py-2 rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2 ${isGeneratingPDF ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#B41F35] hover:bg-[#90192a] active:scale-95'}`}
+          >
+              {isGeneratingPDF ? (
+                 <>
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div> 
+                    Generazione in corso...
+                 </>
+              ) : (
+                 <>📄 Scarica Storico Completo</>
+              )}
+          </button>
             {/* BLOCCO 1: CONTROLLI SISTEMA */}
                 <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full blur-3xl opacity-20 -mr-10 -mt-10"></div>
