@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { updateUserRole, deleteUserDocument, getSystemSettings, toggleRegistrations, updateCacheSettings, toggleMatricolaBlur, updateSystemSettings } from '@/lib/firebase';
-import { Users, UserCheck, Crown, Trash2, Key, Search, Lock, Unlock, ShieldAlert, Zap, Clock, Save, Ghost, Wine, Shield, Eye } from 'lucide-react';
+import { Users, UserCheck, Crown, Trash2, Key, Search, Lock, Unlock, ShieldAlert, Zap, Clock, Save, Ghost, Wine, Shield, Eye, EyeOff } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { getApprovedRequestsByUser } from '@/lib/firebase'; // <-- Aggiungi questa se manca!
+import { getApprovedRequestsByUser } from '@/lib/firebase'; 
 
 export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     const tr = (text) => (t ? t(text) : text);
@@ -29,7 +29,8 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
   const [showDrinkCount, setShowDrinkCount] = useState(true); 
   const [showSquadCount, setShowSquadCount] = useState(true); 
   const [showCaptainIcon, setShowCaptainIcon] = useState(true); 
-  const [showEveningPoints, setShowEveningPoints] = useState(false); // <--- NUOVO STATO PUNTI SERATA (Default spento per sorpresa)
+  const [showEveningPoints, setShowEveningPoints] = useState(false); 
+  const [blindRanking, setBlindRanking] = useState(false); // <--- NUOVO STATO SUSPENSE
   
   const [settingsLoading, setSettingsLoading] = useState(true);
 
@@ -56,7 +57,8 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                 setShowDrinkCount(settings?.showDrinkCount ?? true);
                 setShowSquadCount(settings?.showSquadCount ?? true);
                 setShowCaptainIcon(settings?.showCaptainIcon ?? true);
-                setShowEveningPoints(settings?.showEveningPoints ?? false); // <--- CARICA IL NUOVO FLAG
+                setShowEveningPoints(settings?.showEveningPoints ?? false); 
+                setBlindRanking(settings?.blindRanking ?? false); // <--- CARICA IL FLAG
             } catch (e) { console.error(e); }
             finally { setSettingsLoading(false); }
         };
@@ -125,7 +127,8 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
       if (settingName === 'showDrinkCount') setShowDrinkCount(newState);
       if (settingName === 'showSquadCount') setShowSquadCount(newState);
       if (settingName === 'showCaptainIcon') setShowCaptainIcon(newState);
-      if (settingName === 'showEveningPoints') setShowEveningPoints(newState); // <--- OTTIMISTICO NUOVO FLAG
+      if (settingName === 'showEveningPoints') setShowEveningPoints(newState); 
+      if (settingName === 'blindRanking') setBlindRanking(newState); // <--- OTTIMISTICO NUOVO FLAG
 
       try {
           await updateSystemSettings({ [settingName]: newState });
@@ -135,7 +138,8 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
           if (settingName === 'showDrinkCount') setShowDrinkCount(currentValue);
           if (settingName === 'showSquadCount') setShowSquadCount(currentValue);
           if (settingName === 'showCaptainIcon') setShowCaptainIcon(currentValue);
-          if (settingName === 'showEveningPoints') setShowEveningPoints(currentValue); // <--- REVERT NUOVO FLAG
+          if (settingName === 'showEveningPoints') setShowEveningPoints(currentValue); 
+          if (settingName === 'blindRanking') setBlindRanking(currentValue); // <--- REVERT
       }
   };
 
@@ -465,7 +469,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                      <h3 className="font-bold text-lg text-gray-900 leading-tight">Aspetto Classifiche</h3>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                     
                     {/* TOGGLE DRINK */}
                     <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100">
@@ -509,7 +513,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                         </button>
                     </div>
                     
-                    {/* NUOVO: TOGGLE PUNTI SERATA */}
+                    {/* TOGGLE PUNTI SERATA */}
                     <div className="flex items-center justify-between bg-gray-50 p-3 rounded-xl border border-gray-100">
                         <div className="flex items-center gap-2">
                             <Eye size={16} className={showEveningPoints ? "text-emerald-500" : "text-gray-400"}/>
@@ -524,6 +528,25 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                     </div>
 
                 </div>
+
+                {/* 🚨 BOTTONE MODALITA' SUSPENSE 🚨 */}
+                <div className="mt-2">
+                    <button 
+                        onClick={() => handleToggleVisualSetting('blindRanking', blindRanking)} 
+                        className={`w-full p-3.5 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all shadow-sm ${
+                            blindRanking 
+                            ? 'bg-yellow-500 text-white shadow-yellow-500/30 ring-2 ring-yellow-300 ring-offset-2' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                        {blindRanking ? <Lock size={18} /> : <Unlock size={18} />}
+                        {blindRanking ? "MODALITÀ SUSPENSE ATTIVA (PUNTI OSCURATI)" : "ATTIVA MODALITÀ SUSPENSE (OSCURA PUNTI)"}
+                    </button>
+                    <p className="text-center text-[10px] text-gray-400 mt-2">
+                        Quando attiva, i punteggi in classifica saranno sostituiti da "???" per tutti gli utenti non admin. Le posizioni resteranno visibili.
+                    </p>
+                </div>
+
             </div>
 
         </div>

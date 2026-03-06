@@ -11,9 +11,7 @@ import {
     getSystemSettings,
     updateRequestDate 
 } from '@/lib/firebase';
-import { Trophy, User, Users, Shield, X, Crown, ArrowLeft, Zap, PlusCircle, Calendar, Trash2, EyeOff, Loader2, Wine, CalendarDays, Search, Clock } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable'; 
+import { Trophy, User, Users, Shield, X, Crown, ArrowLeft, Zap, PlusCircle, Calendar, Trash2, EyeOff, Loader2, Wine, CalendarDays, Search, Clock, Lock } from 'lucide-react';
 
 export default function Classifiche({ preloadedUsers = [], currentUser, onTriggerYellow }) {
   const [matricole, setMatricole] = useState([]);
@@ -34,7 +32,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [availableChallenges, setAvailableChallenges] = useState([]);
   const [isAdminLoading, setIsAdminLoading] = useState(false);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false); // NUOVO STATO CARICAMENTO PDF
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false); 
   const [historyLimit, setHistoryLimit] = useState(5);
   
   // --- STATI RICERCA ---
@@ -46,12 +44,14 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
       showDrinkCount: true,
       showSquadCount: true,
       showCaptainIcon: true,
-      showEveningPoints: false 
+      showEveningPoints: false,
+      blindRanking: false 
   });
 
   const [showBcienzEffect, setShowBcienzEffect] = useState(false);
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super-admin';
+  const isSuperAdmin = currentUser?.role === 'super-admin'; // <-- SOLO IL SUPER ADMIN
 
   useEffect(() => {
       const fetchSettings = async () => {
@@ -61,16 +61,16 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                   showDrinkCount: s?.showDrinkCount !== false,
                   showSquadCount: s?.showSquadCount !== false,
                   showCaptainIcon: s?.showCaptainIcon !== false,
-                  showEveningPoints: s?.showEveningPoints === true 
+                  showEveningPoints: s?.showEveningPoints === true,
+                  blindRanking: s?.blindRanking === true 
               });
           } catch (e) { console.error("Errore fetch settings", e); }
       };
       fetchSettings();
   }, []);
 
-  const { showDrinkCount, showSquadCount, showCaptainIcon, showEveningPoints } = sysSettings;
+  const { showDrinkCount, showSquadCount, showCaptainIcon, showEveningPoints, blindRanking } = sysSettings;
 
-  // IMPOSTA ORARIO DI AGGIORNAMENTO
   useEffect(() => {
     const cachedData = localStorage.getItem('cache_users'); 
     
@@ -89,7 +89,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
     setLastUpdateTime(new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }));
   }, []); 
 
-  // CALCOLA LE CLASSIFICHE
   useEffect(() => {
     if (preloadedUsers.length > 0) {
         calculateLeaderboards(preloadedUsers);
@@ -252,7 +251,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
     }
   };
 
-  // HELPER: Calcola le dimensioni originali della foto per mantenerne le proporzioni
   const getImageDimensions = (base64) => {
       return new Promise((resolve) => {
           const img = new Image();
@@ -262,18 +260,17 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
       });
   };
 
-  // ==========================================
-  // FUNZIONE PDF STILE "NEWS FEED POST" (CON PROPORZIONI)
-  // ==========================================
   const generaReportPDF = async (utente, storicoDati) => {
     if (!utente) {
         alert("Errore: Dati utente mancanti.");
         return;
     }
 
-    setIsGeneratingPDF(true); // Accende il loader
+    setIsGeneratingPDF(true);
 
     try {
+        const { jsPDF } = await import('jspdf');
+        
         let storico = [];
         if (Array.isArray(storicoDati)) {
             storico = storicoDati;
@@ -289,7 +286,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
         const marginX = 14;
         const cardWidth = pageWidth - (marginX * 2);
 
-        // --- HEADER PRINCIPALE ---
         doc.setFillColor(...brandColor);
         doc.rect(0, 0, pageWidth, 40, 'F'); 
 
@@ -302,7 +298,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
         doc.setFont("helvetica", "normal");
         doc.text("Elenco bonus e malus", marginX, 28);
 
-        // --- DETTAGLI UTENTE ---
         doc.setTextColor(50, 50, 50);
         doc.setFontSize(16);
         doc.setFont("helvetica", "bold");
@@ -336,8 +331,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
             doc.setTextColor(100, 100, 100);
             doc.text("Nessuna attività registrata per questa matricola.", marginX, currentY);
         } else {
-            
-            // --- CICLO ASINCRONO PER I POST ---
             for (let i = 0; i < storico.length; i++) {
                 const item = storico[i];
                 const dateObj = item.approvedAt?.toDate ? item.approvedAt.toDate() : new Date();
@@ -349,46 +342,39 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                 if (item.status === 'rejected') actionText = "Rifiutato";
 
                 const hasPhoto = item.photoProof && item.photoProof.startsWith('data:image');
-                
                 let printImgW = 0;
                 let printImgH = 0;
 
-                // Calcolo proporzioni intelligenti per la foto
                 if (hasPhoto) {
                     const dims = await getImageDimensions(item.photoProof);
                     if (dims.w > 0 && dims.h > 0) {
-                        const maxW = cardWidth - 12; // Lascia un po' di margine interno
-                        const maxH = 90; // Altezza massima in PDF per non mangiarsi una pagina intera
+                        const maxW = cardWidth - 12; 
+                        const maxH = 90; 
                         const ratio = Math.min(maxW / dims.w, maxH / dims.h);
                         printImgW = dims.w * ratio;
                         printImgH = dims.h * ratio;
                     }
                 }
 
-                // Calcolo altezza dinamica basata sul testo
                 doc.setFontSize(12);
                 doc.setFont("helvetica", "bold");
                 const challengeName = item.challengeName || "Sfida non specificata";
                 const titleLines = doc.splitTextToSize(challengeName, cardWidth - 30);
-                const textHeight = titleLines.length * 6; // Circa 6mm a riga
+                const textHeight = titleLines.length * 6; 
 
-                // Calcolo altezza totale della card
                 const basePadding = 18; 
                 let cardHeight = basePadding + textHeight;
-                if (hasPhoto && printImgH > 0) cardHeight += printImgH + 6; // Aggiunge l'altezza esatta della foto
+                if (hasPhoto && printImgH > 0) cardHeight += printImgH + 6; 
 
-                // Controllo salto pagina
                 if (currentY + cardHeight > 280) {
                     doc.addPage();
                     currentY = 20;
                 }
 
-                // 1. Sfondo della Card
                 doc.setFillColor(252, 252, 252);
                 doc.setDrawColor(230, 230, 230);
                 doc.roundedRect(marginX, currentY, cardWidth, cardHeight, 3, 3, 'FD');
 
-                // 2. Intestazione Post (Data e Stato)
                 doc.setFontSize(9);
                 doc.setFont("helvetica", "normal");
                 doc.setTextColor(150, 150, 150);
@@ -400,7 +386,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                 else doc.setTextColor(22, 163, 74);
                 doc.text(actionText.toUpperCase(), marginX + cardWidth - 4, currentY + 7, { align: 'right' });
 
-                // 3. Titolo Sfida e Punti
                 doc.setFontSize(12);
                 doc.setTextColor(40, 40, 40);
                 doc.setFont("helvetica", "bold");
@@ -412,10 +397,9 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                 else doc.setTextColor(22, 163, 74);
                 doc.text(item.status === 'rejected' ? '0' : puntiStr, marginX + cardWidth - 4, currentY + 15, { align: 'right' });
 
-                // 4. Immagine Allegata (Centrata e Proporzionata)
                 if (hasPhoto && printImgW > 0) {
                     try {
-                        const imgX = marginX + (cardWidth - printImgW) / 2; // La centra perfettamente al centro
+                        const imgX = marginX + (cardWidth - printImgW) / 2; 
                         const imgY = currentY + 15 + textHeight;
                         doc.addImage(item.photoProof, imgX, imgY, printImgW, printImgH, undefined, 'FAST');
                     } catch (e) {
@@ -426,11 +410,10 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                     }
                 }
 
-                currentY += cardHeight + 6; // Spazio prima della prossima card
+                currentY += cardHeight + 6; 
             }
         }
 
-        // --- FOOTER PAGINE ---
         const pageCount = doc.internal.getNumberOfPages();
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
@@ -447,24 +430,21 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
         console.error("Errore PDF:", error);
         alert(`Impossibile generare il PDF: ${error.message}`);
     } finally {
-        setIsGeneratingPDF(false); // Spegne il loader
+        setIsGeneratingPDF(false); 
     }
   };
 
   const listItems = view === 'matricole' ? matricole : fantallenatori;
 
   if (adminSelectedUser && isAdmin) {
-      // 1. Filtra lo storico in base alla ricerca
       const filteredHistory = Object.values(adminHistory).filter(item => 
           item.challengeName?.toLowerCase().includes(historySearch.toLowerCase())
       );
       
-      // 2. Applica il limite (Mostra altro) SOLO ai risultati filtrati
       const displayedHistory = historySearch.trim() !== '' 
     ? filteredHistory 
     : filteredHistory.slice(0, historyLimit);
       
-      // 3. Raggruppa per data
       const groupedHistory = displayedHistory.reduce((acc, item) => {
           const dateObj = item.approvedAt?.toDate ? item.approvedAt.toDate() : new Date();
           const dateStr = dateObj.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -473,7 +453,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
           return acc;
       }, {});
 
-      // Filtra le sfide disponibili nel modale in base alla ricerca
       const filteredChallenges = availableChallenges.filter(c => 
           c.titolo?.toLowerCase().includes(challengeSearch.toLowerCase())
       );
@@ -682,6 +661,17 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
         </div>
       )}
 
+      {/* BANNER CLASSIFICA OSCURATA VISIBILE A TUTTI TRANNE AL SUPER ADMIN */}
+      {blindRanking && !isSuperAdmin && (
+          <div className="bg-yellow-100 border border-yellow-300 p-3 rounded-xl mb-6 flex items-center gap-3 shadow-sm animate-pulse">
+              <Lock className="text-yellow-600 shrink-0" size={24} />
+              <div>
+                  <h3 className="font-bold text-yellow-800 text-sm leading-tight">Modalità Suspense</h3>
+                  <p className="text-xs text-yellow-700">I punteggi esatti sono stati oscurati</p>
+              </div>
+          </div>
+      )}
+
       <div className="mb-6">
           <div className="flex bg-gray-200 p-1 rounded-xl">
             <button onClick={() => setView('fanta')} className={`flex-1 py-2 rounded-lg text-sm font-bold flex justify-center items-center gap-2 transition-all ${view === 'fanta' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}><Shield size={16} /> Squadre</button>
@@ -712,6 +702,10 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                     currentRank++;
                 }
                 previousPoints = points;
+
+                // 🚨 LOGICA OSCURAMENTO PUNTEGGIO CON BLUR (SFOCATURA) 🚨
+                // Solo chi NON è super-admin vede sfocato
+                const isObscured = blindRanking && !isSuperAdmin;
 
                 const count = squadCounts[item.id] || 0; 
                 const capCount = captainCounts[item.id] || 0;
@@ -767,10 +761,12 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                     </div>
                     <div className="text-right pl-2 flex flex-col justify-center items-end">
                         <div>
-                            <span className="inline-block text-2xl font-black text-gray-800 leading-none">{points}</span>
-                            <span className="inline-block text-[9px] uppercase font-bold text-gray-400 ml-1">Pt</span>
+                            {/* NUMERI SFOCATI SE OSCURATO */}
+                            <span className={`inline-block text-2xl font-black text-gray-800 leading-none ${isObscured ? 'blur-sm opacity-50 select-none' : ''}`}>{points}</span>
+                            <span className={`inline-block text-[9px] uppercase font-bold text-gray-400 ml-1 ${isObscured ? 'blur-sm opacity-50 select-none' : ''}`}>Pt</span>
                         </div>
-                        {!isFanta && showEveningPoints && item.puntiSerata !== undefined && item.puntiSerata !== 0 && (
+                        {/* NASCONDE I PUNTI SERATA SE E' IN MODALITA' SUSPENSE */}
+                        {!isFanta && showEveningPoints && item.puntiSerata !== undefined && item.puntiSerata !== 0 && !isObscured && (
                             <span className={`block text-[10px] font-bold mt-1 ${item.puntiSerata > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                                 {item.puntiSerata > 0 ? '+' : ''}{item.puntiSerata} matricolata
                             </span>
@@ -803,6 +799,10 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                         }).map(player => {
                             const isCaptain = selectedTeam.captainId === player.id;
                             const drinks = player.drinkCount || 0; 
+                            
+                            // 🚨 OSCURA I PUNTI ANCHE NEL DETTAGLIO DELLA SQUADRA 🚨
+                            const isObscured = blindRanking && !isSuperAdmin;
+
                             return (
                             <div key={player.id} className={`flex items-center gap-3 p-3 rounded-xl border ${isCaptain ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100 bg-gray-50'}`}>
                                 <div className="relative">
@@ -813,13 +813,15 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                                     <p className="font-bold text-sm text-gray-900">{player.displayName}</p>
                                     <div className="flex items-center gap-2 flex-wrap mt-0.5">
                                         <span className="text-xs text-gray-500">
-                                            Punti: <b>{player.punti || 0}</b>
-                                            {isCaptain && player.puntiSerata !== undefined && player.puntiSerata !== 0 && (
+                                            {/* NUMERO SFOCATO */}
+                                            Punti: <b className={isObscured ? 'blur-[4px] opacity-60 select-none pointer-events-none' : ''}>{player.punti || 0}</b>
+                                            
+                                            {!isObscured && isCaptain && player.puntiSerata !== undefined && player.puntiSerata !== 0 && (
                                                 <span className={`ml-1 font-bold tracking-tight ${player.puntiSerata > 0 ? 'text-yellow-600' : 'text-red-500'}`}>
                                                     (di cui {player.puntiSerata > 0 ? '+' : ''}{player.puntiSerata * 2} matricolata)
                                                 </span>
                                             )}
-                                            {showEveningPoints && !isCaptain && player.puntiSerata !== undefined && player.puntiSerata !== 0 && (
+                                            {!isObscured && showEveningPoints && !isCaptain && player.puntiSerata !== undefined && player.puntiSerata !== 0 && (
                                                 <span className={`ml-1 font-bold tracking-tight ${player.puntiSerata > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                                                     di cui {player.puntiSerata > 0 ? '+' : ''}{player.puntiSerata} matricolata
                                                 </span>

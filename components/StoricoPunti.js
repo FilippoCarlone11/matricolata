@@ -5,7 +5,7 @@ import { getApprovedRequestsByUser } from '@/lib/firebase';
 import { Award, Clock, Download, Loader2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
-export default function StoricoPunti({ currentUser, systemSettings }) {
+export default function StoricoPunti({ t, currentUser, systemSettings }) {
   const [groupedHistory, setGroupedHistory] = useState({});
   const [loading, setLoading] = useState(true);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false); // STATO CARICAMENTO PDF
@@ -245,7 +245,7 @@ export default function StoricoPunti({ currentUser, systemSettings }) {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 mb-8 border-b border-gray-100 pb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Award size={28} className="text-[#B41F35]" /> Il Tuo Storico Punti
+              <Award size={28} className="text-[#B41F35]" /> {t("Il Tuo Storico Punti")}
             </h2>
             {isFeedCacheEnabled && (
               <span className="text-[10px] text-gray-400 flex items-center gap-1 uppercase font-bold bg-gray-100 px-2.5 py-1 rounded-full w-fit mt-2.5">
@@ -266,14 +266,14 @@ export default function StoricoPunti({ currentUser, systemSettings }) {
           >
               {isGeneratingPDF ? <Loader2 size={20} className="animate-spin"/> : <Download size={20} />}
               <span className="text-sm">
-                {isGeneratingPDF ? 'Creando il tuo ricordo...' : 'Scarica un ricordo della tua FantaMatricolata'}
+                {isGeneratingPDF ? 'Creando il tuo ricordo...' : t('Scarica un ricordo della tua FantaMatricolata')}
               </span>
           </button>
       </div>
 
       {Object.keys(groupedHistory).length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-          <p className="text-gray-500">Nessuna attività registrata.</p>
+          <p className="text-gray-500">{t("Nessuna attività registrata.")}</p>
         </div>
       ) : (
         <div className="space-y-8">
@@ -292,10 +292,10 @@ export default function StoricoPunti({ currentUser, systemSettings }) {
                       <div>
                         <h3 className={`font-bold ${isMalus ? 'text-red-900' : 'text-gray-900'} flex items-center gap-2`}>
                             {item.challengeName || "Sfida"}
-                            {isMalus && <span className="text-[10px] bg-red-600 text-white px-1.5 rounded uppercase">Malus</span>}
+                            {isMalus && <span className="text-[10px] bg-red-600 text-white px-1.5 rounded uppercase">{t("Malus")}</span>}
                         </h3>
                         <p className="text-xs text-gray-500 mt-0.5">
-                          {item.manual ? (isMalus ? 'Malus dagli admin' : 'Bonus dagli admin') : 'Completato'}
+                          {item.manual ? (isMalus ? t('Malus dagli admin') : 'Bonus dagli admin') : t('Completato')}
                         </p>
                       </div>
                       <div className={`px-3 py-1.5 rounded-xl font-black text-sm border ${isMalus ? 'bg-red-100 text-red-700 border-red-200' : 'bg-green-100 text-green-700 border-green-200'}`}>

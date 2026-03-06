@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ThumbsUp, ThumbsDown, EyeOff, Zap, Repeat, Lock, RotateCcw, Crown } from 'lucide-react';
 
-export default function BonusMalusList({ currentUser, preloadedChallenges = [] }) {
+export default function BonusMalusList({ t, currentUser, preloadedChallenges = [] }) {
   const [challenges, setChallenges] = useState([]);
   const [view, setView] = useState('bonus'); 
   const [flippedId, setFlippedId] = useState(null);
@@ -104,19 +104,19 @@ export default function BonusMalusList({ currentUser, preloadedChallenges = [] }
   return (
     <div>
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Regolamento</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{t("Regolamento")}</h2>
         <p className="text-gray-400 text-xs mt-1 border-b border-gray-200 pb-4">
-            Tocca una card per i dettagli. <br/>
-            I bonus con la <strong className="text-yellow-500">Corona</strong> valgono doppio per il Capitano!
+            {t("Tocca una card per i dettagli.")} <br/>
+            {t("I bonus con la ")}<strong className="text-yellow-500">{t("Corona")}</strong>{t(" valgono doppio per il Capitano!")}
         </p>
       </div>
 
       <div className="bg-gray-200 p-1 rounded-xl mb-6 flex">
         <button onClick={() => setView('bonus')} className={`flex-1 py-2.5 rounded-lg text-sm font-bold flex justify-center items-center gap-2 transition-all ${view === 'bonus' ? 'bg-white shadow text-green-700' : 'text-gray-500 hover:text-gray-700'}`}>
-          <ThumbsUp size={18} /> Bonus
+          <ThumbsUp size={18} /> {t("Bonus")}
         </button>
         <button onClick={() => setView('malus')} className={`flex-1 py-2.5 rounded-lg text-sm font-bold flex justify-center items-center gap-2 transition-all ${view === 'malus' ? 'bg-white shadow text-red-700' : 'text-gray-500 hover:text-gray-700'}`}>
-          <ThumbsDown size={18} /> Malus
+          <ThumbsDown size={18} /> {t("Malus")}
         </button>
       </div>
 
@@ -124,13 +124,13 @@ export default function BonusMalusList({ currentUser, preloadedChallenges = [] }
         {visibleItems.length === 0 && <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl mb-4">Nessun elemento.</div>}
         {visibleOneShot.length > 0 && (
             <div className="mb-6">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2 px-1"><Zap size={14} /> Speciali</h3>
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2 px-1"><Zap size={14} /> {t("Speciali")}</h3>
                 {visibleOneShot.map(c => renderCard(c, false))}
             </div>
         )}
         {visibleDaily.length > 0 && (
             <div className="mb-6">
-                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2 px-1"><Repeat size={14} /> Giornalieri</h3>
+                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2 px-1"><Repeat size={14} /> {t("Giornalieri")}</h3>
                 {visibleDaily.map(c => renderCard(c, false))}
             </div>
         )}

@@ -126,7 +126,31 @@ const NAP_DICT = {
     "Devi farlo prima di continuare!": "Le fa primm' e cuntinuà!",
     "Vai alla Squadra": "Va a Squadra",
     "AZIONE RICHIESTA": "MOVT!",
-    "Devi impostarlo per sbloccare l'app.": "L'é mett pe sblocca t cos."
+    "Devi impostarlo per sbloccare l'app.": "L'é mett pe sblocca t cos.",
+
+    //manutenzione
+    "VAR Check" : "",
+    "Review in corso" : "Stamm ricontrollan",
+    "Stiamo ricontrollando tutti i vostri punteggi!" : "stamm cuntrullann sj at mbicciat ngopp i punteggi!",
+    "Voi preparatevi per stasera!" : "Vuj preparatev pe staser!",
+
+    //storico punti
+    "Il Tuo Storico Punti" : "Chell che cumbinat",
+    "Scarica un ricordo della tua FantaMatricolata" : "Fatt nu ricord e sta matricolata",
+    "Nessuna attività registrata." : "Nisciuta attività registrata",
+    "Completato" : "L'è fatt tu",
+    "Malus dagli admin" : "stu malùs te l'ann rat i masti",
+    "Bonùs dagli admin" : "stu bonùs te l'ann rat i masti",
+    "Malus" : "Malùs",
+    "Bonus" : "Bonùs",
+
+    // elenco bonus malus
+    "Regolamento" : "E' rregole",
+    "Tocca una card per i dettagli." : "priemc ngopp pe capì caccos",
+    "I bonus con la " : "I bonus ca ",
+    "Corona" : "Coron", 
+    " valgono doppio per il Capitano!" : " valen o doppio po capitano!",
+
 };
 
 export default function Home() {
@@ -303,17 +327,17 @@ export default function Home() {
 
                 {/* Titolo e Badge Giallo animato (stile grafica TV) */}
                 <h1 className="text-3xl font-black text-gray-900 tracking-widest mb-2 uppercase">
-                    VAR Check
+                    {t("VAR Check")}
                 </h1>
                 
                 <div className="inline-block bg-yellow-400 text-black text-xs font-black px-3 py-1 rounded-sm animate-pulse mb-6 tracking-widest uppercase">
-                    Review in corso
+                    {t("Review in corso")}
                 </div>
 
                 {/* Messaggio personalizzato */}
                 <p className="text-gray-600 mb-8 font-medium leading-relaxed text-lg">
-                    Stiamo ricontrollando tutti i vostri punteggi!<br/>
-                    <span className="text-[#B41F35] font-black block mt-4 text-xl">Voi preparatevi per stasera! </span>
+                    {t("Stiamo ricontrollando tutti i vostri punteggi!")}<br/>
+                    <span className="text-[#B41F35] font-black block mt-4 text-xl">{t("Voi preparatevi per stasera!")} </span>
                 </p>
 
                 {/* Bottone di uscita con il colore principale dell'app */}
@@ -471,11 +495,11 @@ export default function Home() {
           </TabContent>
 
             <TabContent id="lista" activeTab={activeTab}>
-                <BonusMalusList currentUser={userData} preloadedChallenges={globalChallenges} />
+                <BonusMalusList t = {t} currentUser={userData} preloadedChallenges={globalChallenges} />
             </TabContent>
 
             <TabContent id="percorso" activeTab={activeTab}>
-                <StoricoPunti currentUser={userData} systemSettings={systemSettings}/>
+                <StoricoPunti t = {t} currentUser={userData} systemSettings={systemSettings}/>
             </TabContent>
           </>
         ) : (
@@ -494,7 +518,7 @@ export default function Home() {
             </TabContent>
             
             <TabContent id="lista" activeTab={activeTab}>
-                 <BonusMalusList currentUser={userData} preloadedChallenges={globalChallenges} />
+                 <BonusMalusList t = {t} currentUser={userData} preloadedChallenges={globalChallenges} />
             </TabContent>
 
             {activeTab === 'admin-sfide' && isAdminOrSuper && <AdminSfideManager t = {t}/>}
