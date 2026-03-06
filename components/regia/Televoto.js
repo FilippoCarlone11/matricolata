@@ -484,7 +484,7 @@ export default function Televoto({ eventPerformances, allMatricole, liveVotingDa
 
                         {completedPerfs.length === 0 && (
                             <div className="text-center py-12 text-gray-600 font-bold border-2 border-dashed border-gray-800 rounded-3xl">
-                                Nessun'esibizione ancora terminata.
+                                Nessuna esibizione ancora terminata.
                             </div>
                         )}
                     </div>
