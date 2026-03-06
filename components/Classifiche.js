@@ -13,7 +13,7 @@ import {
 } from '@/lib/firebase';
 import { Trophy, User, Users, Shield, X, Crown, ArrowLeft, Zap, PlusCircle, Calendar, Trash2, EyeOff, Loader2, Wine, CalendarDays, Search, Clock } from 'lucide-react';
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import autoTable from 'jspdf-autotable'; 
 
 export default function Classifiche({ preloadedUsers = [], currentUser, onTriggerYellow }) {
   const [matricole, setMatricole] = useState([]);
@@ -34,6 +34,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [availableChallenges, setAvailableChallenges] = useState([]);
   const [isAdminLoading, setIsAdminLoading] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false); // NUOVO STATO CARICAMENTO PDF
   const [historyLimit, setHistoryLimit] = useState(5);
   
   // --- STATI RICERCA ---
@@ -69,7 +70,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
 
   const { showDrinkCount, showSquadCount, showCaptainIcon, showEveningPoints } = sysSettings;
 
-  // 1. IMPOSTA ORARIO DI AGGIORNAMENTO (Gira 1 sola volta)
+  // IMPOSTA ORARIO DI AGGIORNAMENTO
   useEffect(() => {
     const cachedData = localStorage.getItem('cache_users'); 
     
@@ -88,7 +89,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
     setLastUpdateTime(new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }));
   }, []); 
 
-  // 2. CALCOLA LE CLASSIFICHE (Il pezzo che era sparito! 🚀)
+  // CALCOLA LE CLASSIFICHE
   useEffect(() => {
     if (preloadedUsers.length > 0) {
         calculateLeaderboards(preloadedUsers);
@@ -251,13 +252,28 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
     }
   };
 
-  const generaReportPDF = (utente, storicoDati) => {
-    try {
-        if (!utente) {
-            alert("Errore: Dati utente mancanti.");
-            return;
-        }
+  // HELPER: Calcola le dimensioni originali della foto per mantenerne le proporzioni
+  const getImageDimensions = (base64) => {
+      return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve({ w: img.width, h: img.height });
+          img.onerror = () => resolve({ w: 0, h: 0 });
+          img.src = base64;
+      });
+  };
 
+  // ==========================================
+  // FUNZIONE PDF STILE "NEWS FEED POST" (CON PROPORZIONI)
+  // ==========================================
+  const generaReportPDF = async (utente, storicoDati) => {
+    if (!utente) {
+        alert("Errore: Dati utente mancanti.");
+        return;
+    }
+
+    setIsGeneratingPDF(true); // Accende il loader
+
+    try {
         let storico = [];
         if (Array.isArray(storicoDati)) {
             storico = storicoDati;
@@ -269,30 +285,33 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
 
         const doc = new jsPDF();
         const brandColor = [180, 31, 53];
+        const pageWidth = 210;
+        const marginX = 14;
+        const cardWidth = pageWidth - (marginX * 2);
 
-        // HEADER
+        // --- HEADER PRINCIPALE ---
         doc.setFillColor(...brandColor);
-        doc.rect(0, 0, 210, 40, 'F'); 
+        doc.rect(0, 0, pageWidth, 40, 'F'); 
 
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(22);
         doc.setFont("helvetica", "bold");
-        doc.text("FANTA MATRICOLATA", 14, 20);
+        doc.text("FANTAMATRICOLATA 2025/26", marginX, 20);
         
         doc.setFontSize(12);
         doc.setFont("helvetica", "normal");
-        doc.text("Referto Ufficiale VAR - Storico Attività", 14, 28);
+        doc.text("Elenco bonus e malus", marginX, 28);
 
-        // SEZIONE UTENTE
+        // --- DETTAGLI UTENTE ---
         doc.setTextColor(50, 50, 50);
         doc.setFontSize(16);
         doc.setFont("helvetica", "bold");
-        doc.text(`Matricola: ${utente.displayName || 'Sconosciuto'}`, 14, 55);
+        doc.text(`Matricola: ${utente.displayName || 'Sconosciuto'}`, marginX, 55);
         
         doc.setFontSize(11);
         doc.setFont("helvetica", "normal");
-        doc.text(`Ruolo: ${utente.role ? utente.role.toUpperCase() : 'N/D'}`, 14, 62);
-        if(utente.teamName) doc.text(`Squadra: ${utente.teamName}`, 14, 68);
+        doc.text(`Ruolo: ${utente.role ? utente.role.toUpperCase() : 'N/D'}`, marginX, 62);
+        if(utente.teamName) doc.text(`Squadra: ${utente.teamName}`, marginX, 68);
         
         doc.setFontSize(14);
         doc.setFont("helvetica", "bold");
@@ -310,64 +329,125 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
             doc.text(`Cocktail bevuti: ${utente.drinkCount}`, 130, 67);
         }
 
-        // TABELLA STORICO
+        let currentY = 80;
+
         if (storico.length === 0) {
             doc.setFontSize(12);
             doc.setTextColor(100, 100, 100);
-            doc.text("Nessuna attività registrata per questa matricola.", 14, 85);
+            doc.text("Nessuna attività registrata per questa matricola.", marginX, currentY);
         } else {
-            const tableBody = storico.map(item => {
+            
+            // --- CICLO ASINCRONO PER I POST ---
+            for (let i = 0; i < storico.length; i++) {
+                const item = storico[i];
                 const dateObj = item.approvedAt?.toDate ? item.approvedAt.toDate() : new Date();
                 const dataStr = dateObj.toLocaleDateString('it-IT') + ' - ' + dateObj.toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'});
-                
                 const isMalus = item.puntiRichiesti < 0;
                 const puntiStr = isMalus ? `${item.puntiRichiesti}` : `+${item.puntiRichiesti}`;
-                const tipo = item.manual ? "Admin" : "App";
                 
-                return [dataStr, item.challengeName || "Sfida non specificata", tipo, puntiStr];
-            });
+                let actionText = item.manual ? "Assegnato da Admin" : "Richiesta Approvata";
+                if (item.status === 'rejected') actionText = "Rifiutato";
 
-            autoTable(doc, {
-                startY: 80,
-                head: [['Data e Ora', 'Azione / Bonus / Malus', 'Assegnato da', 'Punti']],
-                body: tableBody,
-                theme: 'striped',
-                headStyles: { fillColor: brandColor, textColor: 255, fontStyle: 'bold' },
-                columnStyles: {
-                    0: { cellWidth: 45 },
-                    1: { cellWidth: 'auto' },
-                    2: { cellWidth: 35, halign: 'center' },
-                    3: { cellWidth: 25, halign: 'center', fontStyle: 'bold' }
-                },
-                didParseCell: function (data) {
-                    if (data.section === 'body' && data.column.index === 3) {
-                        const val = parseInt(data.cell.raw);
-                        if (val < 0) {
-                            data.cell.styles.textColor = [220, 38, 38]; 
-                        } else {
-                            data.cell.styles.textColor = [22, 163, 74]; 
-                        }
+                const hasPhoto = item.photoProof && item.photoProof.startsWith('data:image');
+                
+                let printImgW = 0;
+                let printImgH = 0;
+
+                // Calcolo proporzioni intelligenti per la foto
+                if (hasPhoto) {
+                    const dims = await getImageDimensions(item.photoProof);
+                    if (dims.w > 0 && dims.h > 0) {
+                        const maxW = cardWidth - 12; // Lascia un po' di margine interno
+                        const maxH = 90; // Altezza massima in PDF per non mangiarsi una pagina intera
+                        const ratio = Math.min(maxW / dims.w, maxH / dims.h);
+                        printImgW = dims.w * ratio;
+                        printImgH = dims.h * ratio;
                     }
-                },
-            });
+                }
+
+                // Calcolo altezza dinamica basata sul testo
+                doc.setFontSize(12);
+                doc.setFont("helvetica", "bold");
+                const challengeName = item.challengeName || "Sfida non specificata";
+                const titleLines = doc.splitTextToSize(challengeName, cardWidth - 30);
+                const textHeight = titleLines.length * 6; // Circa 6mm a riga
+
+                // Calcolo altezza totale della card
+                const basePadding = 18; 
+                let cardHeight = basePadding + textHeight;
+                if (hasPhoto && printImgH > 0) cardHeight += printImgH + 6; // Aggiunge l'altezza esatta della foto
+
+                // Controllo salto pagina
+                if (currentY + cardHeight > 280) {
+                    doc.addPage();
+                    currentY = 20;
+                }
+
+                // 1. Sfondo della Card
+                doc.setFillColor(252, 252, 252);
+                doc.setDrawColor(230, 230, 230);
+                doc.roundedRect(marginX, currentY, cardWidth, cardHeight, 3, 3, 'FD');
+
+                // 2. Intestazione Post (Data e Stato)
+                doc.setFontSize(9);
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(150, 150, 150);
+                doc.text(dataStr, marginX + 4, currentY + 7);
+                
+                doc.setFont("helvetica", "bold");
+                if (item.status === 'rejected') doc.setTextColor(220, 38, 38);
+                else if (item.manual) doc.setTextColor(100, 100, 100);
+                else doc.setTextColor(22, 163, 74);
+                doc.text(actionText.toUpperCase(), marginX + cardWidth - 4, currentY + 7, { align: 'right' });
+
+                // 3. Titolo Sfida e Punti
+                doc.setFontSize(12);
+                doc.setTextColor(40, 40, 40);
+                doc.setFont("helvetica", "bold");
+                doc.text(titleLines, marginX + 4, currentY + 15);
+
+                doc.setFontSize(14);
+                if (item.status === 'rejected') doc.setTextColor(150, 150, 150);
+                else if (isMalus) doc.setTextColor(220, 38, 38);
+                else doc.setTextColor(22, 163, 74);
+                doc.text(item.status === 'rejected' ? '0' : puntiStr, marginX + cardWidth - 4, currentY + 15, { align: 'right' });
+
+                // 4. Immagine Allegata (Centrata e Proporzionata)
+                if (hasPhoto && printImgW > 0) {
+                    try {
+                        const imgX = marginX + (cardWidth - printImgW) / 2; // La centra perfettamente al centro
+                        const imgY = currentY + 15 + textHeight;
+                        doc.addImage(item.photoProof, imgX, imgY, printImgW, printImgH, undefined, 'FAST');
+                    } catch (e) {
+                        console.error("Errore PDF Immagine", e);
+                        doc.setFontSize(9);
+                        doc.setTextColor(200, 100, 100);
+                        doc.text("[Errore rendering immagine]", marginX + cardWidth/2, currentY + 25 + textHeight, { align: 'center' });
+                    }
+                }
+
+                currentY += cardHeight + 6; // Spazio prima della prossima card
+            }
         }
 
-        // FOOTER
+        // --- FOOTER PAGINE ---
         const pageCount = doc.internal.getNumberOfPages();
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
+        doc.setFont("helvetica", "normal");
         for(let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
-            doc.text(`Generato il: ${new Date().toLocaleString('it-IT')} - Pagina ${i} di ${pageCount}`, 14, 285);
+            doc.text(`Generato il: ${new Date().toLocaleString('it-IT')} - Pagina ${i} di ${pageCount}`, marginX, 290);
         }
 
-        // Salva
         const safeName = (utente.displayName || 'Utente').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-        doc.save(`Bonus_${safeName}.pdf`);
+        doc.save(`Resoconto_${safeName}.pdf`);
 
     } catch (error) {
         console.error("Errore PDF:", error);
         alert(`Impossibile generare il PDF: ${error.message}`);
+    } finally {
+        setIsGeneratingPDF(false); // Spegne il loader
     }
   };
 
@@ -454,9 +534,11 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
 
                 <button 
                     onClick={() => generaReportPDF(adminSelectedUser, Object.values(adminHistory))}
-                    className="w-full bg-gray-800 text-white p-3 rounded-xl font-bold text-sm shadow-md hover:bg-gray-900 transition-all flex items-center justify-center gap-2 mb-6"
+                    disabled={isGeneratingPDF}
+                    className={`w-full text-white p-3 rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 mb-6 ${isGeneratingPDF ? 'bg-gray-400 cursor-not-allowed' : 'bg-gray-800 hover:bg-gray-900 active:scale-95'}`}
                 >
-                    📄 Scarica l'elenco di bonus
+                    {isGeneratingPDF ? <Loader2 size={18} className="animate-spin"/> : '📄'}
+                    {isGeneratingPDF ? 'Generazione Report in corso...' : 'Scarica il resoconto'}
                 </button>
 
                 {/* SEARCH STORICO PUNTI */}
