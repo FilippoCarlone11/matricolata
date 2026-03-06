@@ -129,7 +129,7 @@ const NAP_DICT = {
     "Devi impostarlo per sbloccare l'app.": "L'é mett pe sblocca t cos.",
 
     //manutenzione
-    "VAR Check" : "",
+    "VAR Check" : "Controll VAR",
     "Review in corso" : "Stamm ricontrollan",
     "Stiamo ricontrollando tutti i vostri punteggi!" : "stamm cuntrullann sj at mbicciat ngopp i punteggi!",
     "Voi preparatevi per stasera!" : "Vuj preparatev pe staser!",

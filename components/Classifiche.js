@@ -51,7 +51,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   const [showBcienzEffect, setShowBcienzEffect] = useState(false);
 
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'super-admin';
-  const isSuperAdmin = currentUser?.role === 'super-admin'; // <-- SOLO IL SUPER ADMIN
+  const isSuperAdmin = currentUser?.role === 'super-admin'; // SOLO LUI VEDE IN CHIARO
 
   useEffect(() => {
       const fetchSettings = async () => {
@@ -661,13 +661,13 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
         </div>
       )}
 
-      {/* BANNER CLASSIFICA OSCURATA VISIBILE A TUTTI TRANNE AL SUPER ADMIN */}
+      {/* BANNER CLASSIFICA OSCURATA */}
       {blindRanking && !isSuperAdmin && (
           <div className="bg-yellow-100 border border-yellow-300 p-3 rounded-xl mb-6 flex items-center gap-3 shadow-sm animate-pulse">
               <Lock className="text-yellow-600 shrink-0" size={24} />
               <div>
                   <h3 className="font-bold text-yellow-800 text-sm leading-tight">Modalità Suspense</h3>
-                  <p className="text-xs text-yellow-700">I punteggi esatti sono stati oscurati</p>
+                  <p className="text-xs text-yellow-700">I punteggi esatti sono oscurati dal VAR fino all'annuncio ufficiale!</p>
               </div>
           </div>
       )}
@@ -703,9 +703,10 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                 }
                 previousPoints = points;
 
-                // 🚨 LOGICA OSCURAMENTO PUNTEGGIO CON BLUR (SFOCATURA) 🚨
-                // Solo chi NON è super-admin vede sfocato
+                // 🚨 CENSURA A PROVA DI HACKER 🚨
+                // Sostituiamo fisicamente il numero con "888" sotto la sfocatura!
                 const isObscured = blindRanking && !isSuperAdmin;
+                const displayPoints = isObscured ? '888' : points;
 
                 const count = squadCounts[item.id] || 0; 
                 const capCount = captainCounts[item.id] || 0;
@@ -761,11 +762,13 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                     </div>
                     <div className="text-right pl-2 flex flex-col justify-center items-end">
                         <div>
-                            {/* NUMERI SFOCATI SE OSCURATO */}
-                            <span className={`inline-block text-2xl font-black text-gray-800 leading-none ${isObscured ? 'blur-sm opacity-50 select-none' : ''}`}>{points}</span>
-                            <span className={`inline-block text-[9px] uppercase font-bold text-gray-400 ml-1 ${isObscured ? 'blur-sm opacity-50 select-none' : ''}`}>Pt</span>
+                            {/* NUMERI SFOCATI, ILLEGGIBILI E FALSIFICATI */}
+                            <span className={`inline-block text-2xl font-black leading-none ${isObscured ? 'text-gray-400 blur-md opacity-50 select-none pointer-events-none' : 'text-gray-800'}`}>
+                                {displayPoints}
+                            </span>
+                            {!isObscured && <span className="inline-block text-[9px] uppercase font-bold text-gray-400 ml-1">Pt</span>}
                         </div>
-                        {/* NASCONDE I PUNTI SERATA SE E' IN MODALITA' SUSPENSE */}
+                        
                         {!isFanta && showEveningPoints && item.puntiSerata !== undefined && item.puntiSerata !== 0 && !isObscured && (
                             <span className={`block text-[10px] font-bold mt-1 ${item.puntiSerata > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                                 {item.puntiSerata > 0 ? '+' : ''}{item.puntiSerata} matricolata
@@ -800,7 +803,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                             const isCaptain = selectedTeam.captainId === player.id;
                             const drinks = player.drinkCount || 0; 
                             
-                            // 🚨 OSCURA I PUNTI ANCHE NEL DETTAGLIO DELLA SQUADRA 🚨
+                            // CENSURA ANCHE NEL DETTAGLIO SQUADRA
                             const isObscured = blindRanking && !isSuperAdmin;
 
                             return (
@@ -813,8 +816,9 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                                     <p className="font-bold text-sm text-gray-900">{player.displayName}</p>
                                     <div className="flex items-center gap-2 flex-wrap mt-0.5">
                                         <span className="text-xs text-gray-500">
-                                            {/* NUMERO SFOCATO */}
-                                            Punti: <b className={isObscured ? 'blur-[4px] opacity-60 select-none pointer-events-none' : ''}>{player.punti || 0}</b>
+                                            Punti: <b className={isObscured ? 'text-gray-400 blur-md opacity-50 select-none pointer-events-none' : ''}>
+                                                {isObscured ? '888' : (player.punti || 0)}
+                                            </b>
                                             
                                             {!isObscured && isCaptain && player.puntiSerata !== undefined && player.puntiSerata !== 0 && (
                                                 <span className={`ml-1 font-bold tracking-tight ${player.puntiSerata > 0 ? 'text-yellow-600' : 'text-red-500'}`}>
