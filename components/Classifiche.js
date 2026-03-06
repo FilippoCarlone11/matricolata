@@ -667,7 +667,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
               <Lock className="text-yellow-600 shrink-0" size={24} />
               <div>
                   <h3 className="font-bold text-yellow-800 text-sm leading-tight">Modalità Suspense</h3>
-                  <p className="text-xs text-yellow-700">I punteggi esatti sono oscurati dal VAR fino all'annuncio ufficiale!</p>
+                  <p className="text-xs text-yellow-700">I punteggi esatti sono oscurati!</p>
               </div>
           </div>
       )}
