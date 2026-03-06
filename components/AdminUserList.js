@@ -613,7 +613,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                                         : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50 scale-95'
                                     }`}
                                 >
-                                    {role === 'super-admin' ? 'Super' : role}
+                                    {role === 'super-admin' ? 'Super' : role === 'utente' ? 'Anziano' : role}
                                 </button>
                             );
                         })}
