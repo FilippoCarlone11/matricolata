@@ -11,7 +11,9 @@ import {
     getSystemSettings,
     updateRequestDate 
 } from '@/lib/firebase';
-import { Trophy, User, Users, Shield, X, Crown, ArrowLeft, Zap, PlusCircle, Calendar, Trash2, EyeOff, Loader2, Wine, CalendarDays, Search } from 'lucide-react';
+import { Trophy, User, Users, Shield, X, Crown, ArrowLeft, Zap, PlusCircle, Calendar, Trash2, EyeOff, Loader2, Wine, CalendarDays, Search, Clock } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function Classifiche({ preloadedUsers = [], currentUser, onTriggerYellow }) {
   const [matricole, setMatricole] = useState([]);
@@ -20,6 +22,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   const [captainCounts, setCaptainCounts] = useState({}); 
   
   const [view, setView] = useState('fanta'); 
+  const [lastUpdateTime, setLastUpdateTime] = useState('');
   
   // STATI PER UTENTI NORMALI
   const [selectedTeam, setSelectedTeam] = useState(null);
@@ -66,6 +69,26 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
 
   const { showDrinkCount, showSquadCount, showCaptainIcon, showEveningPoints } = sysSettings;
 
+  // 1. IMPOSTA ORARIO DI AGGIORNAMENTO (Gira 1 sola volta)
+  useEffect(() => {
+    const cachedData = localStorage.getItem('cache_users'); 
+    
+    if (cachedData) {
+        try {
+            const parsed = JSON.parse(cachedData);
+            if (parsed && parsed.timestamp) {
+                setLastUpdateTime(new Date(parsed.timestamp).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }));
+                return;
+            }
+        } catch (e) {
+            console.error("Errore lettura cache timestamp");
+        }
+    }
+    
+    setLastUpdateTime(new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }));
+  }, []); 
+
+  // 2. CALCOLA LE CLASSIFICHE (Il pezzo che era sparito! 🚀)
   useEffect(() => {
     if (preloadedUsers.length > 0) {
         calculateLeaderboards(preloadedUsers);
@@ -147,7 +170,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
     setIsAdminLoading(true);
     setAdminSelectedUser(user);
     setHistoryLimit(5);
-    setHistorySearch(''); // Reset ricerca storico
+    setHistorySearch(''); 
     await loadUserHistory(user.id);
     setIsAdminLoading(false);
   };
@@ -188,7 +211,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   };
 
   const openAssignModal = async () => {
-    setChallengeSearch(''); // Reset ricerca bonus
+    setChallengeSearch(''); 
     let challs = await getChallenges();
     challs = challs.sort((a, b) => {
         const titleA = a.titolo ? a.titolo.toLowerCase() : '';
@@ -225,6 +248,126 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
     } catch (error) {
         console.error("Errore aggiornamento data:", error);
         alert("Errore durante l'aggiornamento della data.");
+    }
+  };
+
+  const generaReportPDF = (utente, storicoDati) => {
+    try {
+        if (!utente) {
+            alert("Errore: Dati utente mancanti.");
+            return;
+        }
+
+        let storico = [];
+        if (Array.isArray(storicoDati)) {
+            storico = storicoDati;
+        } else if (typeof storicoDati === 'object' && storicoDati !== null) {
+            Object.values(storicoDati).forEach(arr => {
+                if(Array.isArray(arr)) storico = [...storico, ...arr];
+            });
+        }
+
+        const doc = new jsPDF();
+        const brandColor = [180, 31, 53];
+
+        // HEADER
+        doc.setFillColor(...brandColor);
+        doc.rect(0, 0, 210, 40, 'F'); 
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(22);
+        doc.setFont("helvetica", "bold");
+        doc.text("FANTA MATRICOLATA", 14, 20);
+        
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+        doc.text("Referto Ufficiale VAR - Storico Attività", 14, 28);
+
+        // SEZIONE UTENTE
+        doc.setTextColor(50, 50, 50);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Matricola: ${utente.displayName || 'Sconosciuto'}`, 14, 55);
+        
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Ruolo: ${utente.role ? utente.role.toUpperCase() : 'N/D'}`, 14, 62);
+        if(utente.teamName) doc.text(`Squadra: ${utente.teamName}`, 14, 68);
+        
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...brandColor);
+        doc.text(`PUNTI TOTALI: ${utente.punti || 0} pt`, 130, 55);
+        
+        if (utente.puntiSerata) {
+            doc.setFontSize(10);
+            doc.setTextColor(46, 204, 113); 
+            doc.text(`(Di cui punti serata: ${utente.puntiSerata})`, 130, 61);
+        }
+        if (utente.drinkCount) {
+            doc.setFontSize(10);
+            doc.setTextColor(142, 68, 173); 
+            doc.text(`Cocktail bevuti: ${utente.drinkCount}`, 130, 67);
+        }
+
+        // TABELLA STORICO
+        if (storico.length === 0) {
+            doc.setFontSize(12);
+            doc.setTextColor(100, 100, 100);
+            doc.text("Nessuna attività registrata per questa matricola.", 14, 85);
+        } else {
+            const tableBody = storico.map(item => {
+                const dateObj = item.approvedAt?.toDate ? item.approvedAt.toDate() : new Date();
+                const dataStr = dateObj.toLocaleDateString('it-IT') + ' - ' + dateObj.toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'});
+                
+                const isMalus = item.puntiRichiesti < 0;
+                const puntiStr = isMalus ? `${item.puntiRichiesti}` : `+${item.puntiRichiesti}`;
+                const tipo = item.manual ? "Admin" : "App";
+                
+                return [dataStr, item.challengeName || "Sfida non specificata", tipo, puntiStr];
+            });
+
+            autoTable(doc, {
+                startY: 80,
+                head: [['Data e Ora', 'Azione / Bonus / Malus', 'Assegnato da', 'Punti']],
+                body: tableBody,
+                theme: 'striped',
+                headStyles: { fillColor: brandColor, textColor: 255, fontStyle: 'bold' },
+                columnStyles: {
+                    0: { cellWidth: 45 },
+                    1: { cellWidth: 'auto' },
+                    2: { cellWidth: 35, halign: 'center' },
+                    3: { cellWidth: 25, halign: 'center', fontStyle: 'bold' }
+                },
+                didParseCell: function (data) {
+                    if (data.section === 'body' && data.column.index === 3) {
+                        const val = parseInt(data.cell.raw);
+                        if (val < 0) {
+                            data.cell.styles.textColor = [220, 38, 38]; 
+                        } else {
+                            data.cell.styles.textColor = [22, 163, 74]; 
+                        }
+                    }
+                },
+            });
+        }
+
+        // FOOTER
+        const pageCount = doc.internal.getNumberOfPages();
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        for(let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.text(`Generato il: ${new Date().toLocaleString('it-IT')} - Pagina ${i} di ${pageCount}`, 14, 285);
+        }
+
+        // Salva
+        const safeName = (utente.displayName || 'Utente').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        doc.save(`Bonus_${safeName}.pdf`);
+
+    } catch (error) {
+        console.error("Errore PDF:", error);
+        alert(`Impossibile generare il PDF: ${error.message}`);
     }
   };
 
@@ -308,6 +451,13 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                         <PlusCircle size={20}/> Manuale
                     </button>
                 </div>
+
+                <button 
+                    onClick={() => generaReportPDF(adminSelectedUser, Object.values(adminHistory))}
+                    className="w-full bg-gray-800 text-white p-3 rounded-xl font-bold text-sm shadow-md hover:bg-gray-900 transition-all flex items-center justify-center gap-2 mb-6"
+                >
+                    📄 Scarica l'elenco di bonus
+                </button>
 
                 {/* SEARCH STORICO PUNTI */}
                 <h3 className="font-bold text-gray-900 text-lg mb-3">Storico Punti</h3>
@@ -450,81 +600,104 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
         </div>
       )}
 
-      <div className="flex bg-gray-200 p-1 rounded-xl mb-6">
-        <button onClick={() => setView('fanta')} className={`flex-1 py-2 rounded-lg text-sm font-bold flex justify-center items-center gap-2 transition-all ${view === 'fanta' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}><Shield size={16} /> Squadre</button>
-        <button onClick={() => setView('matricole')} className={`flex-1 py-2 rounded-lg text-sm font-bold flex justify-center items-center gap-2 transition-all ${view === 'matricole' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}><Users size={16} /> Matricole</button>
+      <div className="mb-6">
+          <div className="flex bg-gray-200 p-1 rounded-xl">
+            <button onClick={() => setView('fanta')} className={`flex-1 py-2 rounded-lg text-sm font-bold flex justify-center items-center gap-2 transition-all ${view === 'fanta' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}><Shield size={16} /> Squadre</button>
+            <button onClick={() => setView('matricole')} className={`flex-1 py-2 rounded-lg text-sm font-bold flex justify-center items-center gap-2 transition-all ${view === 'matricole' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}><Users size={16} /> Matricole</button>
+          </div>
+          
+          {/* SCRITTA ULTIMO AGGIORNAMENTO */}
+          {lastUpdateTime && (
+              <div className="flex items-center justify-center gap-1.5 mt-2.5 text-gray-400">
+                  <Clock size={12} />
+                  <span className="text-xs font-bold uppercase tracking-wider">
+                      Ultimo aggiornamento alle {lastUpdateTime}
+                  </span>
+              </div>
+          )}
       </div>
 
       <div className="space-y-3">
-        {listItems.map((item, index) => {
-            const count = squadCounts[item.id] || 0; 
-            const capCount = captainCounts[item.id] || 0;
-            const drinks = item.drinkCount || 0; 
+        {(() => {
+            let currentRank = 1;
+            let previousPoints = null;
 
-            let medalColor = 'bg-white border-gray-200';
-            let rankIcon = <span className="font-black text-xl text-gray-400 italic w-8 text-center">#{index + 1}</span>;
-            
-            if (index === 0) { medalColor = 'bg-yellow-50 border-yellow-300'; rankIcon = <Trophy className="text-yellow-500 w-8" fill="currentColor" fillOpacity={0.2} />; }
-            if (index === 1) { medalColor = 'bg-slate-50 border-slate-300'; rankIcon = <Trophy className="text-slate-400 w-8" fill="currentColor" fillOpacity={0.2} />; }
-            if (index === 2) { medalColor = 'bg-orange-50 border-orange-200'; rankIcon = <Trophy className="text-orange-500 w-8" fill="currentColor" fillOpacity={0.2} />; }
+            return listItems.map((item, index) => {
+                const isFanta = view === 'fanta';
+                const points = isFanta ? item.fantaPunti : item.punti;
+                
+                if (previousPoints !== null && points < previousPoints) {
+                    currentRank++;
+                }
+                previousPoints = points;
 
-            const isFanta = view === 'fanta';
-            const title = isFanta ? (item.teamName || item.displayName) : item.displayName;
-            const subTitle = isFanta ? item.displayName : 'Matricola';
-            const isClickable = (isFanta && item.mySquad && item.mySquad.length > 0) || (view === 'matricole' && isAdmin);
+                const count = squadCounts[item.id] || 0; 
+                const capCount = captainCounts[item.id] || 0;
+                const drinks = item.drinkCount || 0; 
 
-            return (
-            <div 
-                key={item.id} 
-                onClick={() => handleItemClick(item)}
-                className={`flex items-center p-3 rounded-2xl border-2 shadow-sm transition-all ${medalColor} cursor-pointer active:scale-95`}
-            >
-                {rankIcon}
-                <img src={item.photoURL || `https://api.dicebear.com/9.x/notionists/svg?seed=${item.id}&backgroundColor=fecaca`} className="w-12 h-12 rounded-full object-cover mx-3 border border-gray-100 bg-red-50" />
-                <div className="flex-1 min-w-0">
-                    <h3 className={`font-bold text-gray-900 truncate text-lg leading-tight ${view === 'matricole' && isAdmin ? 'group-hover:text-[#B41F35]' : ''}`}>{title}</h3>
-                    <div className="text-xs text-gray-500 truncate flex flex-wrap items-center gap-1 mt-1">
-                        {isFanta ? (
-                             <>
-                                {item.teamName && <User size={10} />} {subTitle}
-                                {isClickable && <span className="text-[9px] bg-[#B41F35]/10 text-[#B41F35] font-bold px-1.5 rounded ml-2">Vedi Squadra</span>}
-                             </>
-                        ) : (
-                             <div className="flex gap-1 flex-wrap">
-                                 {showSquadCount && count > 0 && (
-                                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 bg-[#B41F35]/10 text-[#B41F35]`}>
-                                        <Users size={10} /> {count} Squadre
-                                     </span>
-                                 )}
-                                 {showCaptainIcon && capCount > 0 && (
+                let medalColor = 'bg-white border-gray-200';
+                let rankIcon = <span className="font-black text-xl text-gray-400 italic w-8 text-center">#{currentRank}</span>;
+                
+                if (currentRank === 1) { medalColor = 'bg-yellow-50 border-yellow-300'; rankIcon = <Trophy className="text-yellow-500 w-8" fill="currentColor" fillOpacity={0.2} />; }
+                else if (currentRank === 2) { medalColor = 'bg-slate-50 border-slate-300'; rankIcon = <Trophy className="text-slate-400 w-8" fill="currentColor" fillOpacity={0.2} />; }
+                else if (currentRank === 3) { medalColor = 'bg-orange-50 border-orange-200'; rankIcon = <Trophy className="text-orange-500 w-8" fill="currentColor" fillOpacity={0.2} />; }
+
+                const title = isFanta ? (item.teamName || item.displayName) : item.displayName;
+                const subTitle = isFanta ? item.displayName : 'Matricola';
+                const isClickable = (isFanta && item.mySquad && item.mySquad.length > 0) || (view === 'matricole' && isAdmin);
+
+                return (
+                <div 
+                    key={item.id} 
+                    onClick={() => handleItemClick(item)}
+                    className={`flex items-center p-3 rounded-2xl border-2 shadow-sm transition-all ${medalColor} cursor-pointer active:scale-95`}
+                >
+                    {rankIcon}
+                    <img src={item.photoURL || `https://api.dicebear.com/9.x/notionists/svg?seed=${item.id}&backgroundColor=fecaca`} className="w-12 h-12 rounded-full object-cover mx-3 border border-gray-100 bg-red-50" />
+                    <div className="flex-1 min-w-0">
+                        <h3 className={`font-bold text-gray-900 truncate text-lg leading-tight ${view === 'matricole' && isAdmin ? 'group-hover:text-[#B41F35]' : ''}`}>{title}</h3>
+                        <div className="text-xs text-gray-500 truncate flex flex-wrap items-center gap-1 mt-1">
+                            {isFanta ? (
+                                 <>
+                                    {item.teamName && <User size={10} />} {subTitle}
+                                    {isClickable && <span className="text-[9px] bg-[#B41F35]/10 text-[#B41F35] font-bold px-1.5 rounded ml-2">Vedi Squadra</span>}
+                                 </>
+                            ) : (
+                                 <div className="flex gap-1 flex-wrap">
+                                     {showSquadCount && count > 0 && (
+                                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 bg-[#B41F35]/10 text-[#B41F35]`}>
+                                            <Users size={10} /> {count} Squadre
+                                         </span>
+                                     )}
+                                     {showCaptainIcon && capCount > 0 && (
                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 bg-yellow-100 text-yellow-700 border border-yellow-200">
                                          <Crown size={10} /> {capCount}
                                      </span>
-                                 )}
-                                 {showDrinkCount && drinks > 0 && (
-                                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 bg-purple-100 text-purple-700 border border-purple-200">
-                                         <Wine size={10} /> x{drinks}
-                                     </span>
-                                 )}
-                             </div>
+                                     )}
+                                     {showDrinkCount && drinks > 0 && (
+                                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 bg-purple-100 text-purple-700 border border-purple-200">
+                                             <Wine size={10} /> x{drinks}
+                                         </span>
+                                     )}
+                                 </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="text-right pl-2 flex flex-col justify-center items-end">
+                        <div>
+                            <span className="inline-block text-2xl font-black text-gray-800 leading-none">{points}</span>
+                            <span className="inline-block text-[9px] uppercase font-bold text-gray-400 ml-1">Pt</span>
+                        </div>
+                        {!isFanta && showEveningPoints && item.puntiSerata !== undefined && item.puntiSerata !== 0 && (
+                            <span className={`block text-[10px] font-bold mt-1 ${item.puntiSerata > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                {item.puntiSerata > 0 ? '+' : ''}{item.puntiSerata} matricolata
+                            </span>
                         )}
                     </div>
                 </div>
-                <div className="text-right pl-2 flex flex-col justify-center items-end">
-                    <div>
-                        <span className="inline-block text-2xl font-black text-gray-800 leading-none">{isFanta ? item.fantaPunti : item.punti}</span>
-                        <span className="inline-block text-[9px] uppercase font-bold text-gray-400 ml-1">Pt</span>
-                    </div>
-                    {/* NUOVO: Mostra i punti serata sotto il punteggio totale */}
-                    {!isFanta && showEveningPoints && item.puntiSerata !== undefined && item.puntiSerata !== 0 && (
-                        <span className={`block text-[10px] font-bold mt-1 ${item.puntiSerata > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {item.puntiSerata > 0 ? '+' : ''}{item.puntiSerata} matricolata
-                        </span>
-                    )}
-                </div>
-            </div>
-            );
-        })}
+                );
+            });
+        })()}
         {listItems.length === 0 && <p className="text-center text-gray-500 py-8">Nessun dato.</p>}
       </div>
 

@@ -405,9 +405,9 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                             <div className="flex items-center justify-between mb-1">
                                 <div>
                                     <span className="text-sm font-bold text-gray-200 flex items-center gap-2">
-                                        Cache Feed & Storico <Clock size={14} className={feedCacheEnabled ? "text-green-400" : "text-gray-500"}/>
+                                        Cache Feed <Clock size={14} className={feedCacheEnabled ? "text-green-400" : "text-gray-500"}/>
                                     </span>
-                                    <span className="text-[10px] text-gray-400">News · Storico punti matricole</span>
+                                    <span className="text-[10px] text-gray-400">Imposta cache sulle News</span>
                                 </div>
                                 <button 
                                     onClick={() => saveFeedCacheSettings(!feedCacheEnabled, feedCacheDuration)}
