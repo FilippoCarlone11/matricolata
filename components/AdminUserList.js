@@ -540,10 +540,10 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                         }`}
                     >
                         {blindRanking ? <Lock size={18} /> : <Unlock size={18} />}
-                        {blindRanking ? "MODALITÀ SUSPENSE ATTIVA (PUNTI OSCURATI)" : "ATTIVA MODALITÀ SUSPENSE (OSCURA PUNTI)"}
+                        {blindRanking ? "classifica oscurata" : "Oscura classifica"}
                     </button>
                     <p className="text-center text-[10px] text-gray-400 mt-2">
-                        Quando attiva, i punteggi in classifica saranno sostituiti da "???" per tutti gli utenti non admin. Le posizioni resteranno visibili.
+                        Quando attiva, i punteggi in classifica saranno sfocati per tutti gli utenti non super-admin. Le posizioni resteranno visibili.
                     </p>
                 </div>
 

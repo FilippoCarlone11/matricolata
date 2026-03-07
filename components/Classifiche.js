@@ -14,6 +14,9 @@ import {
 import { Trophy, User, Users, Shield, X, Crown, ArrowLeft, Zap, PlusCircle, Calendar, Trash2, EyeOff, Loader2, Wine, CalendarDays, Search, Clock, Lock } from 'lucide-react';
 
 export default function Classifiche({ preloadedUsers = [], currentUser, onTriggerYellow }) {
+  // STATO LOCALE PER AGGIORNAMENTI IN TEMPO REALE
+  const [localUsers, setLocalUsers] = useState(preloadedUsers);
+  
   const [matricole, setMatricole] = useState([]);
   const [fantallenatori, setFantallenatori] = useState([]);
   const [squadCounts, setSquadCounts] = useState({});
@@ -24,7 +27,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   
   // STATI PER UTENTI NORMALI
   const [selectedTeam, setSelectedTeam] = useState(null);
-  const [teamDetails, setTeamDetails] = useState([]);
 
   // STATI PER ADMIN
   const [adminSelectedUser, setAdminSelectedUser] = useState(null);
@@ -73,7 +75,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
 
   useEffect(() => {
     const cachedData = localStorage.getItem('cache_users'); 
-    
     if (cachedData) {
         try {
             const parsed = JSON.parse(cachedData);
@@ -81,23 +82,24 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                 setLastUpdateTime(new Date(parsed.timestamp).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }));
                 return;
             }
-        } catch (e) {
-            console.error("Errore lettura cache timestamp");
-        }
+        } catch (e) {}
     }
-    
     setLastUpdateTime(new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }));
   }, []); 
 
+  // MANTIENI ALLINEATI GLI UTENTI IN TEMPO REALE
   useEffect(() => {
-    if (preloadedUsers.length > 0) {
-        calculateLeaderboards(preloadedUsers);
-        
+      setLocalUsers(preloadedUsers);
+  }, [preloadedUsers]);
+
+  useEffect(() => {
+    if (localUsers.length > 0) {
+        calculateLeaderboards(localUsers);
         if (showSquadCount || showCaptainIcon) {
-            calculateSquadCounts(preloadedUsers);
+            calculateSquadCounts(localUsers);
         }
     }
-  }, [preloadedUsers, showSquadCount, showCaptainIcon]);
+  }, [localUsers, showSquadCount, showCaptainIcon]);
 
   const calculateLeaderboards = (users) => {
       const m = users.filter(u => u.role === 'matricola').sort((a, b) => (b.punti || 0) - (a.punti || 0));
@@ -128,7 +130,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   const calculateSquadCounts = (users) => {
       const counts = {};
       const capCounts = {}; 
-      
       users.forEach(user => {
           if (user.mySquad && Array.isArray(user.mySquad)) {
               user.mySquad.forEach(mid => {
@@ -145,15 +146,12 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
 
   const handleItemClick = (item) => {
       const name = item.displayName ? item.displayName.toLowerCase() : '';
-
       if (name.includes('bcienz')) triggerBcienzEffect();
       if (name.includes('fisi') && onTriggerYellow) onTriggerYellow();
 
       if (view === 'fanta') {
           if (!item.mySquad || item.mySquad.length === 0) return;
           setSelectedTeam(item);
-          const details = preloadedUsers.filter(u => item.mySquad.includes(u.id));
-          setTeamDetails(details);
           return;
       }
       if (view === 'matricole' && isAdmin) {
@@ -177,12 +175,11 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
 
   const refreshAdminUser = async () => {
     if (!adminSelectedUser) return;
-    
     const freshData = await getUserData(adminSelectedUser.id);
     setAdminSelectedUser(freshData); 
     
-    const updatedUsers = preloadedUsers.map(u => u.id === freshData.id ? freshData : u);
-    calculateLeaderboards(updatedUsers);
+    // Aggiorna lo stato locale così la classifica mostra subito l'icona!
+    setLocalUsers(prev => prev.map(u => u.id === freshData.id ? freshData : u));
     
     await loadUserHistory(adminSelectedUser.id);
   };
@@ -203,7 +200,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
   const handleAddManual = async () => {
     const pointsStr = prompt("Inserisci Punti (+ o -):", "10");
     if (!pointsStr) return;
-    const reason = prompt("Inserisci Motivo:", "Bonus Extra");
+    const reason = prompt("Inserisci Motivo (es. Fegato, Bonus...):", "Bonus Extra");
     try {
       await manualAddPoints(adminSelectedUser.id, parseInt(pointsStr), reason);
       await refreshAdminUser();
@@ -227,7 +224,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
     try {
         await assignExistingChallenge(adminSelectedUser.id, challenge.id, challenge.punti, challenge.titolo);
         setShowAssignModal(false);
-        await refreshAdminUser();
+        await refreshAdminUser(); // LA CLASSIFICA ORA SI AGGIORNERA' ALL'ISTANTE
     } catch(e) { alert(e); }
   };
 
@@ -237,11 +234,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
 
     try {
         const newDate = new Date(newDateStr);
-        if (isNaN(newDate.getTime())) {
-            alert("Data non valida.");
-            return;
-        }
-
+        if (isNaN(newDate.getTime())) { alert("Data non valida."); return; }
         await updateRequestDate(req.id, newDate);
         await refreshAdminUser();
         alert("Data aggiornata con successo.");
@@ -265,12 +258,9 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
         alert("Errore: Dati utente mancanti.");
         return;
     }
-
     setIsGeneratingPDF(true);
-
     try {
         const { jsPDF } = await import('jspdf');
-        
         let storico = [];
         if (Array.isArray(storicoDati)) {
             storico = storicoDati;
@@ -279,7 +269,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                 if(Array.isArray(arr)) storico = [...storico, ...arr];
             });
         }
-
         const doc = new jsPDF();
         const brandColor = [180, 31, 53];
         const pageWidth = 210;
@@ -403,7 +392,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                         const imgY = currentY + 15 + textHeight;
                         doc.addImage(item.photoProof, imgX, imgY, printImgW, printImgH, undefined, 'FAST');
                     } catch (e) {
-                        console.error("Errore PDF Immagine", e);
                         doc.setFontSize(9);
                         doc.setTextColor(200, 100, 100);
                         doc.text("[Errore rendering immagine]", marginX + cardWidth/2, currentY + 25 + textHeight, { align: 'center' });
@@ -667,7 +655,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
               <Lock className="text-yellow-600 shrink-0" size={24} />
               <div>
                   <h3 className="font-bold text-yellow-800 text-sm leading-tight">Modalità Suspense</h3>
-                  <p className="text-xs text-yellow-700">I punteggi esatti sono oscurati!</p>
+                  <p className="text-xs text-yellow-700">I punteggi esatti sono oscurati dal VAR fino all'annuncio ufficiale!</p>
               </div>
           </div>
       )}
@@ -704,7 +692,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                 previousPoints = points;
 
                 // 🚨 CENSURA A PROVA DI HACKER 🚨
-                // Sostituiamo fisicamente il numero con "888" sotto la sfocatura!
                 const isObscured = blindRanking && !isSuperAdmin;
                 const displayPoints = isObscured ? '888' : points;
 
@@ -795,7 +782,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                 </div>
                 
                 <div className="space-y-3">
-                    {[...teamDetails].sort((a, b) => {
+                    {[...localUsers.filter(u => selectedTeam.mySquad?.includes(u.id))].sort((a, b) => {
                         const aCap = selectedTeam.captainId === a.id ? -1 : 1;
                         const bCap = selectedTeam.captainId === b.id ? -1 : 1;
                         return aCap - bCap;
@@ -803,7 +790,6 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
                             const isCaptain = selectedTeam.captainId === player.id;
                             const drinks = player.drinkCount || 0; 
                             
-                            // CENSURA ANCHE NEL DETTAGLIO SQUADRA
                             const isObscured = blindRanking && !isSuperAdmin;
 
                             return (
