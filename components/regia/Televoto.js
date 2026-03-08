@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Play, Trash2, EyeOff, CheckCircle2, Trophy, Users, XCircle, Star, Undo2, RefreshCw, AlertTriangle, ListOrdered, Radio, User } from 'lucide-react';
+import { Plus, Play, Trash2, EyeOff, CheckCircle2, Trophy, Users, XCircle, Star, Undo2, RefreshCw, AlertTriangle, ListOrdered, Radio, User, Search } from 'lucide-react';
 import {
     addEventPerformance,
     deleteEventPerformance,
@@ -15,7 +15,8 @@ import {
     fullResetTelvoto
 } from '@/lib/firebase';
 
-export default function Televoto({ eventPerformances, allMatricole, liveVotingData }) {
+// 🚨 NOTA BENE: Ho aggiunto "allUsers" nelle props per avere la lista di chi può votare!
+export default function Televoto({ eventPerformances, allMatricole, allUsers = [], liveVotingData }) {
     // --- STATI TABS E FORM ---
     const [activeTab, setActiveTab] = useState('scaletta'); // 'scaletta' | 'live'
     const [isTeamMode, setIsTeamMode] = useState(false);
@@ -40,7 +41,7 @@ export default function Televoto({ eventPerformances, allMatricole, liveVotingDa
     const currentLiveSum = Object.values(liveVotingData?.votes || {}).reduce((a, b) => a + Number(b), 0);
     const currentVotersCount = liveVotingData?.votes ? Object.keys(liveVotingData.votes).length : 0;
 
-    // ─── HELPER SQUADRE (Colore e Nome) ──────────────────────────────────────
+    // ─── HELPER SQUADRE E RITARDATARI ──────────────────────────────────────
     const getTeamInfoForPerformance = (perf) => {
         if (perf.isTeam && perf.teamId) {
             const team = allTeams.find(t => t.id === perf.teamId);
@@ -51,6 +52,16 @@ export default function Televoto({ eventPerformances, allMatricole, liveVotingDa
         }
         return { name: 'Manuale', colorClass: 'text-gray-400' };
     };
+
+    // CALCOLO RITARDATARI DELLA GIURIA (Chi vota = NON matricole)
+    const votersIds = liveVotingData?.votes ? Object.keys(liveVotingData.votes) : [];
+    
+    // 1. Definiamo la giuria: Tutti gli utenti che NON sono matricole
+    const theJury = allUsers.filter(u => u.role !== 'matricola');
+    const totalVotersExpected = theJury.length; 
+    
+    // 2. Chi manca all'appello tra la giuria
+    const missingVoters = theJury.filter(j => !votersIds.includes(j.id));
 
     // ─── FILTRO MATRICOLE GIÀ IN SCALETTA ────────────────────────────────────
     const usedMatricoleIds = eventPerformances.map(p => p.matricolaId).filter(Boolean);
@@ -316,10 +327,14 @@ export default function Televoto({ eventPerformances, allMatricole, liveVotingDa
                     
                     {/* DASHBOARD LIVE (In Cima) */}
                     {liveVotingData?.isActive && (
-                        <div className="bg-gray-900 border-2 border-red-600 rounded-3xl p-6 md:p-8 shadow-[0_0_80px_rgba(220,38,38,0.15)]">
-                            <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div className="bg-gray-900 border-2 border-red-600 rounded-3xl p-6 md:p-8 shadow-[0_0_80px_rgba(220,38,38,0.15)] relative overflow-hidden">
+                            
+                            {/* RAGGI DI LUCE ROSSI SULLO SFONDO (Decorazione) */}
+                            <div className="absolute top-[-50%] left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-red-600/10 blur-[100px] rounded-full pointer-events-none"></div>
+
+                            <div className="flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
                                 <div className="text-center md:text-left">
-                                    <span className="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest mb-3 inline-flex items-center gap-1 animate-pulse">
+                                    <span className="bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest mb-3 inline-flex items-center gap-1 animate-pulse shadow-lg shadow-red-600/50">
                                         <Radio size={12}/> LIVE ORA
                                     </span>
                                     {liveVotingData.isTeam && <span className="ml-2 bg-blue-600 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest mb-3 inline-flex items-center">SQUADRA</span>}
@@ -335,24 +350,26 @@ export default function Televoto({ eventPerformances, allMatricole, liveVotingDa
                                             APRI TELEVOTO
                                         </button>
                                     ) : (
-                                        <div className="w-full bg-green-500/10 border border-green-500 text-green-400 px-6 py-4 rounded-2xl font-black text-xl text-center shadow-inner">
+                                        <div className="w-full bg-green-500/10 border border-green-500 text-green-400 px-6 py-4 rounded-2xl font-black text-xl text-center shadow-inner animate-pulse">
                                             VOTAZIONI APERTE!
                                         </div>
                                     )}
                                     <div className="flex gap-2">
-                                        <button onClick={handleCancelLivePerformance} className="flex-1 bg-gray-800 text-gray-300 px-4 py-3 rounded-xl font-bold text-sm hover:bg-gray-700 transition-all flex items-center justify-center gap-1">
+                                        <button onClick={handleCancelLivePerformance} className="flex-1 bg-gray-800 border border-gray-700 text-gray-300 px-4 py-3 rounded-xl font-bold text-sm hover:bg-red-900/40 hover:text-red-400 transition-all flex items-center justify-center gap-1">
                                             <XCircle size={16} /> Annulla
                                         </button>
-                                        <button onClick={handleCloseLivePerformance} className="flex-1 bg-red-600 text-white px-4 py-3 rounded-xl font-bold text-sm hover:bg-red-500 transition-all flex items-center justify-center gap-1">
+                                        <button onClick={handleCloseLivePerformance} className="flex-1 bg-red-600 text-white px-4 py-3 rounded-xl font-bold text-sm hover:bg-red-500 transition-all flex items-center justify-center gap-1 shadow-lg shadow-red-900/50">
                                             <CheckCircle2 size={16} /> Chiudi & Salva
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="flex gap-8 items-center bg-black/30 p-6 rounded-3xl border border-gray-800">
+                                <div className="flex gap-8 items-center bg-black/40 backdrop-blur-sm p-6 rounded-3xl border border-gray-800 shadow-inner">
                                     <div className="text-center">
                                         <p className="text-[10px] text-gray-500 font-bold uppercase mb-1">Votanti</p>
-                                        <p className="text-4xl font-black text-gray-300">{currentVotersCount}</p>
+                                        <p className="text-4xl font-black text-gray-300">
+                                            {currentVotersCount} <span className="text-sm text-gray-600">/ {totalVotersExpected}</span>
+                                        </p>
                                     </div>
                                     <div className="h-16 w-[1px] bg-gray-700" />
                                     <div className="text-center">
@@ -363,6 +380,31 @@ export default function Televoto({ eventPerformances, allMatricole, liveVotingDa
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    )}
+
+                    {/* PANNELLO RITARDATARI DELLA GIURIA (Visibile solo a Televoto Aperto) */}
+                    {liveVotingData?.isActive && liveVotingData?.votingOpen && (
+                        <div className="bg-red-900/10 border border-red-500/20 rounded-3xl p-5 shadow-inner mt-4 animate-in fade-in slide-in-from-top-4">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Search className="text-red-500" size={18} />
+                                <h3 className="text-red-400 font-bold text-sm uppercase tracking-wider">Persone che non hanno ancora votato:</h3>
+                                <span className="ml-auto bg-red-500/20 text-red-500 text-xs font-black px-2 py-0.5 rounded-lg">{missingVoters.length} mancanti</span>
+                            </div>
+                            
+                            {missingVoters.length === 0 ? (
+                                <p className="text-green-500 font-bold text-center py-4 bg-green-900/20 rounded-xl border border-green-500/30">
+                                    🎉 Hanno votato tutti! 🎉
+                                </p>
+                            ) : (
+                                <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                                    {missingVoters.map(m => (
+                                        <span key={m.id} className="bg-gray-900 border border-red-900 text-gray-300 text-xs px-3 py-1.5 rounded-lg font-medium shadow-sm">
+                                            {m.displayName}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -509,7 +551,7 @@ export default function Televoto({ eventPerformances, allMatricole, liveVotingDa
                 </div>
             )}
 
-            {/* RESET TOTALE (Sempre in fondo, piccolino per sicurezza) */}
+            {/* RESET TOTALE */}
             {eventPerformances.length > 0 && (
                 <div className="pt-12 pb-4">
                     <button onClick={handleFullReset} className="mx-auto bg-transparent border border-red-900/30 text-red-500/50 hover:bg-red-900/20 hover:text-red-400 px-4 py-2 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2">

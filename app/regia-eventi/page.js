@@ -25,6 +25,7 @@ export default function PuntiLayout() {
     const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
     const [eventTeams, setEventTeams] = useState([]);
+    const [allUsers, setAllUsers] = useState([]); // <--- ECCO IL NUOVO STATO PER TUTTI GLI UTENTI
     const [allMatricole, setAllMatricole] = useState([]);
     const [eventChallenges, setEventChallenges] = useState([]);
     const [liveVotingData, setLiveVotingData] = useState(null);
@@ -52,7 +53,11 @@ export default function PuntiLayout() {
         const qPerf = query(collection(db, 'event_performances'), orderBy('createdAt', 'asc'));
         const uPerf = onSnapshot(qPerf, (snap) => setEventPerformances(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
 
-        getAllUsers().then(users => setAllMatricole(users.filter(u => u.role === 'matricola')));
+        // <--- QUI ORA SALVIAMO SIA TUTTI GLI UTENTI CHE SOLO LE MATRICOLE
+        getAllUsers().then(users => {
+            setAllUsers(users); 
+            setAllMatricole(users.filter(u => u.role === 'matricola'));
+        });
 
         return () => { unsubscribeAuth(); uTeams(); uChal(); uVote(); uPerf(); };
     }, []);
@@ -83,7 +88,6 @@ export default function PuntiLayout() {
     return (
         <div className="h-screen bg-gray-900 text-white flex flex-col md:flex-row font-sans overflow-hidden">
             
-            {/* SIDEBAR DESKTOP (A SCOMPARSA) */}
             {/* SIDEBAR DESKTOP (A SCOMPARSA) */}
             <aside 
                 className={`bg-gray-950 border-r border-gray-800 hidden md:flex flex-col h-screen shrink-0 transition-all duration-300 ease-in-out z-20 ${isSidebarExpanded ? 'w-64' : 'w-20'}`}
@@ -175,6 +179,7 @@ export default function PuntiLayout() {
                         <Televoto 
                             eventPerformances={eventPerformances} 
                             allMatricole={allMatricole} 
+                            allUsers={allUsers} // <--- ORA GLI PASSIAMO TUTTI GLI UTENTI VERI
                             liveVotingData={liveVotingData} 
                         />
                     )}
