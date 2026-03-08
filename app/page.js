@@ -4,11 +4,12 @@ import { useState, useEffect } from 'react';
 import { auth, db, getUserData, signOutUser, getChallenges, getAllUsers, getSystemSettings } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot, getDoc } from 'firebase/firestore'; 
+import { NAP_DICT } from '@/lib/dictionary'; // <--- IMPORTIAMO IL DIZIONARIO PULITO
 
 import Login from '@/components/Login';
 import ChallengeList from '@/components/ChallengeList';
-import StoricoPunti from '@/components/StoricoPunti';
-import AdminUserList from '@/components/AdminUserList';
+import MatricolaStoricoPunti from '@/components/MatricolaStoricoPunti';
+import AdminDashboard from '@/components/AdminDashboard';
 import AdminSfideManager from '@/components/AdminSfideManager'; 
 import EditProfile from '@/components/EditProfile'; 
 import Navigation from '@/components/Navigation';
@@ -16,7 +17,6 @@ import SquadraMercato from '@/components/SquadraMercato';
 import Classifiche from '@/components/Classifiche';
 import BonusMalusList from '@/components/BonusMalusList'; 
 import NewsFeed from '@/components/NewsFeed'; 
-import InstallPrompt from '@/components/InstallPrompt'; 
 
 import { Trophy, LogOut, Edit2, LockKeyhole, Pizza, AlertCircle, Crown, Users } from 'lucide-react'; 
 
@@ -26,131 +26,6 @@ const TabContent = ({ id, activeTab, children }) => {
       {children}
     </div>
   );
-};
-
-// ==========================================
-// 🍕 DIZIONARIO NAPOLETANO
-// ==========================================
-const NAP_DICT = {
-    // Generali
-    "Controllo VAR": "controllan cu VAR",
-    "Punteggio Attuale": "O' Punteggio Tuojo",
-    "Tornate a studiare!": "Jate a faticà!",
-    "Sito in Aggiornamento": "Stamm facenn' e lavor'",
-    "Vista oscurata!": "Ne vere niente!",
-    "Riprova": "Prov n'ata vot",
-    "Stiamo preparando una sorpresa.": "Stamm preparann' na cosa bella.",
-    
-    // Ruoli
-    "Matricola": "Muccus",
-    "Admin": "Mast",
-    "Super Admin": "Capo mast",
-    "Super" : "Capo mast",
-    "Utente": "Uaglion",
-
-    // Tabs & Navigazione
-    "Feed": "Nciuci",
-    "Richieste": "A' Dumann",
-    "Archivio": "A' Storj",
-    "Bonus/Malus": "Bonus/Malùs",
-    "Squadra": "O Napl",
-    "Classifiche": "Classifiche",
-    "Utenti": "Uagliun",
-    
-    // Azioni
-    "Esci": "Vattenne",
-    "Vedi Squadra": "Uard a squadra",
-    "In Attesa": "Stamm aspettan", 
-    "In Attesa di Approvazione": "stamm aspettan", 
-    "Richiesta inviata": "L'amm mannata",
-    "Approvato": "Appost",
-    "Rifiutato": "Lev mano",
-    "Richiesta Rifiutata": "Nun va buon",
-    "Richiesta approvata": "Chell ca chiest",
-    
-    // Admin
-    "Gestione Utenti": "Cumann' e uagliun",
-    "System Control": "Gestisc o sistem",
-    "Registrazioni": "Iscrizioni",
-    "Cache Dati": "Memoria",
-    "Blackout Matricole": "Stuta tutto",
-    
-    // Messaggi Vari
-    "Nessun dato.": "Nce sta nient.",
-    "Caricamento...": "Aspetta n'attimo...",
-    
-    // Profilo
-    "Personalizza Profilo": "Cagna 'o Profilo",
-    "Il tuo Nome": "Comm' te chiamm?",
-    "Nome e Cognome...": "Mett 'o nomm...",
-    "Nome Squadra": "Nomm d'a Squadra",
-    "Es: SSC Napoli...": "Es: Maradona FC...",
-    "Foto Profilo": "A' Faccia Toja",
-    "Attuale": "Chella 'e mo",
-    "Carica": "Careca",
-    "Cartoon": "Disegn",
-    "Link Web": "O' Link",
-    "Salva Profilo": "Astipa Tutto",
-    "Lingua App": "Comm'amma parlà?",
-    
-    // Feed Extra
-    "Oggi": "Ogg", 
-    "Ieri": "Aier",
-    "Ingrandisci": "Fa vedè gruoss", 
-    "Ha preso un Malus Nascosto:": "Ha pigliat nu malus nascost",
-    "Ha preso un Malus:": "Ha pigliat nu malus",
-    "Ha preso un Bonus Nascosto:": "Ha pigliat nu bonus nascost",
-    "Ha preso un Bonus:": "Ha pigliat nu bonus",
-    "La Tua Squadra": "A squadra toj",
-    "Lista Matricole": "Tutti i muccusielli",
-    "Richiedi Bonus" : "Chier o favor",
-    "Richiedi": "Chier",
-    "GIORNALIERO" : "Tutt e iuorn",
-    "Giornaliero" : "Tutt e iuorn",
-    "Giornalieri" : "Tutt e iuorn",
-    "Richieste In Attesa": "Fatt a risolve",
-    "Nessuna richiesta da approvare al momento." : "Nisciuno fatt a risolve pe mo.",
-    "Nascosto" : "Nascuost",
-    "Nessuna descrizione inserita." : "Niscuna descrizione mess",
-    "Speciale" : "Special",
-    "Speciali" : "Special",
-    "AGGIUNGI BONUS" : "Miett nu bonus",
-    "Permetti nuovi iscritti" : "Permiett nuovi iscritti",
-    "Matricole" : "Muccus",
-    "ATTIVO" : "APPICCIAT",
-    "SPENTO" : "STUTAT",
-
-    // BANNER CAPITANO E BLOCCO
-    "Capitano non impostato!": "Manca o' capitan!",
-    "Scegli il tuo capitano per raddoppiare i suoi punti!": "Scegl' o capitan !",
-    "Devi farlo prima di continuare!": "Le fa primm' e cuntinuà!",
-    "Vai alla Squadra": "Va a Squadra",
-    "AZIONE RICHIESTA": "MOVT!",
-    "Devi impostarlo per sbloccare l'app.": "L'é mett pe sblocca t cos.",
-
-    //manutenzione
-    "VAR Check" : "Controll VAR",
-    "Review in corso" : "Stamm ricontrollan",
-    "Stiamo ricontrollando tutti i vostri punteggi!" : "stamm cuntrullann sj at mbicciat ngopp i punteggi!",
-    "Voi preparatevi per stasera!" : "Vuj preparatev pe staser!",
-
-    //storico punti
-    "Il Tuo Storico Punti" : "Chell che cumbinat",
-    "Scarica un ricordo della tua FantaMatricolata" : "Fatt nu ricord e sta matricolata",
-    "Nessuna attività registrata." : "Nisciuta attività registrata",
-    "Completato" : "L'è fatt tu",
-    "Malus dagli admin" : "stu malùs te l'ann rat i masti",
-    "Bonùs dagli admin" : "stu bonùs te l'ann rat i masti",
-    "Malus" : "Malùs",
-    "Bonus" : "Bonùs",
-
-    // elenco bonus malus
-    "Regolamento" : "E' rregole",
-    "Tocca una card per i dettagli." : "priemc ngopp pe capì caccos",
-    "I bonus con la " : "I bonus ca ",
-    "Corona" : "Coron", 
-    " valgono doppio per il Capitano!" : " valen o doppio po capitano!",
-
 };
 
 export default function Home() {
@@ -220,11 +95,7 @@ export default function Home() {
               setUserData(data);
               
               // --- CARICA LA LINGUA SALVATA ---
-              if (data.isNeapolitan) {
-                  setNeapolitanMode(true);
-              } else {
-                  setNeapolitanMode(false);
-              }
+              setNeapolitanMode(data.isNeapolitan ? true : false);
           }
           setLoading(false);
         });
@@ -233,24 +104,20 @@ export default function Home() {
         // 🚨 BLOCCO DATABASE PER MANUTENZIONE (Risparmio letture)
         // ========================================================
         try {
-            // 1. Scarica solo i settaggi (1 lettura)
             const settings = await getSystemSettings();
             setSystemSettings(settings); 
             
-            // 2. Legge il ruolo dell'utente
             const userDoc = await getDoc(userRef);
             const role = userDoc.exists() ? userDoc.data().role : 'matricola';
 
-            // 3. Se l'app è in manutenzione e l'utente NON è admin, non scaricare nient'altro!
             if (settings?.maintenanceMode && role !== 'admin' && role !== 'super-admin') {
                 return; // 🛑 Esce dall'operazione
             }
 
-            // 4. Altrimenti, scarica tutto il malloppo (Sfide e Utenti)
             const isCacheEnabled = settings?.cacheEnabled ?? true; 
             const cacheTime = settings?.cacheDuration ?? 30;
-            const usersCacheTime = settings?.cacheDuration ?? 30; // 30 minuti per le classifiche utenti
-            const challengesCacheTime = 1440; // 24 ORE (in minuti) per i Bonus/Malus! 🚀
+            const usersCacheTime = settings?.cacheDuration ?? 30; 
+            const challengesCacheTime = 1440; 
             
             const [challengesData, usersData] = await Promise.all([
                 fetchWithCache('cache_challenges', getChallenges, challengesCacheTime, isCacheEnabled),
@@ -304,53 +171,29 @@ export default function Home() {
   if (systemSettings?.maintenanceMode && !isAdminOrSuper) {
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden font-sans">
-            
-            {/* Box centrale chiaro con ombra morbida */}
             <div className="bg-white p-8 rounded-2xl shadow-xl border-2 border-gray-100 max-w-sm w-full z-10 relative">
-                
-                {/* Bordo Giallo VAR che pulsa leggermente */}
                 <div className="absolute inset-0 rounded-2xl border-4 border-yellow-400/60 animate-pulse pointer-events-none"></div>
-
-                {/* Contenitore Icona VAR */}
                 <div className="relative w-24 h-24 mx-auto mb-6 bg-gray-50 rounded-xl border-2 border-yellow-400 flex items-center justify-center shadow-sm">
-                    {/* Pallino che lampeggia: usiamo il tuo colore brand per il "led" */}
                     <div className="absolute top-2 right-2 flex items-center gap-1">
                         <div className="w-2.5 h-2.5 rounded-full bg-[#B41F35] animate-pulse shadow-[0_0_8px_#B41F35]"></div>
                     </div>
-                    
-                    <img 
-                        src="/var-replay.png" 
-                        alt="VAR Check" 
-                        className="w-16 h-16 object-contain z-10" 
-                    />
+                    <img src="/var-replay.png" alt="VAR Check" className="w-16 h-16 object-contain z-10" />
                 </div>
-
-                {/* Titolo e Badge Giallo animato (stile grafica TV) */}
-                <h1 className="text-3xl font-black text-gray-900 tracking-widest mb-2 uppercase">
-                    {t("VAR Check")}
-                </h1>
-                
+                <h1 className="text-3xl font-black text-gray-900 tracking-widest mb-2 uppercase">{t("VAR Check")}</h1>
                 <div className="inline-block bg-yellow-400 text-black text-xs font-black px-3 py-1 rounded-sm animate-pulse mb-6 tracking-widest uppercase">
                     {t("Review in corso")}
                 </div>
-
-                {/* Messaggio personalizzato */}
                 <p className="text-gray-600 mb-8 font-medium leading-relaxed text-lg">
                     {t("Stiamo ricontrollando tutti i vostri punteggi!")}<br/>
                     <span className="text-[#B41F35] font-black block mt-4 text-xl">{t("Voi preparatevi per stasera!")} </span>
                 </p>
-
-                {/* Bottone di uscita con il colore principale dell'app */}
-                <button 
-                    onClick={handleLogout} 
-                    className="w-full bg-[#B41F35] text-white px-6 py-4 rounded-xl font-bold shadow-md hover:bg-[#91182a] transition-colors flex items-center justify-center gap-2"
-                >
+                <button onClick={handleLogout} className="w-full bg-[#B41F35] text-white px-6 py-4 rounded-xl font-bold shadow-md hover:bg-[#91182a] transition-colors flex items-center justify-center gap-2">
                     <LogOut size={20} /> {t("Esci")}
                 </button>
             </div>
         </div>
     );
-}
+  }
 
   // --- LOGICA BLOCCO CAPITANO ---
   const isCaptainMissing = userData.role !== 'matricola' && (!userData.captainId) && (userData.mySquad && userData.mySquad.length > 0);
@@ -362,11 +205,7 @@ export default function Home() {
       {yellowTheme && (
         <div 
             className="fixed inset-0 z-[9999] pointer-events-none animate-in fade-in duration-500"
-            style={{
-                backgroundColor: 'rgba(253, 224, 71, 0.4)', 
-                mixBlendMode: 'color', 
-                backdropFilter: 'sepia(100%)' 
-            }}
+            style={{ backgroundColor: 'rgba(253, 224, 71, 0.4)', mixBlendMode: 'color', backdropFilter: 'sepia(100%)' }}
         />
       )}
 
@@ -499,7 +338,7 @@ export default function Home() {
             </TabContent>
 
             <TabContent id="percorso" activeTab={activeTab}>
-                <StoricoPunti t = {t} currentUser={userData} systemSettings={systemSettings}/>
+                <MatricolaStoricoPunti t = {t} currentUser={userData} systemSettings={systemSettings}/>
             </TabContent>
           </>
         ) : (
@@ -522,7 +361,7 @@ export default function Home() {
             </TabContent>
 
             {activeTab === 'admin-sfide' && isAdminOrSuper && <AdminSfideManager t = {t}/>}
-            {activeTab === 'admin-utenti' && isSuperAdmin && <AdminUserList currentUser={userData} preloadedUsers={globalUsers} t = {t}/>}
+            {activeTab === 'admin-utenti' && isSuperAdmin && <AdminDashboard currentUser={userData} preloadedUsers={globalUsers} t = {t}/>}
           </>
         )}
 
