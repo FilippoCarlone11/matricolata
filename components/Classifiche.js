@@ -228,13 +228,22 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
     } catch(e) { alert(e); }
   };
 
-  const handleChangeDate = async (req) => {
+const handleChangeDate = async (req) => {
     const newDateStr = prompt("Inserisci la nuova data (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
     if (!newDateStr) return;
 
     try {
-        const newDate = new Date(newDateStr);
-        if (isNaN(newDate.getTime())) { alert("Data non valida."); return; }
+        // Smontiamo la data inserita per evitare casini coi fusi orari
+        const [year, month, day] = newDateStr.split('-');
+        
+        // Ricreiamo la data forzando l'orario locale alle 23:59:59
+        const newDate = new Date(year, month - 1, day, 23, 59, 59);
+
+        if (isNaN(newDate.getTime())) {
+            alert("Data non valida.");
+            return;
+        }
+
         await updateRequestDate(req.id, newDate);
         await refreshAdminUser();
         alert("Data aggiornata con successo.");
