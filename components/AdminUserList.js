@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react';
 import { updateUserRole, deleteUserDocument, getSystemSettings, toggleRegistrations, updateCacheSettings, toggleMatricolaBlur, updateSystemSettings } from '@/lib/firebase';
 import { Users, UserCheck, Crown, Trash2, Key, Search, Lock, Unlock, ShieldAlert, Zap, Clock, Save, Ghost, Wine, Shield, Eye, EyeOff } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { getApprovedRequestsByUser } from '@/lib/firebase'; 
 
 export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
@@ -30,7 +28,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
   const [showSquadCount, setShowSquadCount] = useState(true); 
   const [showCaptainIcon, setShowCaptainIcon] = useState(true); 
   const [showEveningPoints, setShowEveningPoints] = useState(false); 
-  const [blindRanking, setBlindRanking] = useState(false); // <--- NUOVO STATO SUSPENSE
+  const [blindRanking, setBlindRanking] = useState(false); 
   
   const [settingsLoading, setSettingsLoading] = useState(true);
 
@@ -58,7 +56,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                 setShowSquadCount(settings?.showSquadCount ?? true);
                 setShowCaptainIcon(settings?.showCaptainIcon ?? true);
                 setShowEveningPoints(settings?.showEveningPoints ?? false); 
-                setBlindRanking(settings?.blindRanking ?? false); // <--- CARICA IL FLAG
+                setBlindRanking(settings?.blindRanking ?? false); 
             } catch (e) { console.error(e); }
             finally { setSettingsLoading(false); }
         };
@@ -119,27 +117,24 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     }
   };
 
-  // FUNZIONE UNIFICATA: Salva i settings visivi delle classifiche
   const handleToggleVisualSetting = async (settingName, currentValue) => {
       const newState = !currentValue;
       
-      // Aggiornamento ottimistico UI
       if (settingName === 'showDrinkCount') setShowDrinkCount(newState);
       if (settingName === 'showSquadCount') setShowSquadCount(newState);
       if (settingName === 'showCaptainIcon') setShowCaptainIcon(newState);
       if (settingName === 'showEveningPoints') setShowEveningPoints(newState); 
-      if (settingName === 'blindRanking') setBlindRanking(newState); // <--- OTTIMISTICO NUOVO FLAG
+      if (settingName === 'blindRanking') setBlindRanking(newState); 
 
       try {
           await updateSystemSettings({ [settingName]: newState });
       } catch (error) {
           alert("Errore salvataggio impostazione.");
-          // Revert in caso di errore
           if (settingName === 'showDrinkCount') setShowDrinkCount(currentValue);
           if (settingName === 'showSquadCount') setShowSquadCount(currentValue);
           if (settingName === 'showCaptainIcon') setShowCaptainIcon(currentValue);
           if (settingName === 'showEveningPoints') setShowEveningPoints(currentValue); 
-          if (settingName === 'blindRanking') setBlindRanking(currentValue); // <--- REVERT
+          if (settingName === 'blindRanking') setBlindRanking(currentValue); 
       }
   };
 
@@ -174,99 +169,181 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     (u.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   );
 
+  // HELPER: Calcola dimensioni foto proporzionate
+  const getImageDimensions = (base64) => {
+      return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve({ w: img.width, h: img.height });
+          img.onerror = () => resolve({ w: 0, h: 0 });
+          img.src = base64;
+      });
+  };
+
+  // ==========================================
+  // NUOVO REPORT GLOBALE STILE "FEED"
+  // ==========================================
   const generaReportDettagliatoTutteMatricole = async () => {
-    // Avviso di sicurezza per evitare click accidentali
-    if (!confirm("Attenzione: Questa operazione scaricherà lo storico di TUTTE le matricole. Potrebbe richiedere qualche secondo. Procedere?")) return;
+    if (!confirm("Attenzione: Questa operazione genererà un documento con foto e storico di TUTTE le matricole. Potrebbe richiedere fino a un minuto. Procedere?")) return;
 
     setIsGeneratingPDF(true);
     
     try {
+        const { jsPDF } = await import('jspdf');
+
         const doc = new jsPDF();
         const brandColor = [180, 31, 53];
+        const pageWidth = 210;
+        const marginX = 14;
+        const cardWidth = pageWidth - (marginX * 2);
 
-        // HEADER PRINCIPALE (Stampa solo sulla prima pagina)
+        // HEADER PRINCIPALE (Prima pagina)
         doc.setFillColor(...brandColor);
-        doc.rect(0, 0, 210, 30, 'F'); 
+        doc.rect(0, 0, pageWidth, 40, 'F'); 
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(20);
+        doc.setFontSize(22);
         doc.setFont("helvetica", "bold");
-        doc.text("STORICO DETTAGLIATO MATRICOLE", 14, 20);
+        doc.text("FANTAMATRICOLATA 2025/26", marginX, 20);
+        
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+        doc.text("Feed completo", marginX, 28);
 
-        // Prendi solo le matricole e mettile in ordine di punteggio
         const matricole = users.filter(u => u.role === 'matricola').sort((a, b) => (b.punti || 0) - (a.punti || 0));
 
-        let currentY = 40; // Punto di partenza dall'alto
+        let currentY = 55; 
 
-        // Cicliamo ogni matricola per scaricare i dati e disegnare la sua tabella
         for (let i = 0; i < matricole.length; i++) {
             const m = matricole[i];
             
-            // ⚠️ CHIAMATA A FIREBASE: Scarica lo storico di QUESTA matricola
+            // ⚠️ CHIAMATA A FIREBASE: Scarica lo storico
             const storico = await getApprovedRequestsByUser(m.id);
 
-            // Se stiamo arrivando a fine pagina, crea una pagina nuova
-            if (currentY > 250) {
+            // Controllo salto pagina per nuova matricola (se c'è poco spazio)
+            if (currentY > 230 && i > 0) {
                 doc.addPage();
                 currentY = 20;
+            } else if (i > 0) {
+                currentY += 10;
+                doc.setDrawColor(220, 220, 220);
+                doc.line(marginX, currentY, pageWidth - marginX, currentY);
+                currentY += 15;
             }
 
             // 1. INTESTAZIONE MATRICOLA
-            doc.setFontSize(14);
+            doc.setFontSize(18);
             doc.setFont("helvetica", "bold");
             doc.setTextColor(...brandColor);
-            doc.text(`${i + 1}. ${m.displayName || 'Sconosciuto'}`, 14, currentY);
+            doc.text(`${i + 1}. ${m.displayName || 'Sconosciuto'}`, marginX, currentY);
             
             doc.setFontSize(10);
             doc.setTextColor(100, 100, 100);
-            doc.text(`Totale Punti: ${m.punti || 0} | Squadra: ${m.teamName || 'Nessuna'}`, 14, currentY + 6);
+            doc.setFont("helvetica", "bold");
+            doc.text(`PUNTI: ${m.punti || 0}`, marginX, currentY + 7);
+            doc.setFont("helvetica", "normal");
             
-            currentY += 12; // Spazio prima della tabella
+            // ECCO I PUNTI SERATA AGGIUNTI:
+            doc.text(` | Punti Matricolata: ${m.puntiSerata || 0} | Squadra: ${m.teamName || 'Nessuna'} | Drink: ${m.drinkCount || 0}`, marginX + doc.getTextWidth(`PUNTI: ${m.punti || 0}`), currentY + 7);
+            currentY += 18; 
 
-            // 2. TABELLA STORICO
+            // 2. I POST DELLA MATRICOLA (STILE FEED)
             if (storico.length === 0) {
-                doc.setFontSize(10);
+                doc.setFontSize(11);
                 doc.setTextColor(150, 150, 150);
                 doc.setFont("helvetica", "italic");
-                doc.text("Nessuna attività registrata per questa matricola.", 14, currentY);
-                currentY += 15; // Spazio extra prima del prossimo utente
-                continue; // Passa alla matricola successiva
+                doc.text("Nessuna attività registrata.", marginX, currentY);
+                currentY += 5; 
+                continue; 
             }
 
-            // Prepara i dati della tabella
-            const tableBody = storico.map(item => {
+            // CICLO ASINCRONO PER I POST
+            for (let j = 0; j < storico.length; j++) {
+                const item = storico[j];
                 const dateObj = item.approvedAt?.toDate ? item.approvedAt.toDate() : new Date();
-                const dataStr = dateObj.toLocaleDateString('it-IT') + ' ' + dateObj.toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'});
+                const dataStr = dateObj.toLocaleDateString('it-IT') + ' - ' + dateObj.toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'});
                 const isMalus = item.puntiRichiesti < 0;
                 const puntiStr = isMalus ? `${item.puntiRichiesti}` : `+${item.puntiRichiesti}`;
                 
-                return [dataStr, item.challengeName || "Sfida", item.manual ? "Admin" : "App", puntiStr];
-            });
+                let actionText = item.manual ? "Admin" : "Approvata";
+                if (item.status === 'rejected') actionText = "Rifiutata";
 
-            // Disegna la tabella
-            autoTable(doc, {
-                startY: currentY,
-                head: [['Data', 'Azione / Bonus / Malus', 'Assegnato da', 'Punti']],
-                body: tableBody,
-                theme: 'striped',
-                headStyles: { fillColor: [50, 50, 50], textColor: 255, fontStyle: 'bold' }, // Header grigio scuro per staccare dal rosso
-                styles: { fontSize: 9, cellPadding: 2 },
-                columnStyles: {
-                    0: { cellWidth: 35 },
-                    1: { cellWidth: 'auto' },
-                    2: { cellWidth: 25, halign: 'center' },
-                    3: { cellWidth: 20, halign: 'center', fontStyle: 'bold' }
-                },
-                didParseCell: function (data) {
-                    if (data.section === 'body' && data.column.index === 3) {
-                        const val = parseInt(data.cell.raw);
-                        if (val < 0) data.cell.styles.textColor = [220, 38, 38]; // Rosso
-                        else data.cell.styles.textColor = [22, 163, 74]; // Verde
+                const hasPhoto = item.photoProof && item.photoProof.startsWith('data:image');
+                let printImgW = 0;
+                let printImgH = 0;
+
+                // Calcolo proporzioni intelligenti per la foto (maxH 75 per non mangiare troppe pagine)
+                if (hasPhoto) {
+                    const dims = await getImageDimensions(item.photoProof);
+                    if (dims.w > 0 && dims.h > 0) {
+                        const maxW = cardWidth - 12; 
+                        const maxH = 75; 
+                        const ratio = Math.min(maxW / dims.w, maxH / dims.h);
+                        printImgW = dims.w * ratio;
+                        printImgH = dims.h * ratio;
                     }
-                },
-            });
+                }
 
-            // Aggiorna la Y per la matricola successiva: la tabella finisce a `doc.lastAutoTable.finalY`
-            currentY = doc.lastAutoTable.finalY + 15; 
+                // Calcolo altezza testo
+                doc.setFontSize(11);
+                doc.setFont("helvetica", "bold");
+                const challengeName = item.challengeName || "Sfida non specificata";
+                const titleLines = doc.splitTextToSize(challengeName, cardWidth - 30);
+                const textHeight = titleLines.length * 5; 
+
+                // Altezza totale card
+                const basePadding = 16; 
+                let cardHeight = basePadding + textHeight;
+                if (hasPhoto && printImgH > 0) cardHeight += printImgH + 5; 
+
+                // Salto pagina post se non ci sta
+                if (currentY + cardHeight > 280) {
+                    doc.addPage();
+                    currentY = 20;
+                }
+
+                // A. Sfondo della Card (Grigio chiaro)
+                doc.setFillColor(252, 252, 252);
+                doc.setDrawColor(235, 235, 235);
+                doc.roundedRect(marginX, currentY, cardWidth, cardHeight, 2, 2, 'FD');
+
+                // B. Data e Azione
+                doc.setFontSize(8);
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(150, 150, 150);
+                doc.text(dataStr, marginX + 4, currentY + 6);
+                
+                doc.setFont("helvetica", "bold");
+                if (item.status === 'rejected') doc.setTextColor(220, 38, 38);
+                else if (item.manual) doc.setTextColor(100, 100, 100);
+                else doc.setTextColor(22, 163, 74);
+                doc.text(actionText.toUpperCase(), marginX + cardWidth - 4, currentY + 6, { align: 'right' });
+
+                // C. Titolo Sfida e Punti
+                doc.setFontSize(11);
+                doc.setTextColor(40, 40, 40);
+                doc.setFont("helvetica", "bold");
+                doc.text(titleLines, marginX + 4, currentY + 13);
+
+                doc.setFontSize(12);
+                if (item.status === 'rejected') doc.setTextColor(150, 150, 150);
+                else if (isMalus) doc.setTextColor(220, 38, 38);
+                else doc.setTextColor(22, 163, 74);
+                doc.text(item.status === 'rejected' ? '0' : puntiStr, marginX + cardWidth - 4, currentY + 13, { align: 'right' });
+
+                // D. Immagine (Centrata e Proporzionata)
+                if (hasPhoto && printImgW > 0) {
+                    try {
+                        const imgX = marginX + (cardWidth - printImgW) / 2; 
+                        const imgY = currentY + 13 + textHeight;
+                        doc.addImage(item.photoProof, imgX, imgY, printImgW, printImgH, undefined, 'FAST');
+                    } catch (e) {
+                        doc.setFontSize(8);
+                        doc.setTextColor(200, 100, 100);
+                        doc.text("[Errore rendering immagine]", marginX + cardWidth/2, currentY + 20 + textHeight, { align: 'center' });
+                    }
+                }
+
+                currentY += cardHeight + 5; // Spazio prima del prossimo post della stessa matricola
+            }
         }
 
         // FOOTER CON NUMERO PAGINE
@@ -276,17 +353,17 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
         doc.setFont("helvetica", "normal");
         for(let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
-            doc.text(`Report Globale Storici - Generato il: ${new Date().toLocaleString('it-IT')} - Pagina ${i} di ${pageCount}`, 14, 285);
+            doc.text(`Feed Globale - Generato il: ${new Date().toLocaleString('it-IT')} - Pagina ${i} di ${pageCount}`, marginX, 290);
         }
 
         // Salva
-        doc.save(`Report_Dettagliato_Matricole.pdf`);
+        doc.save(`Feed_Globale_Fantamatricola.pdf`);
 
     } catch (error) {
         console.error("Errore generazione PDF Dettagliato:", error);
         alert("Errore durante la creazione del PDF. Controlla la console.");
     } finally {
-        setIsGeneratingPDF(false); // Spegne l'icona di caricamento
+        setIsGeneratingPDF(false); 
     }
   };
 
@@ -302,15 +379,15 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
             <button 
               onClick={generaReportDettagliatoTutteMatricole}
               disabled={isGeneratingPDF}
-              className={`text-white px-4 py-2 rounded-xl font-bold text-sm shadow-md transition-all flex items-center gap-2 ${isGeneratingPDF ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#B41F35] hover:bg-[#90192a] active:scale-95'}`}
+              className={`w-full text-white px-4 py-3 rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 ${isGeneratingPDF ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#B41F35] hover:bg-[#90192a] active:scale-95'}`}
           >
               {isGeneratingPDF ? (
                  <>
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div> 
-                    Generazione in corso...
+                    <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div> 
+                    Generazione Feed Globale in corso... (può richiedere un minuto)
                  </>
               ) : (
-                 <>📄 Scarica Storico Completo</>
+                 <>📄 Scarica il feed globale</>
               )}
           </button>
             {/* BLOCCO 1: CONTROLLI SISTEMA */}
@@ -540,7 +617,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                         }`}
                     >
                         {blindRanking ? <Lock size={18} /> : <Unlock size={18} />}
-                        {blindRanking ? "classifica oscurata" : "Oscura classifica"}
+                        {blindRanking ? "CLASSIFICA OSCURATA" : "OSCURA CLASSIFICA"}
                     </button>
                     <p className="text-center text-[10px] text-gray-400 mt-2">
                         Quando attiva, i punteggi in classifica saranno sfocati per tutti gli utenti non super-admin. Le posizioni resteranno visibili.
@@ -552,7 +629,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
         </div>
       )}
 
-      {/* DASHBOARD CONTEGGI E LISTA UTENTI... (resto del codice identico) */}
+      {/* DASHBOARD CONTEGGI E LISTA UTENTI... */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
             { label: tr('Matricole'), count: counts.matricola, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
