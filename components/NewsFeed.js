@@ -111,7 +111,7 @@ export default function NewsFeed({ t, systemSettings }) {
            <p className="text-gray-400">{tr("Nessun dato.")}</p>
         </div>
       ) : (
-        feed.map((item, index) => {
+        feed.filter(item => item.status !== 'revoked').map((item, index, filteredArray) => {
           const isMalus = item.puntiRichiesti < 0;
           const isPending = item.status === 'pending';
           const isManual = item.manual === true;
@@ -120,7 +120,7 @@ export default function NewsFeed({ t, systemSettings }) {
           const isHidden = item.isHidden === true; 
           
           const currentDateLabel = getDateLabel(item);
-          const prevItem = feed[index-1];
+          const prevItem = filteredArray[index-1];
           const prevDateLabel = index > 0 ? getDateLabel(prevItem) : null;
           const showDivider = currentDateLabel !== prevDateLabel;
 
