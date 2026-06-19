@@ -135,6 +135,35 @@ service cloud.firestore {
              && request.resource.data.votes[request.auth.uid] <= 10 );
     }
 
+    // ---------- SONDAGGI ----------
+    // Creazione: solo non-matricole (Anziani/Admin), a proprio nome.
+    // Voto: qualsiasi utente loggato, ma solo sulla PROPRIA chiave e con un
+    // indice di opzione valido. Eliminazione: autore o admin.
+    match /polls/{pollId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && myRole() != ''
+        && myRole() != 'matricola'
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.question is string
+        && request.resource.data.question.size() > 0
+        && request.resource.data.options is list
+        && request.resource.data.options.size() >= 2
+        && request.resource.data.options.size() <= 6
+        && request.resource.data.votes.size() == 0;
+
+      allow update: if isSignedIn()
+        && onlyTouches(['votes'])
+        && request.resource.data.votes.diff(resource.data.votes).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.votes[request.auth.uid] is int
+        && request.resource.data.votes[request.auth.uid] >= 0
+        && request.resource.data.votes[request.auth.uid] < resource.data.options.size();
+
+      allow delete: if isSignedIn()
+        && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+
     // ---------- DEFAULT: TUTTO IL RESTO È VIETATO ----------
     match /{document=**} {
       allow read, write: if false;

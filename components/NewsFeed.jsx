@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { getGlobalFeed } from '@/lib/firebase';
-import { Clock, User, Hourglass, CheckCircle, ShieldAlert, EyeOff, XCircle, Camera, X, Clapperboard } from 'lucide-react';
+import { Clock, User, Hourglass, CheckCircle, ShieldAlert, EyeOff, XCircle, Camera, X, Clapperboard, Share2 } from 'lucide-react';
+import ShareStoryModal from '@/components/ShareStoryModal';
 
 
 export default function NewsFeed({ t, systemSettings }) {
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedImage, setSelectedImage] = useState(null); 
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [shareItem, setShareItem] = useState(null);
 
   const tr = (text) => (t ? t(text) : text);
 
@@ -229,6 +231,15 @@ export default function NewsFeed({ t, systemSettings }) {
                   </div>
                 )}
 
+                {!isRejected && !isPending && (
+                  <button
+                    onClick={() => setShareItem(item)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 border-t border-gray-50 text-gray-400 hover:text-[#B41F35] text-xs font-bold uppercase tracking-wide transition-colors"
+                  >
+                    <Share2 size={14} /> {tr("Condividi nella storia")}
+                  </button>
+                )}
+
               </div>
             </div>
           );
@@ -245,6 +256,10 @@ export default function NewsFeed({ t, systemSettings }) {
             </button>
             <img src={selectedImage} className="max-w-full max-h-full rounded-lg shadow-2xl object-contain" onClick={(e) => e.stopPropagation()} alt="Zoomed prova" />
         </div>
+      )}
+
+      {shareItem && (
+        <ShareStoryModal item={shareItem} onClose={() => setShareItem(null)} t={t} />
       )}
 
     </div>
