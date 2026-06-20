@@ -153,12 +153,20 @@ service cloud.firestore {
         && request.resource.data.options.size() <= 6
         && request.resource.data.votes.size() == 0;
 
-      allow update: if isSignedIn()
-        && onlyTouches(['votes'])
-        && request.resource.data.votes.diff(resource.data.votes).affectedKeys().hasOnly([request.auth.uid])
-        && request.resource.data.votes[request.auth.uid] is int
-        && request.resource.data.votes[request.auth.uid] >= 0
-        && request.resource.data.votes[request.auth.uid] < resource.data.options.size();
+      allow update: if isSignedIn() && (
+        // a) VOTO: solo la propria chiave, indice valido, sondaggio NON chiuso
+        ( resource.data.closed != true
+          && onlyTouches(['votes'])
+          && request.resource.data.votes.diff(resource.data.votes).affectedKeys().hasOnly([request.auth.uid])
+          && request.resource.data.votes[request.auth.uid] is int
+          && request.resource.data.votes[request.auth.uid] >= 0
+          && request.resource.data.votes[request.auth.uid] < resource.data.options.size() )
+        ||
+        // b) APERTURA/CHIUSURA: solo autore o admin
+        ( onlyTouches(['closed'])
+          && request.resource.data.closed is bool
+          && (resource.data.authorId == request.auth.uid || isAdmin()) )
+      );
 
       allow delete: if isSignedIn()
         && (resource.data.authorId == request.auth.uid || isAdmin());

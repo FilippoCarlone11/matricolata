@@ -1,20 +1,35 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getGlobalFeed } from '@/lib/firebase';
-import { Clock, User, Hourglass, CheckCircle, ShieldAlert, EyeOff, XCircle, Camera, X, Clapperboard, Share2 } from 'lucide-react';
+import { getGlobalFeed, setPostFeedVisibility } from '@/lib/firebase';
+import { toast } from '@/lib/toast';
+import { Clock, User, Hourglass, CheckCircle, ShieldAlert, EyeOff, XCircle, Camera, X, Clapperboard, Share2, Trash2, RotateCcw } from 'lucide-react';
 import ShareStoryModal from '@/components/ShareStoryModal';
 
 
-export default function NewsFeed({ t, systemSettings }) {
+export default function NewsFeed({ t, systemSettings, currentUser }) {
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(null);
   const [shareItem, setShareItem] = useState(null);
 
   const tr = (text) => (t ? t(text) : text);
+  const isSuperAdmin = currentUser?.role === 'super-admin';
 
   const CACHE_KEY = 'fantamatricolata_feed_cache';
+
+  // Super-admin: nasconde/ripristina un post dal feed (NON tocca i punti)
+  const handleToggleFeedHidden = async (item) => {
+    const newHidden = !item.feedHidden;
+    try {
+      await setPostFeedVisibility(item.id, newHidden);
+      setFeed((prev) => prev.map((f) => (f.id === item.id ? { ...f, feedHidden: newHidden } : f)));
+      localStorage.removeItem(CACHE_KEY); // invalida la cache così resta coerente
+      toast.success(newHidden ? 'Post rimosso dal feed.' : 'Post ripristinato.');
+    } catch (e) {
+      toast.error('Errore aggiornamento post.');
+    }
+  };
   
   // Legge i parametri separati del feed! (Se non ci sono, usa 2 min di default)
   const isFeedCacheEnabled = systemSettings?.feedCacheEnabled ?? true;
@@ -113,13 +128,17 @@ export default function NewsFeed({ t, systemSettings }) {
            <p className="text-gray-400">{tr("Nessun dato.")}</p>
         </div>
       ) : (
-        feed.filter(item => item.status !== 'revoked').map((item, index, filteredArray) => {
+        feed
+          .filter(item => item.status !== 'revoked')
+          .filter(item => isSuperAdmin || !item.feedHidden) // i post nascosti spariscono per tutti tranne il super-admin
+          .map((item, index, filteredArray) => {
           const isMalus = item.puntiRichiesti < 0;
           const isPending = item.status === 'pending';
           const isManual = item.manual === true;
-          const isRejected = item.status === 'rejected'; 
+          const isRejected = item.status === 'rejected';
           const isPhoto = !!item.photoProof;
-          const isHidden = item.isHidden === true; 
+          const isHidden = item.isHidden === true;
+          const isFeedHidden = item.feedHidden === true;
           
           const currentDateLabel = getDateLabel(item);
           const prevItem = filteredArray[index-1];
@@ -153,8 +172,11 @@ export default function NewsFeed({ t, systemSettings }) {
           } else {
               statusLabel = tr("Approvato");
               statusColor = "bg-green-100 text-green-700 border-green-200";
-              actionText = tr("Richiesta approvata") + ":"; 
+              actionText = tr("Richiesta approvata") + ":";
           }
+
+          // Post nascosto dal feed: visibile solo al super-admin, sbiadito
+          if (isFeedHidden) cardOpacity = "opacity-50";
 
           return (
             
@@ -231,13 +253,27 @@ export default function NewsFeed({ t, systemSettings }) {
                   </div>
                 )}
 
-                {!isRejected && !isPending && (
-                  <button
-                    onClick={() => setShareItem(item)}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 border-t border-gray-50 text-gray-400 hover:text-[#B41F35] text-xs font-bold uppercase tracking-wide transition-colors"
-                  >
-                    <Share2 size={14} /> {tr("Condividi nella storia")}
-                  </button>
+                {((!isRejected && !isPending) || isSuperAdmin) && (
+                  <div className="flex items-center border-t border-gray-50 divide-x divide-gray-50">
+                    {!isRejected && !isPending && (
+                      <button
+                        onClick={() => setShareItem(item)}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 text-gray-400 hover:text-[#B41F35] text-xs font-bold uppercase tracking-wide transition-colors"
+                      >
+                        <Share2 size={14} /> {tr("Condividi nella storia")}
+                      </button>
+                    )}
+                    {isSuperAdmin && (
+                      <button
+                        onClick={() => handleToggleFeedHidden(item)}
+                        className="flex-1 flex items-center justify-center gap-2 py-2.5 text-gray-400 hover:text-red-500 text-xs font-bold uppercase tracking-wide transition-colors"
+                      >
+                        {isFeedHidden
+                          ? <><RotateCcw size={14} /> {tr("Ripristina")}</>
+                          : <><Trash2 size={14} /> {tr("Rimuovi dal feed")}</>}
+                      </button>
+                    )}
+                  </div>
                 )}
 
               </div>

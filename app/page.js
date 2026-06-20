@@ -314,7 +314,7 @@ export default function Home() {
 
         <TabContent id="feed" activeTab={activeTab}>
            <PollsFeed currentUser={userData} t={t} />
-           <NewsFeed t={t} systemSettings={systemSettings}/>
+           <NewsFeed t={t} systemSettings={systemSettings} currentUser={userData}/>
         </TabContent>
 
         {userData.role === 'matricola' ? (

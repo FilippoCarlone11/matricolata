@@ -199,10 +199,7 @@ export default function ShareStoryModal({ item, onClose, t }) {
       const dateStr = date ? date.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
       ctx.font = '600 36px Arial, sans-serif';
       ctx.fillStyle = 'rgba(255,255,255,0.7)';
-      if (dateStr) ctx.fillText(dateStr, W / 2, 1760);
-      ctx.font = '800 40px Arial, sans-serif';
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText('🎓 ' + tr('Gioca anche tu su matricolata.it'), W / 2, 1840);
+      if (dateStr) ctx.fillText(dateStr, W / 2, 1800);
 
       if (!cancelled) setRendering(false);
     };

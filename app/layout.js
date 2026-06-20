@@ -1,5 +1,6 @@
 import './globals.css'
 import LiveVotingOverlay from '@/components/LiveVotingOverlay'
+import Toaster from '@/components/Toaster'
 
 export const metadata = {
   title: 'Matricolata',
@@ -12,6 +13,7 @@ export default function RootLayout({ children }) {
       <body>
         {children}
         <LiveVotingOverlay />
+        <Toaster />
       </body>
     </html>
   )

@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 
-export function middleware(req) {
+// Next.js 16: la vecchia convenzione "middleware" è stata rinominata in "proxy".
+// Logica invariata: gestisce il sottodominio "punti." della Regia.
+export function proxy(req) {
   const url = req.nextUrl;
-  
+
   // Prendi l'hostname (es: matricolata.it, punti.matricolata.it, localhost:3000)
   const hostname = req.headers.get('host') || '';
 
@@ -20,7 +22,7 @@ export function middleware(req) {
   return NextResponse.next();
 }
 
-// Applica il middleware a tutte le rotte tranne i file statici
+// Applica il proxy a tutte le rotte tranne i file statici
 export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { recruitMatricola, releaseMatricola, setSquadCaptain, getMarketStatus, toggleMarketStatus } from '@/lib/firebase';
+import { toast } from '@/lib/toast';
 import { UserPlus, Users, Crown, Trash2, Lock, Unlock, Trophy, Star } from 'lucide-react';
 
 export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers = [], t }) {
@@ -36,24 +37,24 @@ export default function SquadraMercato({ currentUser, onUpdate, preloadedUsers =
   };
 
   const checkMarket = () => {
-    if (!marketOpen && !isSuperAdmin) { alert("Il mercato è CHIUSO!"); return false; }
+    if (!marketOpen && !isSuperAdmin) { toast.error("Il mercato è CHIUSO!"); return false; }
     return true;
   };
 
   const handleSetCaptain = async (mid) => {
     if (!checkMarket()) return;
-    try { await setSquadCaptain(currentUser.id, mid); onUpdate(); } catch (e) { alert(e); }
+    try { await setSquadCaptain(currentUser.id, mid); onUpdate(); } catch (e) { toast.error(String(e?.message || e)); }
   };
 
   const handleRelease = async (mid) => {
     if (!checkMarket()) return;
-    try { await releaseMatricola(currentUser.id, mid); onUpdate(); } catch (e) { alert(e); }
+    try { await releaseMatricola(currentUser.id, mid); onUpdate(); } catch (e) { toast.error(String(e?.message || e)); }
   };
 
   const handleRecruit = async (m) => {
     if (!checkMarket()) return;
-    if (isSquadFull) { alert("Squadra piena (max 3)."); return; }
-    try { await recruitMatricola(currentUser.id, m.id); onUpdate(); } catch (e) { alert(e); }
+    if (isSquadFull) { toast.error("Squadra piena (max 3)."); return; }
+    try { await recruitMatricola(currentUser.id, m.id); onUpdate(); } catch (e) { toast.error(String(e?.message || e)); }
   };
 
   const toggleStatus = async () => {

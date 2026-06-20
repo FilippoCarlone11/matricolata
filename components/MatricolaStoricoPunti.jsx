@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getApprovedRequestsByUser } from '@/lib/firebase';
+import { toast } from '@/lib/toast';
 import { Award, Clock, Download, Loader2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
@@ -230,7 +231,7 @@ export default function StoricoPunti({ t, currentUser, systemSettings }) {
 
       } catch (error) {
           console.error("Errore PDF:", error);
-          alert(`Impossibile generare il PDF: ${error.message}`);
+          toast.error(`Impossibile generare il PDF: ${error.message}`);
       } finally {
           setIsGeneratingPDF(false);
       }

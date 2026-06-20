@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createRequest, getUserRequests } from '@/lib/firebase'; 
+import { createRequest, getUserRequests } from '@/lib/firebase';
+import { toast } from '@/lib/toast';
 import { Send, Plus, Zap, Search, Clock, Hourglass, Camera, Loader2, Info, X } from 'lucide-react';
 
 export default function ChallengeList({ currentUser, preloadedChallenges = [], t }) {
@@ -77,7 +78,7 @@ export default function ChallengeList({ currentUser, preloadedChallenges = [], t
       setSelectedFile(null);
       setActiveCardId(null);
       setFlippedId(null);
-    } catch (e) { alert("Errore: " + e); } 
+    } catch (e) { toast.error("Errore: " + e); }
     finally { setSendingId(null); }
   };
 

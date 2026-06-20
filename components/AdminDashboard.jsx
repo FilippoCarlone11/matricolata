@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { updateUserRole, deleteUserDocument, getSystemSettings, toggleRegistrations, updateCacheSettings, toggleMatricolaBlur, updateSystemSettings } from '@/lib/firebase';
 import { Users, UserCheck, Crown, Trash2, Key, Search, Lock, Unlock, ShieldAlert, Zap, Clock, Save, Ghost, Wine, Shield, Eye, EyeOff, SlidersHorizontal, Trophy, FileText } from 'lucide-react';
-import { getApprovedRequestsByUser } from '@/lib/firebase'; 
+import { getApprovedRequestsByUser } from '@/lib/firebase';
+import { toast } from '@/lib/toast';
 
 export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     const tr = (text) => (t ? t(text) : text);
@@ -78,8 +79,8 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     setCacheEnabled(newEnabled);
     try {
         await updateCacheSettings(newEnabled, newDuration);
-    } catch (e) { 
-        alert("Errore salvataggio settings");
+    } catch (e) {
+        toast.error("Errore salvataggio settings");
         setCacheEnabled(!newEnabled);
     }
     finally { setSettingsLoading(false); }
@@ -90,8 +91,8 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     setFeedCacheEnabled(newEnabled);
     try {
         await updateSystemSettings({ feedCacheEnabled: newEnabled, feedCacheDuration: Number(newDuration) });
-    } catch (e) { 
-        alert("Errore salvataggio settings feed");
+    } catch (e) {
+        toast.error("Errore salvataggio settings feed");
         setFeedCacheEnabled(!newEnabled);
     }
     finally { setSettingsLoading(false); }
@@ -103,8 +104,8 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     try {
         await toggleMatricolaBlur(newState);
     } catch (e) {
-        alert("Errore aggiornamento blur");
-        setBlurEnabled(!newState); 
+        toast.error("Errore aggiornamento blur");
+        setBlurEnabled(!newState);
     }
   };
 
@@ -115,7 +116,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     try {
         await updateSystemSettings({ maintenanceMode: newState });
     } catch (e) {
-        alert("Errore aggiornamento manutenzione");
+        toast.error("Errore aggiornamento manutenzione");
         setMaintenanceMode(!newState);
     }
   };
@@ -132,7 +133,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
       try {
           await updateSystemSettings({ [settingName]: newState });
       } catch (error) {
-          alert("Errore salvataggio impostazione.");
+          toast.error("Errore salvataggio impostazione.");
           if (settingName === 'showDrinkCount') setShowDrinkCount(currentValue);
           if (settingName === 'showSquadCount') setShowSquadCount(currentValue);
           if (settingName === 'showCaptainIcon') setShowCaptainIcon(currentValue);
@@ -146,9 +147,9 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     if (!isSuperAdmin) return;
     setUpdatingUser(userId);
     try { 
-        await updateUserRole(userId, newRole); 
+        await updateUserRole(userId, newRole);
         setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-    } catch (e) { alert(e); }
+    } catch (e) { toast.error(String(e?.message || e)); }
     finally { setUpdatingUser(null); }
   };
 
@@ -156,9 +157,10 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     if (!isSuperAdmin) return;
     if (prompt(`Per eliminare ${user.displayName} scrivi ELIMINA:`) !== "ELIMINA") return;
     try { 
-        await deleteUserDocument(user.id); 
+        await deleteUserDocument(user.id);
         setUsers(prev => prev.filter(u => u.id !== user.id));
-    } catch (e) { alert(e); }
+        toast.success(`${user.displayName || 'Utente'} eliminato.`);
+    } catch (e) { toast.error(String(e?.message || e)); }
   };
 
   const counts = users.reduce((acc, u) => {
@@ -364,7 +366,7 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
 
     } catch (error) {
         console.error("Errore generazione PDF Dettagliato:", error);
-        alert("Errore durante la creazione del PDF. Controlla la console.");
+        toast.error("Errore durante la creazione del PDF. Controlla la console.");
     } finally {
         setIsGeneratingPDF(false); 
     }

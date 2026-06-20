@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from '@/lib/toast';
 import { 
   getAllUsers, 
   getUserData, // <--- Importiamo questo per ricaricare i punti live
@@ -79,7 +80,7 @@ export default function AdminMatricolaHistory() {
     try {
       await revokeApprovedRequest(req.id, selectedUser.id, req.puntiRichiesti);
       await refreshSelectedUser(); // Aggiorna punti visualizzati
-    } catch (e) { alert("Errore: " + e); }
+    } catch (e) { toast.error("Errore: " + e); }
   };
 
   const handleAddManual = async () => {
@@ -89,7 +90,7 @@ export default function AdminMatricolaHistory() {
     try {
       await manualAddPoints(selectedUser.id, parseInt(pointsStr), reason);
       await refreshSelectedUser();
-    } catch (e) { alert(e); }
+    } catch (e) { toast.error(String(e?.message || e)); }
   };
 
   const openAssignModal = async () => {
@@ -104,7 +105,7 @@ export default function AdminMatricolaHistory() {
         await assignExistingChallenge(selectedUser.id, challenge.id, challenge.punti, challenge.titolo);
         setShowAssignModal(false);
         await refreshSelectedUser();
-    } catch(e) { alert(e); }
+    } catch(e) { toast.error(String(e?.message || e)); }
   };
 
 
