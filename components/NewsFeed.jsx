@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getGlobalFeed, setPostFeedVisibility } from '@/lib/firebase';
+import { getGlobalFeed, setPostFeedVisibility, deleteRequest } from '@/lib/firebase';
 import { toast } from '@/lib/toast';
 import { Clock, User, Hourglass, CheckCircle, ShieldAlert, EyeOff, XCircle, Camera, X, Clapperboard, Share2, Trash2, RotateCcw } from 'lucide-react';
 import ShareStoryModal from '@/components/ShareStoryModal';
@@ -28,6 +28,19 @@ export default function NewsFeed({ t, systemSettings, currentUser }) {
       toast.success(newHidden ? 'Post rimosso dal feed.' : 'Post ripristinato.');
     } catch (e) {
       toast.error('Errore aggiornamento post.');
+    }
+  };
+
+  // Super-admin: elimina DEFINITIVAMENTE il post (irreversibile, non tocca i punti)
+  const handleDeletePost = async (item) => {
+    if (!confirm("Eliminare DEFINITIVAMENTE questo post?\nL'azione è irreversibile.\n\n(I punti già assegnati NON vengono rimossi: per quello usa la revoca.)")) return;
+    try {
+      await deleteRequest(item.id);
+      setFeed((prev) => prev.filter((f) => f.id !== item.id));
+      localStorage.removeItem(CACHE_KEY);
+      toast.success('Post eliminato definitivamente.');
+    } catch (e) {
+      toast.error('Errore eliminazione post.');
     }
   };
   
@@ -266,11 +279,19 @@ export default function NewsFeed({ t, systemSettings, currentUser }) {
                     {isSuperAdmin && (
                       <button
                         onClick={() => handleToggleFeedHidden(item)}
-                        className="flex-1 flex items-center justify-center gap-2 py-2.5 text-gray-400 hover:text-red-500 text-xs font-bold uppercase tracking-wide transition-colors"
+                        title={isFeedHidden ? tr("Ripristina") : tr("Rimuovi dal feed")}
+                        className="px-5 py-2.5 text-gray-400 hover:text-amber-600 transition-colors shrink-0"
                       >
-                        {isFeedHidden
-                          ? <><RotateCcw size={14} /> {tr("Ripristina")}</>
-                          : <><Trash2 size={14} /> {tr("Rimuovi dal feed")}</>}
+                        {isFeedHidden ? <RotateCcw size={16} /> : <EyeOff size={16} />}
+                      </button>
+                    )}
+                    {isSuperAdmin && (
+                      <button
+                        onClick={() => handleDeletePost(item)}
+                        title={tr("Elimina definitivamente")}
+                        className="px-5 py-2.5 text-gray-400 hover:text-red-600 transition-colors shrink-0"
+                      >
+                        <Trash2 size={16} />
                       </button>
                     )}
                   </div>
