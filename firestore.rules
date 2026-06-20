@@ -1,0 +1,172 @@
+rules_version = '2';
+
+// =====================================================================
+//  FantaMatricolata - Firestore Security Rules
+// ---------------------------------------------------------------------
+//  Principio: il client NON è mai affidabile. Ogni regola di gioco
+//  (chi è admin, chi assegna punti, chi vota) è imposta QUI, lato server.
+//  Tutto ciò che non è esplicitamente permesso è VIETATO (default deny).
+// =====================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- HELPER ----------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Ruolo dell'utente loggato, letto in modo sicuro dal SUO documento.
+    // (Se il doc non esiste ancora -> stringa vuota, niente crash nelle regole)
+    function myRole() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : '';
+    }
+
+    function isAdmin() {
+      return myRole() == 'admin' || myRole() == 'super-admin';
+    }
+
+    function isSuperAdmin() {
+      return myRole() == 'super-admin';
+    }
+
+    // L'update tocca SOLO i campi elencati e non altera nessun campo "sensibile"
+    function onlyTouches(allowedKeys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedKeys);
+    }
+
+    // ---------- UTENTI ----------
+    match /users/{userId} {
+      // Tutti gli utenti loggati leggono i profili (servono per classifiche/feed)
+      allow read: if isSignedIn();
+
+      // Iscrizione: puoi creare SOLO il tuo documento, come 'matricola', a 0 punti.
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.uid == userId
+        && request.resource.data.role == 'matricola'
+        && request.resource.data.punti == 0
+        && request.resource.data.puntiSerata == 0;
+
+      // Update:
+      //  - l'utente può modificare SOLO il proprio profilo/squadra,
+      //    MAI punti, ruolo, email (campi gestiti dalla Regia/Admin);
+      //  - admin e super-admin possono modificare qualsiasi cosa.
+      allow update: if isAdmin()
+        || ( request.auth.uid == userId
+             && onlyTouches(['displayName', 'teamName', 'photoURL', 'isNeapolitan', 'mySquad', 'captainId'])
+             && request.resource.data.role == resource.data.role
+             && request.resource.data.punti == resource.data.punti
+             && request.resource.data.puntiSerata == resource.data.puntiSerata
+             && (!('mySquad' in request.resource.data) || request.resource.data.mySquad.size() <= 3) );
+
+      // Cancellazione utenti: solo admin (cancellazione a cascata)
+      allow delete: if isAdmin();
+    }
+
+    // ---------- RICHIESTE PUNTI / FEED ----------
+    match /requests/{requestId} {
+      allow read: if isSignedIn();
+
+      // Una matricola può creare SOLO una richiesta a proprio nome, in 'pending'.
+      // Gli admin possono creare richieste già 'approved' (bonus manuali, televoto).
+      allow create: if isAdmin()
+        || ( isSignedIn()
+             && request.resource.data.matricolaId == request.auth.uid
+             && request.resource.data.status == 'pending' );
+
+      // Approvare/rifiutare/revocare/spostare: solo admin.
+      allow update, delete: if isAdmin();
+    }
+
+    // ---------- CATALOGO BONUS/MALUS ----------
+    match /challenges/{challengeId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---------- IMPOSTAZIONI DI SISTEMA ----------
+    // config/appSettings  -> registrazioni, cache, blur, manutenzione
+    match /config/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    // settings/config -> stato mercato
+    match /settings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---------- EVENTO LIVE (REGIA) ----------
+    // Squadre, sfide ed esibizioni della serata: gestite solo dalla Regia.
+    match /event_teams/{teamId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+    match /event_challenges/{challengeId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+    match /event_performances/{perfId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
+    }
+
+    // ---------- TELEVOTO LIVE ----------
+    // live_voting/current : la Regia apre/chiude; il pubblico scrive SOLO il
+    // proprio voto (1-10) e solo quando il televoto è aperto.
+    match /live_voting/{docId} {
+      allow read: if isSignedIn();
+      allow create, delete: if isSuperAdmin();
+
+      allow update: if isSuperAdmin()
+        || ( isSignedIn()
+             && resource.data.votingOpen == true
+             // l'unico campo modificato è la mappa "votes"...
+             && onlyTouches(['votes'])
+             // ...e dentro "votes" tocco SOLO la mia chiave (non quella di altri)
+             && request.resource.data.votes.diff(resource.data.votes).affectedKeys().hasOnly([request.auth.uid])
+             // ...con un valore intero valido da 1 a 10
+             && request.resource.data.votes[request.auth.uid] is int
+             && request.resource.data.votes[request.auth.uid] >= 1
+             && request.resource.data.votes[request.auth.uid] <= 10 );
+    }
+
+    // ---------- SONDAGGI ----------
+    // Creazione: solo non-matricole (Anziani/Admin), a proprio nome.
+    // Voto: qualsiasi utente loggato, ma solo sulla PROPRIA chiave e con un
+    // indice di opzione valido. Eliminazione: autore o admin.
+    match /polls/{pollId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && myRole() != ''
+        && myRole() != 'matricola'
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.question is string
+        && request.resource.data.question.size() > 0
+        && request.resource.data.options is list
+        && request.resource.data.options.size() >= 2
+        && request.resource.data.options.size() <= 6
+        && request.resource.data.votes.size() == 0;
+
+      allow update: if isSignedIn()
+        && onlyTouches(['votes'])
+        && request.resource.data.votes.diff(resource.data.votes).affectedKeys().hasOnly([request.auth.uid])
+        && request.resource.data.votes[request.auth.uid] is int
+        && request.resource.data.votes[request.auth.uid] >= 0
+        && request.resource.data.votes[request.auth.uid] < resource.data.options.size();
+
+      allow delete: if isSignedIn()
+        && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+
+    // ---------- DEFAULT: TUTTO IL RESTO È VIETATO ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

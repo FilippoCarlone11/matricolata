@@ -16,7 +16,8 @@ import Navigation from '@/components/Navigation';
 import SquadraMercato from '@/components/SquadraMercato';
 import Classifiche from '@/components/Classifiche';
 import BonusMalusList from '@/components/BonusMalusList'; 
-import NewsFeed from '@/components/NewsFeed'; 
+import NewsFeed from '@/components/NewsFeed';
+import PollsFeed from '@/components/PollsFeed';
 
 import { Trophy, LogOut, Edit2, LockKeyhole, Pizza, AlertCircle, Crown, Users } from 'lucide-react'; 
 
@@ -312,6 +313,7 @@ export default function Home() {
         )}
 
         <TabContent id="feed" activeTab={activeTab}>
+           <PollsFeed currentUser={userData} t={t} />
            <NewsFeed t={t} systemSettings={systemSettings}/>
         </TabContent>
 

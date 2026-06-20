@@ -2,14 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { updateUserRole, deleteUserDocument, getSystemSettings, toggleRegistrations, updateCacheSettings, toggleMatricolaBlur, updateSystemSettings } from '@/lib/firebase';
-import { Users, UserCheck, Crown, Trash2, Key, Search, Lock, Unlock, ShieldAlert, Zap, Clock, Save, Ghost, Wine, Shield, Eye, EyeOff } from 'lucide-react';
+import { Users, UserCheck, Crown, Trash2, Key, Search, Lock, Unlock, ShieldAlert, Zap, Clock, Save, Ghost, Wine, Shield, Eye, EyeOff, SlidersHorizontal, Trophy, FileText } from 'lucide-react';
 import { getApprovedRequestsByUser } from '@/lib/firebase'; 
 
 export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
     const tr = (text) => (t ? t(text) : text);
   const [users, setUsers] = useState(preloadedUsers);
   const [updatingUser, setUpdatingUser] = useState(null);
-  const [searchTerm, setSearchTerm] = useState(''); 
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // SOTTO-SEZIONE ATTIVA DEL PANNELLO ('utenti' | 'sistema' | 'classifiche' | 'report')
+  const [section, setSection] = useState('utenti');
 
   // STATI SISTEMA
   const [regOpen, setRegOpen] = useState(true);
@@ -369,14 +372,43 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
 
   return (
     <div className="pb-20">
-      <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-        <Users className="text-blue-600" /> Gestione Utenti
-      </h2>
+      {/* HEADER + SOTTO-NAVIGAZIONE A SEGMENTI */}
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <Shield className="text-[#B41F35]" /> {tr("Pannello Super Admin")}
+        </h2>
 
-      {/* --- PANNELLO CONTROLLO SUPER ADMIN --- */}
-      {isSuperAdmin && (
+        {isSuperAdmin && (
+          <div className="grid grid-cols-4 gap-1.5 bg-gray-100 p-1.5 rounded-2xl">
+            {[
+              { id: 'utenti', label: tr('Utenti'), icon: Users },
+              { id: 'sistema', label: tr('Sistema'), icon: SlidersHorizontal },
+              { id: 'classifiche', label: tr('Classifiche'), icon: Trophy },
+              { id: 'report', label: tr('Report'), icon: FileText },
+            ].map(s => {
+              const Icon = s.icon;
+              const active = section === s.id;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setSection(s.id)}
+                  className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-wide transition-all ${
+                    active ? 'bg-white shadow text-[#B41F35]' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <Icon size={18} strokeWidth={active ? 2.5 : 2} />
+                  {s.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ===================== SEZIONE: REPORT ===================== */}
+      {isSuperAdmin && section === 'report' && (
         <div className="space-y-4 mb-8">
-            <button 
+            <button
               onClick={generaReportDettagliatoTutteMatricole}
               disabled={isGeneratingPDF}
               className={`w-full text-white px-4 py-3 rounded-xl font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 ${isGeneratingPDF ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#B41F35] hover:bg-[#90192a] active:scale-95'}`}
@@ -390,6 +422,12 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                  <>📄 Scarica il feed globale</>
               )}
           </button>
+        </div>
+      )}
+
+      {/* ===================== SEZIONE: SISTEMA ===================== */}
+      {isSuperAdmin && section === 'sistema' && (
+        <div className="space-y-4 mb-8">
             {/* BLOCCO 1: CONTROLLI SISTEMA */}
                 <div className="bg-slate-900 text-white p-5 rounded-2xl shadow-xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full blur-3xl opacity-20 -mr-10 -mt-10"></div>
@@ -538,7 +576,12 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
                     </div>
 
             </div>
+        </div>
+      )}
 
+      {/* ===================== SEZIONE: CLASSIFICHE ===================== */}
+      {isSuperAdmin && section === 'classifiche' && (
+        <div className="space-y-4 mb-8">
             {/* BLOCCO 2: IMPOSTAZIONI VISIVE CLASSIFICHE */}
             <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm relative overflow-hidden">
                 <div className="flex items-center gap-2 mb-4 border-b border-gray-100 pb-3">
@@ -629,6 +672,9 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
         </div>
       )}
 
+      {/* ===================== SEZIONE: UTENTI (default) ===================== */}
+      {section === 'utenti' && (
+      <>
       {/* DASHBOARD CONTEGGI E LISTA UTENTI... */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
@@ -732,6 +778,8 @@ export default function AdminUserList({ currentUser, preloadedUsers = [] , t}) {
             </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }

@@ -1,0 +1,23 @@
+{
+  "indexes": [
+    {
+      "comment": "getApprovedRequestsByUser: where matricolaId == ... && status == 'approved'",
+      "collectionGroup": "requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "matricolaId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "comment": "assignAllPerformancePoints: where status == 'completed' && pointsAssigned == false",
+      "collectionGroup": "event_performances",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "pointsAssigned", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
