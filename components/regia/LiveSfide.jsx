@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Trophy, Swords, Wrench, ChevronRight, RotateCcw, CheckCircle2, Minus, Plus, Settings, Loader2, Send, ArrowLeft } from 'lucide-react';
+import { toast } from '@/lib/toast';
 import { resolveEventChallenge, revertEventChallenge, addManualPointsToEventTeams, propagateChallengeToFanta, revertFantaPropagation } from '@/lib/firebase';
 
 export default function LiveSfide({ eventTeams, eventChallenges }) {
@@ -29,12 +30,12 @@ export default function LiveSfide({ eventTeams, eventChallenges }) {
         try {
             await resolveEventChallenge(challenge.id, finalScores, challenge.pointsScheme);
             setSelectedLiveChallenge(null);
-        } catch (e) { alert("Errore tecnico: " + e.message); }
+        } catch (e) { toast.error("Errore tecnico: " + e.message); }
     };
 
     const handleRevertChallenge = async (challengeId) => {
         if (!window.confirm("Vuoi riaprire questa sfida? I punti verranno sottratti alle squadre e ricalcolati da zero.")) return;
-        try { await revertEventChallenge(challengeId); } catch (e) { alert("Errore: " + e.message); }
+        try { await revertEventChallenge(challengeId); } catch (e) { toast.error("Errore: " + e.message); }
     };
 
     const handlePropagateToFanta = async (challengeId) => {
@@ -43,9 +44,9 @@ export default function LiveSfide({ eventTeams, eventChallenges }) {
         setIsPropagating(true);
         try {
             await propagateChallengeToFanta(challengeId);
-            alert("Propagazione avvenuta con successo!");
+            toast.success("Propagazione avvenuta con successo!");
         } catch (e) {
-            alert("Errore durante la propagazione: " + e.message);
+            toast.error("Errore durante la propagazione: " + e.message);
         } finally {
             setIsPropagating(false);
         }
@@ -56,9 +57,9 @@ export default function LiveSfide({ eventTeams, eventChallenges }) {
         setIsPropagating(true);
         try {
             await revertFantaPropagation(challengeId);
-            alert("Propagazione annullata!");
+            toast.success("Propagazione annullata!");
         } catch (e) {
-            alert("Errore: " + e.message);
+            toast.error("Errore: " + e.message);
         } finally {
             setIsPropagating(false);
         }
@@ -68,7 +69,7 @@ export default function LiveSfide({ eventTeams, eventChallenges }) {
         const scores = rawScoresInputs['manual'] || {};
         const hasPoints = Object.values(scores).some(val => val !== 0);
         if (!hasPoints) {
-            alert("Non hai inserito nessun punteggio.");
+            toast.error("Non hai inserito nessun punteggio.");
             return;
         }
         if (!window.confirm("Confermi di voler applicare questi punti manuali?")) return;
@@ -76,7 +77,7 @@ export default function LiveSfide({ eventTeams, eventChallenges }) {
             await addManualPointsToEventTeams(scores);
             setRawScoresInputs(prev => ({ ...prev, manual: {} }));
             setSelectedLiveChallenge(null);
-        } catch (e) { alert("Errore: " + e.message); }
+        } catch (e) { toast.error("Errore: " + e.message); }
     };
 
     return (

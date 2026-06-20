@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toast } from '@/lib/toast';
 import { db, auth, submitLiveVote } from '@/lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -54,7 +55,7 @@ export default function LiveVotingOverlay() {
         try {
             await submitLiveVote(user.uid, value);
         } catch (error) {
-            alert("Errore durante l'invio del voto. Riprova.");
+            toast.error("Errore durante l'invio del voto. Riprova.");
         } finally {
             setIsVoting(false);
         }

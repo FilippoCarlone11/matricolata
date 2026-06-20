@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Users, Swords, Plus, Trash2, Edit2, Check, CheckCircle2, UserMinus } from 'lucide-react';
+import { toast } from '@/lib/toast';
 import { createEventTeam, deleteEventTeam, updateEventTeamName, createEventChallenge, deleteEventChallenge } from '@/lib/firebase';
 
 const COLORS = [
@@ -25,7 +26,7 @@ export default function SetupRegia({ eventTeams, allMatricole, eventChallenges, 
         e.preventDefault();
         if (!newTeamName.trim()) return;
         try { await createEventTeam(newTeamName, newTeamColor.class); setNewTeamName(''); }
-        catch (err) { alert(err.message); }
+        catch (err) { toast.error(err.message); }
     };
 
     const handleDeleteTeam = async (teamId) => {
@@ -42,7 +43,7 @@ export default function SetupRegia({ eventTeams, allMatricole, eventChallenges, 
     const handleSaveTeamName = async (teamId) => {
         if (!editingTeamName.trim()) { setEditingTeamId(null); return; }
         try { await updateEventTeamName(teamId, editingTeamName); setEditingTeamId(null); }
-        catch (error) { alert("Errore durante il salvataggio: " + error.message); }
+        catch (error) { toast.error("Errore durante il salvataggio: " + error.message); }
     };
 
     const handleCreateChallenge = async (e) => {
@@ -51,7 +52,7 @@ export default function SetupRegia({ eventTeams, allMatricole, eventChallenges, 
         try {
             await createEventChallenge(newChallengeTitle, Number(p1), Number(p2), Number(p3));
             setNewChallengeTitle('');
-        } catch (err) { alert(err.message); }
+        } catch (err) { toast.error(err.message); }
     };
 
     // Helper per le matricole non ancora assegnate (usato nella select)
@@ -187,7 +188,7 @@ export default function SetupRegia({ eventTeams, allMatricole, eventChallenges, 
                             </div>
                             <button onClick={async () => {
                                 if(window.confirm('Sei sicuro di voler eliminare questa sfida?')) {
-                                    try { await deleteEventChallenge(challenge.id); } catch (e) { alert(e.message); }
+                                    try { await deleteEventChallenge(challenge.id); } catch (e) { toast.error(e.message); }
                                 }
                             }} className="text-gray-500 hover:text-red-500 p-2"><Trash2 size={18} /></button>
                         </div>

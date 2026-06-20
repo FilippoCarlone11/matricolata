@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { updateUserProfile } from '@/lib/firebase';
+import { toast } from '@/lib/toast';
 import { X, Save, RefreshCw, Camera, Upload, Shield, Globe, Pizza } from 'lucide-react';
 
 export default function EditProfile({ user, onClose, onUpdate, t }) {
@@ -65,7 +66,7 @@ export default function EditProfile({ user, onClose, onUpdate, t }) {
       await onUpdate(); 
       onClose();
     } catch (error) {
-      alert(tr("Errore") + ": " + error.message);
+      toast.error(tr("Errore") + ": " + error.message);
     } finally {
       setLoading(false);
     }

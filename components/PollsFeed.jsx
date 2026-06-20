@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { onPollsChange, createPoll, votePoll, deletePoll } from '@/lib/firebase';
-import { BarChart3, Plus, X, Trash2, Check, Loader2, Send } from 'lucide-react';
+import { onPollsChange, createPoll, votePoll, deletePoll, setPollClosed } from '@/lib/firebase';
+import { toast } from '@/lib/toast';
+import { BarChart3, Plus, X, Trash2, Check, Loader2, Send, Lock, Unlock } from 'lucide-react';
 
 export default function PollsFeed({ currentUser, t }) {
   const tr = (text) => (t ? t(text) : text);
@@ -38,20 +39,30 @@ export default function PollsFeed({ currentUser, t }) {
     try {
       await createPoll(question, options, currentUser);
       resetComposer();
+      toast.success('Sondaggio pubblicato!');
     } catch (e) {
-      alert(e.message || 'Errore creazione sondaggio.');
+      toast.error(e.message || 'Errore creazione sondaggio.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleToggleClosed = async (poll) => {
+    try {
+      await setPollClosed(poll.id, !poll.closed);
+      toast.success(poll.closed ? 'Sondaggio riaperto.' : 'Sondaggio chiuso.');
+    } catch (e) {
+      toast.error('Errore aggiornamento sondaggio.');
+    }
+  };
+
   const handleVote = async (poll, idx) => {
-    if (!uid) return;
+    if (!uid || poll.closed) return;
     setVotingId(poll.id);
     try {
       await votePoll(poll.id, uid, idx);
     } catch (e) {
-      alert('Errore durante il voto.');
+      toast.error('Errore durante il voto.');
     } finally {
       setVotingId(null);
     }
@@ -62,7 +73,7 @@ export default function PollsFeed({ currentUser, t }) {
     try {
       await deletePoll(poll.id);
     } catch (e) {
-      alert('Errore eliminazione.');
+      toast.error('Errore eliminazione.');
     }
   };
 
@@ -150,6 +161,9 @@ export default function PollsFeed({ currentUser, t }) {
         );
         const total = counts.reduce((a, b) => a + b, 0);
         const canDelete = isAdmin || poll.authorId === uid;
+        const canManage = isAdmin || poll.authorId === uid;
+        const isClosed = poll.closed === true;
+        const showResults = hasVoted || isClosed;
 
         return (
           <div key={poll.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -163,15 +177,29 @@ export default function PollsFeed({ currentUser, t }) {
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wide leading-none mb-0.5">{tr('Sondaggio')}</p>
+                  <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wide leading-none mb-0.5">
+                    {tr('Sondaggio')}
+                    {isClosed && <span className="ml-2 text-[#B41F35]">· {tr('Chiuso')}</span>}
+                  </p>
                   <p className="text-xs font-bold text-gray-600 truncate">{poll.authorName}</p>
                 </div>
               </div>
-              {canDelete && (
-                <button onClick={() => handleDelete(poll)} className="text-gray-300 hover:text-red-500 p-1.5">
-                  <Trash2 size={16} />
-                </button>
-              )}
+              <div className="flex items-center gap-0.5 shrink-0">
+                {canManage && (
+                  <button
+                    onClick={() => handleToggleClosed(poll)}
+                    title={isClosed ? tr('Riapri') : tr('Chiudi')}
+                    className="text-gray-300 hover:text-[#B41F35] p-1.5"
+                  >
+                    {isClosed ? <Unlock size={16} /> : <Lock size={16} />}
+                  </button>
+                )}
+                {canDelete && (
+                  <button onClick={() => handleDelete(poll)} className="text-gray-300 hover:text-red-500 p-1.5">
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="p-4">
@@ -183,8 +211,9 @@ export default function PollsFeed({ currentUser, t }) {
                   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
                   const isMine = hasVoted && Number(myVote) === i;
 
-                  // PRIMA del voto: opzioni cliccabili. DOPO: barre con risultati.
-                  if (!hasVoted) {
+                  // PRIMA del voto (e sondaggio aperto): opzioni cliccabili.
+                  // DOPO il voto o se chiuso: barre coi risultati.
+                  if (!showResults) {
                     return (
                       <button
                         key={i}
@@ -201,10 +230,10 @@ export default function PollsFeed({ currentUser, t }) {
                     <button
                       key={i}
                       onClick={() => handleVote(poll, i)}
-                      disabled={votingId === poll.id}
+                      disabled={votingId === poll.id || isClosed}
                       className={`relative w-full overflow-hidden text-left px-4 py-3 rounded-xl border transition-all ${
                         isMine ? 'border-[#B41F35]' : 'border-gray-200'
-                      }`}
+                      } ${isClosed ? 'cursor-default' : ''}`}
                     >
                       <div
                         className={`absolute inset-y-0 left-0 ${isMine ? 'bg-[#B41F35]/15' : 'bg-gray-100'} transition-all duration-500`}
@@ -223,7 +252,8 @@ export default function PollsFeed({ currentUser, t }) {
 
               <p className="text-[10px] text-gray-400 mt-3 font-bold uppercase tracking-wide">
                 {total} {total === 1 ? tr('voto') : tr('voti')}
-                {hasVoted && <span className="text-gray-300"> · {tr('Tocca per cambiare')}</span>}
+                {hasVoted && !isClosed && <span className="text-gray-300"> · {tr('Tocca per cambiare')}</span>}
+                {isClosed && <span className="text-gray-300"> · {tr('Sondaggio chiuso')}</span>}
               </p>
             </div>
           </div>

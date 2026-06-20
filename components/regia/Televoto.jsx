@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Play, Trash2, EyeOff, CheckCircle2, Trophy, Users, XCircle, Star, Undo2, RefreshCw, AlertTriangle, ListOrdered, Radio, User, Search } from 'lucide-react';
+import { toast } from '@/lib/toast';
 import {
     addEventPerformance,
     deleteEventPerformance,
@@ -85,31 +86,31 @@ export default function Televoto({ eventPerformances, allMatricole, allUsers = [
     // ─── HANDLERS ────────────────────────────────────────────────────────────
     const handleAddToLineup = async (e) => {
         e.preventDefault();
-        if (!votingTheme.trim()) { alert("Inserisci il tema dell'esibizione."); return; }
+        if (!votingTheme.trim()) { toast.error("Inserisci il tema dell'esibizione."); return; }
         try {
             if (isTeamMode) {
-                if (!selectedTeamId) { alert("Seleziona una squadra."); return; }
+                if (!selectedTeamId) { toast.error("Seleziona una squadra."); return; }
                 const team = allTeams.find(t => t.id === selectedTeamId);
                 await addEventPerformance(selectedTeamId, team.name, votingTheme, true);
                 setSelectedTeamId('');
             } else if (useManualName) {
-                if (!manualMatricolaName.trim()) { alert("Inserisci il nome manuale."); return; }
+                if (!manualMatricolaName.trim()) { toast.error("Inserisci il nome manuale."); return; }
                 await addEventPerformance("manual_" + Date.now(), manualMatricolaName, votingTheme, false);
                 setManualMatricolaName('');
             } else {
-                if (!selectedMatricolaForVoting) { alert("Seleziona una matricola."); return; }
+                if (!selectedMatricolaForVoting) { toast.error("Seleziona una matricola."); return; }
                 const matricola = allMatricole.find(m => m.id === selectedMatricolaForVoting);
                 await addEventPerformance(selectedMatricolaForVoting, matricola.displayName, votingTheme, false);
                 setSelectedMatricolaForVoting('');
             }
             setVotingTheme('');
-            alert("Aggiunto in scaletta!");
-        } catch (err) { alert(err.message); }
+            toast.success("Aggiunto in scaletta!");
+        } catch (err) { toast.error(err.message); }
     };
 
     const handleDeletePerformance = async (perfId) => {
         if (!window.confirm("Rimuovere questa esibizione dalla scaletta?")) return;
-        try { await deleteEventPerformance(perfId); } catch (e) { alert(e.message); }
+        try { await deleteEventPerformance(perfId); } catch (e) { toast.error(e.message); }
     };
 
     const handleStartPerformance = async (perfId) => {
@@ -117,23 +118,23 @@ export default function Televoto({ eventPerformances, allMatricole, allUsers = [
         try { 
             await startEventPerformance(perfId); 
             setActiveTab('live'); 
-        } catch (e) { alert(e.message); }
+        } catch (e) { toast.error(e.message); }
     };
 
     const handleOpenLiveVoting = async () => {
         if (!window.confirm("Aprire le votazioni al pubblico?")) return;
-        try { await openLiveVoting(); } catch (e) { alert(e.message); }
+        try { await openLiveVoting(); } catch (e) { toast.error(e.message); }
     };
 
     const handleCloseLivePerformance = async () => {
         if (!liveVotingData?.performanceId) return;
         if (!window.confirm("Chiudere il televoto e salvare la SOMMA totale?")) return;
-        try { await completeEventPerformance(liveVotingData.performanceId); } catch (e) { alert(e.message); }
+        try { await completeEventPerformance(liveVotingData.performanceId); } catch (e) { toast.error(e.message); }
     };
 
     const handleCancelLivePerformance = async () => {
         if (!window.confirm("ANNULLA l'esibizione in corso? I voti verranno scartati e l'esibizione tornerà in coda.")) return;
-        try { await cancelLivePerformance(); } catch (e) { alert(e.message); }
+        try { await cancelLivePerformance(); } catch (e) { toast.error(e.message); }
     };
 
     const handlePropagateToFanta = async (perf) => {
@@ -143,35 +144,35 @@ export default function Televoto({ eventPerformances, allMatricole, allUsers = [
         if (!window.confirm(msg)) return;
         try {
             await propagateSinglePerformanceToFanta(perf.id);
-            alert("✅ Punti propagati!");
-        } catch (e) { alert(e.message); }
+            toast.success("✅ Punti propagati!");
+        } catch (e) { toast.error(e.message); }
     };
 
     const handleRollbackFanta = async (perf) => {
         if (!window.confirm("Annullare la propagazione Fanta? I punti verranno sottratti.")) return;
-        try { await rollbackFantaPropagation(perf.id); alert("✅ Rollback completato."); } catch (e) { alert(e.message); }
+        try { await rollbackFantaPropagation(perf.id); toast.success("✅ Rollback completato."); } catch (e) { toast.error(e.message); }
     };
 
     const handleRepeatTelvoto = async (perf) => {
         const warn = perf.fantaPropagated ? `\n⚠️ I punti Fanta già propagati verranno sottratti automaticamente.` : '';
         if (!window.confirm(`Ripetere il televoto per "${perf.matricolaName}"? Il punteggio attuale verrà azzerato.${warn}`)) return;
-        try { await repeatPerformanceTelvoto(perf.id); } catch (e) { alert(e.message); }
+        try { await repeatPerformanceTelvoto(perf.id); } catch (e) { toast.error(e.message); }
     };
 
     const handleFinalPointsAssignment = async () => {
         if (!window.confirm("Assegnare i punti finali alle squadre? Operazione irreversibile.")) return;
         try {
             const count = await assignAllPerformancePoints();
-            alert(`✅ Punti assegnati a ${count} squadre!`);
-        } catch (e) { alert(e.message); }
+            toast.success(`✅ Punti assegnati a ${count} squadre!`);
+        } catch (e) { toast.error(e.message); }
     };
 
     const handleFullReset = async () => {
         if (!window.confirm("⚠️ RESET TOTALE TELEVOTO ⚠️\nSottrae punti Fanta, rimuove feed, azzera tabellone e rimette in coda. Sei sicuro?")) return;
         try {
             const count = await fullResetTelvoto();
-            alert(`✅ Reset completato. ${count} esibizioni rimesse in coda.`);
-        } catch (e) { alert(e.message); }
+            toast.success(`✅ Reset completato. ${count} esibizioni rimesse in coda.`);
+        } catch (e) { toast.error(e.message); }
     };
 
     // ─── RENDER HELPER AZIONI FANTA ─────────────────────────────────────────

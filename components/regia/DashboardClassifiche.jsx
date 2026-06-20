@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Trophy, Medal, Crown, Send, Loader2 } from 'lucide-react';
+import { toast } from '@/lib/toast';
 import { propagateFinalLeaderboard } from '@/lib/firebase';
 
 export default function DashboardClassifiche({ eventTeams }) {
@@ -14,9 +15,9 @@ export default function DashboardClassifiche({ eventTeams }) {
         setIsPropagating(true);
         try {
             const count = await propagateFinalLeaderboard();
-            alert(`🎉 Serata conclusa! Punti (+30 e +15) assegnati con successo a ${count} matricole!`);
+            toast.success(`🎉 Serata conclusa! Punti (+30 e +15) assegnati con successo a ${count} matricole!`);
         } catch (e) {
-            alert("Errore: " + e.message);
+            toast.error("Errore: " + e.message);
         } finally {
             setIsPropagating(false);
         }

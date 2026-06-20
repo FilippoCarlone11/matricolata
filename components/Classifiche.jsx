@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
+import { toast } from '@/lib/toast';
+import {
     getUserData, 
     getApprovedRequestsByUser, 
     revokeApprovedRequest, 
@@ -193,8 +194,8 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
     if (!confirm(`Annullare "${req.challengeName}" e rimuovere ${req.puntiRichiesti} punti?`)) return;
     try {
       await revokeApprovedRequest(req.id, adminSelectedUser.id, req.puntiRichiesti);
-      await refreshAdminUser(); 
-    } catch (e) { alert("Errore: " + e); }
+      await refreshAdminUser();
+    } catch (e) { toast.error("Errore: " + e); }
   };
 
   const handleAddManual = async () => {
@@ -204,7 +205,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
     try {
       await manualAddPoints(adminSelectedUser.id, parseInt(pointsStr), reason);
       await refreshAdminUser();
-    } catch (e) { alert(e); }
+    } catch (e) { toast.error(String(e?.message || e)); }
   };
 
   const openAssignModal = async () => {
@@ -225,7 +226,7 @@ export default function Classifiche({ preloadedUsers = [], currentUser, onTrigge
         await assignExistingChallenge(adminSelectedUser.id, challenge.id, challenge.punti, challenge.titolo);
         setShowAssignModal(false);
         await refreshAdminUser(); // LA CLASSIFICA ORA SI AGGIORNERA' ALL'ISTANTE
-    } catch(e) { alert(e); }
+    } catch(e) { toast.error(String(e?.message || e)); }
   };
 
 const handleChangeDate = async (req) => {
@@ -240,16 +241,16 @@ const handleChangeDate = async (req) => {
         const newDate = new Date(year, month - 1, day, 23, 59, 59);
 
         if (isNaN(newDate.getTime())) {
-            alert("Data non valida.");
+            toast.error("Data non valida.");
             return;
         }
 
         await updateRequestDate(req.id, newDate);
         await refreshAdminUser();
-        alert("Data aggiornata con successo.");
+        toast.success("Data aggiornata con successo.");
     } catch (error) {
         console.error("Errore aggiornamento data:", error);
-        alert("Errore durante l'aggiornamento della data.");
+        toast.error("Errore durante l'aggiornamento della data.");
     }
   };
 
@@ -264,7 +265,7 @@ const handleChangeDate = async (req) => {
 
   const generaReportPDF = async (utente, storicoDati) => {
     if (!utente) {
-        alert("Errore: Dati utente mancanti.");
+        toast.error("Errore: Dati utente mancanti.");
         return;
     }
     setIsGeneratingPDF(true);
@@ -425,7 +426,7 @@ const handleChangeDate = async (req) => {
 
     } catch (error) {
         console.error("Errore PDF:", error);
-        alert(`Impossibile generare il PDF: ${error.message}`);
+        toast.error(`Impossibile generare il PDF: ${error.message}`);
     } finally {
         setIsGeneratingPDF(false); 
     }

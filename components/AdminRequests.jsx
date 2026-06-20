@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { onPendingRequestsChange, approveRequest, rejectRequest } from '@/lib/firebase';
+import { toast } from '@/lib/toast';
 import { Check, X, Clock, Camera } from 'lucide-react';
 
 export default function AdminRequests({t}) {
@@ -27,9 +28,9 @@ export default function AdminRequests({t}) {
       } else {
           await rejectRequest(req.id);
       }
-    } catch (e) { 
-        alert("Errore: " + e.message); 
-    } finally { 
+    } catch (e) {
+        toast.error("Errore: " + e.message);
+    } finally {
         setProcessing(null); 
     }
   };
